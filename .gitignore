@@ -132,7 +132,7 @@ dmypy.json
 /**/*.DS_Store
 
 #Playground
-playground/
+development/
 data/
 scores_scripts/*.csv
 data2/
