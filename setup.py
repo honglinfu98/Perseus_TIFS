@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="pdenv",
+    name="clotho_env",
     packages=find_packages(),
     install_requires=[
         "numpy",
