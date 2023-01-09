@@ -109,9 +109,10 @@ def load_cloudburst_members_data() -> pd.DataFrame:
         list(CloudburstDataBaseConnection.fetch_data(MEMBERS_QUERY)),
         columns=MEMBERS_COLS,
     )
+    # Remove the double quotes from the column names
+    tbl_members.columns = tbl_members.columns.str.replace('"', "")
 
-    return tbl_members
-
+    return tbl_members, MEMBERS_COLS
 
 def load_cloudburst_users_data() -> pd.DataFrame:
     """
