@@ -53,17 +53,28 @@ pip install -e ".[dev]"
 
 ## Run scripts
 
-To run the dashboard:
+To run the profiling:
 Include SSH_PKEY, DB_USERNAME, and DB_PASS variable assignment in the .env file,
-which correspond to SSH priviate key, database username, and database password.
+which correspond to SSH private key, database username, and database password.
 
 ```bash
 export $(cat .env | xargs)
 ```
 
-```bash
-run
-```
+### Run the channels profiling pipeline:
+   
+   ```bash
+   run/run_channels_profiling.py
+   ```
+   
+
+### Run the users profiling pipeline:
+
+   ```bash
+   run/run_users_profiling.py
+   ```
+   
+   
 
 ## Git Large File Storage (Git LFS)
 
@@ -87,7 +98,7 @@ git lfs pull
 
 ## Synchronize with the repo
 
-Always pull latest code first
+Always pull the latest code first
 
 ```bash
 git pull
