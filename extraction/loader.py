@@ -22,6 +22,7 @@ def load_cloudburst_signals() -> pd.DataFrame:
         "source_datetime",
         "commodity",
         "channel_participants",
+        "message_text",
     ]
 
     QUERY_SIGNALS = ("SELECT " 
@@ -71,6 +72,7 @@ def load_cloudburst_signals() -> pd.DataFrame:
             "commodity",
             "username",
             "channel_participants",
+            "message_text"
         ]]
     
     return processed_signals
@@ -151,5 +153,4 @@ def load_cloudburst_users_data() -> pd.DataFrame:
         list(CloudburstDataBaseConnection.fetch_data(MEMBERS_QUERY)),
         columns=MEMBERS_COLS,
     )
-
     return tbl_members
