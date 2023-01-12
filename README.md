@@ -67,14 +67,30 @@ export $(cat .env | xargs)
    run/run_channels_profiling.py
    ```
    
-
 ### Run the users profiling pipeline:
 
    ```bash
    run/run_users_profiling.py
    ```
-   
-   
+
+## Testing and Coverage
+
+We use pytest as our testing framework and coverage to measure code coverage.
+
+To run the tests:
+
+```bash
+pytest
+```
+
+To generate a coverage report:
+
+```bash
+coverage run -m pytest
+coverage report
+```
+
+You can also use coverage html command to generate HTML files that you can view in a web browser.
 
 ## Git Large File Storage (Git LFS)
 

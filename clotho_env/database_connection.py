@@ -1,11 +1,13 @@
 """
 Script for connecting with cloudburst database
 """
-
+import logging
 import os
 import psycopg2
 from sshtunnel import SSHTunnelForwarder
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger()
 
 class CloudburstDataBaseConnection:
     """
@@ -40,7 +42,7 @@ class CloudburstDataBaseConnection:
             ssh_private_key_password=ssh_private_key_password,
             remote_bind_address=(db_host, db_port),
         ) as ssh_tunnel:
-            print("SSH tunnel connected")
+            logger.info("SSH tunnel connected")
 
             try:
                 conn = psycopg2.connect(
