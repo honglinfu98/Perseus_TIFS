@@ -4,7 +4,7 @@ and labels the country of the phone number
 """
 
 import pandas as pd
-from extraction_scripts.loader import load_cloudburst_users_data
+from extraction.loader import load_cloudburst_users_data
 
 # Function to create a dict from a 2 dataframe column
 

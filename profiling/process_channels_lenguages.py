@@ -5,12 +5,12 @@ on profiling the channels
 import logging
 import pandas as pd
 from langdetect import detect
-from extraction_scripts.loader import load_cloudburst_signals
+from extraction.loader import load_cloudburst_signals
 
 # Call logger
 logger = logging.getLogger()
 
-def detect_language(tuple_list: list[tuple],col_names_signals: list[str])->list[tuple]:
+def detect_language(tuple_list: list[tuple],col_names_signals: list[str], len_limit: int = 50)->list[tuple]:
     """
     This function detects the language of the content of the channels
     :param tuple_list: List of tuples
@@ -23,7 +23,7 @@ def detect_language(tuple_list: list[tuple],col_names_signals: list[str])->list[
     # Extrac from the list of tuples the 3 columns that we need
     tuple_list = [(tup[entity_id_position], tup[name_position], tup[message_position]) for tup in tuple_list]
     # Langdetect library has a limit of 50 characters to detect the language
-    tuple_list = [tup for tup in tuple_list if len(tup[2]) > 50]
+    tuple_list = [tup for tup in tuple_list if len(tup[2]) > len_limit]
     logger.info("Number of signals to detect language: %s", len(tuple_list))
     list_of_tuples = []
     detection_errors = []
@@ -34,7 +34,7 @@ def detect_language(tuple_list: list[tuple],col_names_signals: list[str])->list[
             # logger.info("Detected language: %s - Position: %s", lang, idx)
             tup = tup + (lang,)
             list_of_tuples.append(tup)
-        except Exception as lang_detect_e:  # TODO Add specific exceptio, too broad
+        except Exception as lang_detect_e:  # TODO Add specific exceptions, too broad
             logger.error("Error: %s", lang_detect_e)
             detection_errors.append(lang_detect_e)
             continue
@@ -51,12 +51,9 @@ def group_by_language(detected_langs: list[tuple])->list[tuple]:
     detected_langs_df = pd.DataFrame(detected_langs,
                                      columns=["entity_id", "username", "message_text", "language"])
 
-    grouped_df = detected_langs_df.groupby(['entity_id', 'username'])[
-        'language'].apply(list).reset_index()
-
-    # Leave only unique values on the column language
-    grouped_df['language'] = grouped_df['language'].apply(
-        lambda x: list(set(x)))
+    # Group by entity_id and username and the languages frecuency
+    grouped_df = detected_langs_df.groupby(["entity_id", "username"]).agg({
+        'language': lambda x: x.value_counts().to_dict()}).reset_index()
 
     # Remove rows with empty list on the column language
     grouped_df = grouped_df[grouped_df['language'].map(len) > 0]
@@ -71,7 +68,6 @@ def detect_and_group_by_language(signal_df: pd.DataFrame)->list[tuple]:
     """
     signals_tuple_list = [tuple(x) for x in signal_df.values]
     column_names = signal_df.columns.to_list()
-    print(column_names)
     signals_tuple_list = detect_language(signals_tuple_list,column_names)
     langs_detected_grouped = group_by_language(signals_tuple_list)
     return langs_detected_grouped

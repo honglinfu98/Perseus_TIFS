@@ -3,7 +3,7 @@ Unit tests for process_users_phone_numbers.py
 """
 import pytest
 import pandas as pd
-from profiling_scripts.process_users_phone_numbers import label_countries, create_dict
+from profiling.process_users_phone_numbers import label_countries, create_dict
 
 @pytest.mark.parametrize(
     "dataframe,code_dict,output",

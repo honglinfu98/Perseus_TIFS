@@ -1,10 +1,10 @@
 """Run the scripts to detect the users' characteristics."""
 import logging
 import pandas as pd
-from extraction_scripts.loader import load_cloudburst_user_members_data
-from profiling_scripts.process_users_characters import run_detect_scripts
-from profiling_scripts.process_users_phone_numbers import label_countries, create_dict
-from processing_scripts.merge_users_features import merge_dataframes
+from extraction.loader import load_cloudburst_user_members_data
+from profiling.process_users_characters import run_detect_scripts
+from profiling.process_users_phone_numbers import label_countries, create_dict
+from processing.merge_users_features import merge_dataframes
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()

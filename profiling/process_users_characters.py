@@ -1,6 +1,11 @@
+"""
+This script processes the users characters
+for instance, it detects the scripts of the usernames, first names and last names
+"""
+
 import pandas as pd
 import unicodedata
-from extraction_scripts.loader import load_cloudburst_user_members_data
+from extraction.loader import load_cloudburst_user_members_data
 
 def filter_usernames(users_members: pd.DataFrame) -> pd.DataFrame:
     """

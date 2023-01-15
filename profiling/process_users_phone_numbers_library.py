@@ -4,7 +4,7 @@ with the help of the phonenumbers library
 """
 import phonenumbers as phonenumbers
 import pandas as pd
-from extraction_scripts.loader import load_cloudburst_users_data
+from extraction.loader import load_cloudburst_users_data
 
 def label_countries(users_df: pd.DataFrame):
     """

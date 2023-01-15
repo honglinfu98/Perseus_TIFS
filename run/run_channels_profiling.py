@@ -1,6 +1,6 @@
 import logging
-from extraction_scripts.loader import load_cloudburst_signals
-from profiling_scripts.process_channels_lenguages import detect_and_group_by_language
+from extraction.loader import load_cloudburst_signals
+from profiling.process_channels_lenguages import detect_and_group_by_language
 
 logging.basicConfig(level=logging.INFO)
 logging.basicConfig(level=logging.ERROR)
