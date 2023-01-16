@@ -20,6 +20,7 @@ setup(
         "coverage",
         "phonenumbers",
         "pyvis",
+        "pycountry",
     ],
     extras_require={"dev": ["pylint", "black"]},
 )
