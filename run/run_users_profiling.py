@@ -3,7 +3,7 @@ import logging
 import pandas as pd
 from extraction.loader import load_cloudburst_user_members_data
 from profiling.process_users_characters import run_detect_scripts
-from profiling.process_users_phone_numbers import label_countries, create_dict
+from profiling.process_users_phone_numbers_library import join_phone_number_data
 from processing.merge_users_features import merge_dataframes
 
 logging.basicConfig(level=logging.INFO)
@@ -18,21 +18,16 @@ if __name__ == "__main__":
     scripts_by_character = run_detect_scripts(user_members)
     logger.info("Users' characteristics detected")
 
-    logger.info("Loading phone codes")
-    phone_code_df = pd.read_csv("../support_data/cellphones_code.csv", sep=";")
-    logger.info("Phone codes loaded")
+    logger.info("Processing phone number data")
+    # Label the region of the phone number
+    user_members_phones = join_phone_number_data(user_members)
+    #Filter the columns we want to keep: user_PID, phone_number, region, country
+    user_members_phones_df = pd.DataFrame(user_members_phones, columns=["user_PID", "phone_number", "region", "country"])
+    logger.info("Phone number data processed")
 
-    logger.info("Creating dictionary with phone codes")
-    phone_code_dict = create_dict(phone_code_df, "country", "country_code")
-    logger.info("Dictionary with phone codes created")
-
-    logger.info("Detecting location by users' phone numbers")
-    country_by_phone = label_countries(user_members,phone_code_dict)
-    logger.info("Location by phone numbers detected")
-    
     #Create a list with the dataframes to merge
-    dataframes_to_merge = [scripts_by_character, country_by_phone]
-    
+    dataframes_to_merge = [scripts_by_character, user_members_phones_df]
+
     #Merge the dataframes and return a tuple list and a dataframe
     #on the dataframe we have the columns names
     (users_members_featured_tuple_list,
