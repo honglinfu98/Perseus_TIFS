@@ -6,7 +6,7 @@ import pandas as pd
 import pycountry
 import phonenumbers
 from phonenumbers import geocoder
-from extraction.loader import load_cloudburst_users_data
+from clotho.extraction.loader import load_cloudburst_users_data
 
 def get_region(phone: str) -> str:
     """

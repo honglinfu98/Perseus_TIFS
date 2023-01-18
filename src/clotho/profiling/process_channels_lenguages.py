@@ -5,7 +5,7 @@ on profiling the channels
 import logging
 import pandas as pd
 from langdetect import detect
-from extraction.loader import load_cloudburst_signals
+from clotho.extraction.loader import load_cloudburst_signals
 
 # Call logger
 logger = logging.getLogger()

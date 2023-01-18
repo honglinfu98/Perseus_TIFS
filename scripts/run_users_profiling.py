@@ -1,4 +1,6 @@
-"""Run the scripts to detect the users' characteristics."""
+"""
+This script runs the flowork of the users profiling.
+"""
 import logging
 import pandas as pd
 from clotho.extraction.loader import load_cloudburst_user_members_data
@@ -36,4 +38,3 @@ if __name__ == "__main__":
     user_members_featured_df) = merge_dataframes(dataframes_to_merge)
     logger.info("Dataframes merged")
 
-    
