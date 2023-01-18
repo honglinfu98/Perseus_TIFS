@@ -7,7 +7,8 @@ import pandas as pd
 # Merging all the dataframes by the user_PID, mantaing all the rows from all dataframes
 def merge_dataframes(dataframes: list) -> list[tuple]:
     """
-    This function merges all the dataframes by the user_PID, mantaing all the rows from all dataframes
+    This function merges all the dataframes on a list of dfs by the user_PID
+    and mantaing all the rows from all dataframes.
     :param dataframes: List of dataframes
     :return: Dataframe
     """

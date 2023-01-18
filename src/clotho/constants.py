@@ -2,7 +2,7 @@
 Constants used for this project 
 """
 from os import path
-from clotho_env.settings import PROJECT_ROOT
+from clotho.settings import PROJECT_ROOT
 
 FIGURES_PATH = path.join(PROJECT_ROOT, "figures")
 DATA_PATH = path.join(PROJECT_ROOT, "data")

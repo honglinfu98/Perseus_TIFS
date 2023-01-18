@@ -46,6 +46,7 @@ def join_phone_number_data(users_members_data: pd.DataFrame) -> list[tuple]:
     users_members_data["country"] = users_members_data["phone_number"].apply(get_country)
 
     return users_members_data
+    
 if __name__ == '__main__':
 
     # Calling the users data from cloudburst

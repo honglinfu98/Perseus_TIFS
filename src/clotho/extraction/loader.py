@@ -2,7 +2,9 @@
 This module loads the data from cloudburst tables
 """
 import pandas as pd
-from clotho_env.database_connection import CloudburstDataBaseConnection
+from clotho.extraction.cloudburst_connection import CloudburstDataBaseConnection
+
+# TODO add scrapper user_PID to an ignore list
 
 def load_cloudburst_signals() -> pd.DataFrame:
     """

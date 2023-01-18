@@ -1,10 +1,10 @@
 """Run the scripts to detect the users' characteristics."""
 import logging
 import pandas as pd
-from extraction.loader import load_cloudburst_user_members_data
-from profiling.process_users_characters import run_detect_scripts
-from profiling.process_users_phone_numbers_library import join_phone_number_data
-from processing.merge_users_features import merge_dataframes
+from clotho.extraction.loader import load_cloudburst_user_members_data
+from clotho.profiling.process_users_characters import run_detect_scripts
+from clotho.profiling.process_users_phone_numbers_library import join_phone_number_data
+from clotho.processing.merge_users_features import merge_dataframes
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
@@ -26,9 +26,14 @@ if __name__ == "__main__":
     logger.info("Phone number data processed")
 
     #Create a list with the dataframes to merge
+    logger.info("Creating a list with the dataframes to merge")
     dataframes_to_merge = [scripts_by_character, user_members_phones_df]
+    logger.info("List created")
 
     #Merge the dataframes and return a tuple list and a dataframe
-    #on the dataframe we have the columns names
+    logger.info("Merging dataframes")
     (users_members_featured_tuple_list,
     user_members_featured_df) = merge_dataframes(dataframes_to_merge)
+    logger.info("Dataframes merged")
+
+    

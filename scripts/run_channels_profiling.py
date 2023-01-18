@@ -1,6 +1,6 @@
 import logging
-from extraction.loader import load_cloudburst_signals
-from profiling.process_channels_lenguages import detect_and_group_by_language
+from clotho.extraction.loader import load_cloudburst_signals
+from clotho.profiling.process_channels_lenguages import detect_and_group_by_language
 
 logging.basicConfig(level=logging.INFO)
 logging.basicConfig(level=logging.ERROR)
