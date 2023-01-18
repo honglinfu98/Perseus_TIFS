@@ -9,6 +9,7 @@ from sshtunnel import SSHTunnelForwarder
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
 
+
 class CloudburstDataBaseConnection:
     """
     Class for extracting tables from cloudburst through a SQL query
