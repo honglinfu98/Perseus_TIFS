@@ -63,15 +63,15 @@ export $(cat .env | xargs)
 
 ### Run the channels profiling pipeline:
    
-   ```bash
-   run/run_channels_profiling.py
-   ```
+```bash
+run/run_channels_profiling.py
+```
    
 ### Run the users profiling pipeline:
 
-   ```bash
-   run/run_users_profiling.py
-   ```
+```bash
+run/run_users_profiling.py
+```
 
 ## Testing and Coverage
 

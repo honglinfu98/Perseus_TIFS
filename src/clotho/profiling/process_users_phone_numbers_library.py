@@ -6,7 +6,7 @@ import pandas as pd
 import pycountry
 import phonenumbers
 from phonenumbers import geocoder
-from clotho.extraction.loader import load_cloudburst_users_data
+
 
 def get_region(phone: str) -> str:
     """
@@ -17,7 +17,8 @@ def get_region(phone: str) -> str:
         return geocoder.description_for_number(phone_number, "en")
     except phonenumbers.phonenumberutil.NumberParseException:
         return "Unknown"
-    
+
+
 def get_country(phone: str) -> str:
     """
     This function labels the country of the phone number
@@ -33,21 +34,27 @@ def get_country(phone: str) -> str:
     except phonenumbers.phonenumberutil.NumberParseException:
         return "Unknown"
 
+
 def join_phone_number_data(users_members_data: pd.DataFrame) -> list[tuple]:
     """
     This function joins the phone number data to the user data
     keeping the user_PID column for each user
     """
     # Applying the function to label the country of the phone number
-    users_members_data = users_members_data[users_members_data["phone_number"].apply(lambda x: x is not None)]
+    users_members_data = users_members_data[
+        users_members_data["phone_number"].apply(lambda x: x is not None)
+    ]
     # Label the region of the phone number
     users_members_data["region"] = users_members_data["phone_number"].apply(get_region)
     # Label the country of the phone number
-    users_members_data["country"] = users_members_data["phone_number"].apply(get_country)
+    users_members_data["country"] = users_members_data["phone_number"].apply(
+        get_country
+    )
 
     return users_members_data
-    
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
 
     # Calling the users data from cloudburst
     user_data = load_cloudburst_users_data()

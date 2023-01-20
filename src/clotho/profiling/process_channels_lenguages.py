@@ -2,76 +2,64 @@
 This script is used to process the channels to extract the characteristics for later use
 on profiling the channels
 """
+import pprint
 import logging
-import pandas as pd
 from langdetect import detect
-from clotho.extraction.loader import load_cloudburst_signals
 
 # Call logger
 logger = logging.getLogger()
 
-def detect_language(tuple_list: list[tuple],col_names_signals: list[str], len_limit: int = 50)->list[tuple]:
+
+def detect_language(message: str) -> str:
     """
     This function detects the language of the content of the channels
-    :param tuple_list: List of tuples
-    :param column_names: List of column names
-    :return: List of tuples with the new column language
+    :param message: Message to detect the language
+    :return: Language detected
     """
-    message_position = col_names_signals.index("message_text")
-    entity_id_position = col_names_signals.index("entity_id")
-    name_position = col_names_signals.index("username")
-    # Extrac from the list of tuples the 3 columns that we need
-    tuple_list = [(tup[entity_id_position], tup[name_position], tup[message_position]) for tup in tuple_list]
-    # Langdetect library has a limit of 50 characters to detect the language
-    tuple_list = [tup for tup in tuple_list if len(tup[2]) > len_limit]
-    logger.info("Number of signals to detect language: %s", len(tuple_list))
-    list_of_tuples = []
-    detection_errors = []
-    logger.info("Detecting language...")
-    for idx, tup in enumerate(tuple_list):
-        try:
-            lang = detect(str(tup[2]))
-            # logger.info("Detected language: %s - Position: %s", lang, idx)
-            tup = tup + (lang,)
-            list_of_tuples.append(tup)
-        except Exception as lang_detect_e:  # TODO Add specific exceptions, too broad
-            logger.error("Error: %s", lang_detect_e)
-            detection_errors.append(lang_detect_e)
-            continue
-    logger.error("Number of errors:  %s", len(detection_errors))
-    logger.error("Detection errors:  %s", detection_errors)
-    return list_of_tuples
+    try:
+        lang = detect(str(message))
+    except Exception as lang_detect_e:  # TODO Add specific exceptions, too broad
+        logger.error("Error: %s", lang_detect_e)
+        return None
+    return lang
 
-def group_by_language(detected_langs: list[tuple])->list[tuple]:
+
+def detect_lang_list_dict(messages: list[dict], min_length: int = 50) -> list[dict]:
     """
-    This function groups the channels by the language
-    :param tuple_list: List of tuples
-    :return: Dataframe grouped by the language
+    This function detects the language of the content of the channels
+    :param messages: List of dictionaries with the messages to detect the language
+    :return: List of dictionaries with the messages and the language detected
     """
-    detected_langs_df = pd.DataFrame(detected_langs,
-                                     columns=["entity_id", "username", "message_text", "language"])
+    for idx, message in enumerate(messages):
+        if len(message["message_text"]) > min_length:
+            message["language"] = detect_language(message["message_text"])
 
-    # Group by entity_id and username and the languages frecuency
-    grouped_df = detected_langs_df.groupby(["entity_id", "username"]).agg({
-        'language': lambda x: x.value_counts().to_dict()}).reset_index()
+        if idx % 1000 == 0:
+            logger.info("Messages processed: %s", idx)
 
-    # Remove rows with empty list on the column language
-    grouped_df = grouped_df[grouped_df['language'].map(len) > 0]
-    detected_langs = [tuple(x) for x in grouped_df.values]
-    return detected_langs
+    return messages
 
-def detect_and_group_by_language(signal_df: pd.DataFrame)->list[tuple]:
-    """
-    This function detects the language of the content of the channels and groups by language
-    :param signal_df: Dataframe with the signals
-    :return: Dataframe grouped by the language
-    """
-    signals_tuple_list = [tuple(x) for x in signal_df.values]
-    column_names = signal_df.columns.to_list()
-    signals_tuple_list = detect_language(signals_tuple_list,column_names)
-    langs_detected_grouped = group_by_language(signals_tuple_list)
-    return langs_detected_grouped
 
-if __name__ == '__main__':
-    cloudbusrt_signals_df = load_cloudburst_signals()
-    langs_detected = detect_and_group_by_language(cloudbusrt_signals_df)
+if __name__ == "__main__":
+    messages = [
+        {
+            "entity_id": 1,
+            "message_text": "Hello, I hope you're doing well. How was your day today?",
+        },
+        {
+            "entity_id": 2,
+            "message_text": "Hola, espero que estés bien. ¿Cómo ha sido tu día hoy?",
+        },
+        {
+            "entity_id": 2,
+            "message_text": "Bonjour, j'espère que vous allez bien. Comment s'est passée votre journée aujourd'hui?",
+        },
+        {
+            "entity_id": 1,
+            "message_text": "Hello, I hope you're doing well. How was your day today?",
+        },
+    ]
+
+    messages = detect_lang_list_dict(messages)
+
+    pprint.pprint(messages)
