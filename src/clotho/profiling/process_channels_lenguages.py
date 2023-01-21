@@ -10,29 +10,35 @@ from langdetect import detect
 logger = logging.getLogger()
 
 
-def detect_language(message: str) -> str:
+def detect_language(message: str, min_length: int = 50) -> str:
     """
     This function detects the language of the content of the channels
     :param message: Message to detect the language
     :return: Language detected
     """
     try:
-        lang = detect(str(message))
+
+        if len(message["message_text"]) > min_length:
+            lang = detect(str(message))
+        else:
+            lang = "Too short"
+
+        return lang
+
     except Exception as lang_detect_e:  # TODO Add specific exceptions, too broad
         logger.error("Error: %s", lang_detect_e)
         return None
-    return lang
 
 
-def detect_lang_list_dict(messages: list[dict], min_length: int = 50) -> list[dict]:
+def detect_lang_list_dict(messages: list[dict]) -> list[dict]:
     """
     This function detects the language of the content of the channels
     :param messages: List of dictionaries with the messages to detect the language
     :return: List of dictionaries with the messages and the language detected
     """
     for idx, message in enumerate(messages):
-        if len(message["message_text"]) > min_length:
-            message["language"] = detect_language(message["message_text"])
+
+        message["language"] = detect_language(message["message_text"])
 
         if idx % 1000 == 0:
             logger.info("Messages processed: %s", idx)
