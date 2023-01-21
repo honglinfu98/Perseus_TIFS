@@ -16,18 +16,23 @@ def detect_language(message: str, min_length: int = 50) -> str:
     :param message: Message to detect the language
     :return: Language detected
     """
+
     try:
 
-        if len(message["message_text"]) > min_length:
+        if len(message) > min_length:
+
             lang = detect(str(message))
+
         else:
+
             lang = "Too short"
 
         return lang
 
     except Exception as lang_detect_e:  # TODO Add specific exceptions, too broad
         logger.error("Error: %s", lang_detect_e)
-        return None
+
+        return f"Error: {lang_detect_e}"
 
 
 def detect_lang_list_dict(messages: list[dict]) -> list[dict]:

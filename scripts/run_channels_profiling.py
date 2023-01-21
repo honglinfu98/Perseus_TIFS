@@ -1,15 +1,16 @@
 """
 This script runs the flowork of the channels profiling.
 """
-
 import logging
 from clotho.extraction.loader import load_cloudburst_signals, COLUMNS_NAMES_SIGNALS
 from clotho.pre_processing.create_dict import tuple_to_dict
 from clotho.profiling.process_channels_lenguages import detect_lang_list_dict
 from clotho.profiling.group_by_value_count import group_by_id_value_count
+from clotho.correlations.dict_similarity import measure_similarity
+from clotho.correlations.mix_weights import run_mix_weights
+
 
 logging.basicConfig(level=logging.INFO)
-
 logger = logging.getLogger()
 
 if __name__ == "__main__":
@@ -34,3 +35,11 @@ if __name__ == "__main__":
         cloudburst_signals_featured, "entity_id", "language"
     )
     logger.info("Grouped by entity_id and language")
+
+    logger.info("Measuring similarity...")
+    channels_similarity = measure_similarity(channels_leng_count)
+    logger.info("Similarity measured")
+
+    logger.info("Running mix weights...")
+    channels_mix_weights = run_mix_weights([channels_similarity])
+    logger.info("Mix weights run")
