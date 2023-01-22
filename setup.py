@@ -6,11 +6,14 @@ import pathlib
 from pkg_resources import parse_requirements
 from setuptools import find_packages, setup
 
-# TODO ADD DEV TO SET UP
-# parse requirements as string, compatible with install_requires
 with pathlib.Path("requirements.txt").open() as requirements_txt:
     install_requires = [
         str(requirement) for requirement in parse_requirements(requirements_txt)
+    ]
+
+with pathlib.Path("dev-requirements.txt").open() as dev_requirements_txt:
+    install_requires += [
+        str(requirement) for requirement in parse_requirements(dev_requirements_txt)
     ]
 
 setup(
