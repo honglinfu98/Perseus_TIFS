@@ -26,9 +26,9 @@ class CloudburstDataBaseConnection:
     def fetch_data(
         cls,
         sql_query: str,
-        db_username: str = CLOUDBURST_USERNAME,
-        db_password: str = CLOUDBURST_PASS,
-        db_host: str = CLOUDBURST_HOST,
+        db_username: str | None = CLOUDBURST_USERNAME,
+        db_password: str | None = CLOUDBURST_PASS,
+        db_host: str | None = CLOUDBURST_HOST,
         db_port=25060,
         remote_host="161.35.13.185",
         remote_ssh_port=22,

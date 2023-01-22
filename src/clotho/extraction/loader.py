@@ -21,7 +21,7 @@ QUERY_SIGNALS = (
     "SELECT "
     + ", ".join(COLUMNS_NAMES_SIGNALS)
     + """
-FROM cloudburst_signals WHERE message_text IS NOT NULL
+FROM cloudburst_signals WHERE message_text IS NOT NULL LIMIT 100000
 """
 )
 
@@ -45,6 +45,7 @@ COLUMN_NAMES_CHANNELS = [
     "username",
     "title",
     "entity_type",
+    "last_profile_updated",
 ]
 
 QUERY_CHANNELS = (

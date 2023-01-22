@@ -23,6 +23,6 @@ if __name__ == "__main__":
     cloudburst_channels = tuple_to_dict(cloudburst_channels, keys=COLUMN_NAMES_CHANNELS)
     logger.info("Channels data converted to dictionary")
 
-    logger.info("Saving channels data to csv file...")
-    save_dict(cloudburst_channels, "channels.csv")
-    logger.info("Channels data saved to csv file")
+    # logger.info("Saving channels data to csv file...")
+    # save_dict(cloudburst_channels, "channels_data.csv")
+    # logger.info("Channels data saved to csv file")

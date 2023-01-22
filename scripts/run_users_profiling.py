@@ -9,6 +9,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
 
 if __name__ == "__main__":
+    # Download the users data for users profiling ##############################
     logger.info("Loading users-members")
     user_members = load_cloudburst_users()
     logger.info("Users-members loaded")
@@ -17,6 +18,8 @@ if __name__ == "__main__":
 
     logger.info("Converting to dictionary...")
     user_members_df = tuple_to_dict(user_members, keys=COLUMNS_NAMES_USERS)
+    logger.info("Users-members converted to dictionary")
+    ###########################################################################
 
     logger.info("Detecting users' scripts on username, first_name, last_name")
 

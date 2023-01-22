@@ -40,7 +40,7 @@ def mix_weights(edges: list[dict]) -> list[dict]:
 
 
 # convert a list of dictionaries with certain keys and fields to csv
-def create_csv(data: list[dict]) -> None:
+def create_csv(data: list[dict], file_name: str) -> None:
     """
     Creates a csv file from a list of dictionaries.
     """
@@ -53,34 +53,36 @@ def create_csv(data: list[dict]) -> None:
         }
         for edge in data
     ]
-    with open(path.join(DATA_PATH, "similarity_output.csv"), "w", newline="") as file:
+    with open(path.join(DATA_PATH, file_name), "w", newline="") as file:
         writer = csv.DictWriter(file, fieldnames=data[0].keys())
         writer.writeheader()
         writer.writerows(data)
 
 
-def run_mix_weights(list_to_mix: list[list[dict]]) -> list[dict]:
+def run_mix_weights(list_to_mix: list[list[dict]], file_name: str) -> list[dict]:
     """
     Runs all the functions in this file.
     """
     merged_list_of_dicts = merge_lists(list_to_mix)
     data = mix_weights(merged_list_of_dicts)
-    create_csv(data)
+    create_csv(data, file_name)
     return data
 
 
 if __name__ == "__main__":
 
     input_time = [
-        {"start": "node1", "end": "node2", "weight_msg_time": 10},
-        {"start": "node2", "end": "node3", "weight_msg_time": 10},
+        {"start": "node1", "end": "node2", "weight_time": 10},
+        {"start": "node2", "end": "node3", "weight_time": 10},
     ]
 
     input_lenguage = [
         {"start": "node7", "end": "node2", "weight_language": 6},
-        {"start": "node1", "end": "node3", "weight_language": 6},
+        {"start": "node1", "end": "node2", "weight_language": 6},
     ]
 
-    input_lenght = [{"start": "node4", "end": "node3", "weight_msg_length": 5}]
+    input_lenght = [{"start": "node4", "end": "node3", "weight_length": 5}]
 
-    run_mix_weights([input_time, input_lenguage, input_lenght])
+    from pprint import pprint
+
+    pprint(run_mix_weights([input_time, input_lenguage, input_lenght], "test.csv"))
