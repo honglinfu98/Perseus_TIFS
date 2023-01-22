@@ -48,6 +48,7 @@ if __name__ == "__main__":
     logger.info("Grouped by entity_id and language")
 
     # Remove all the keys 'en' and 'too short' from the dictionary inside lenguages before measuring similarity
+    # TODO move this away to another .py
     def remove_keys(data):
         cleaned_data = []
         for d in data:
