@@ -7,8 +7,7 @@ from clotho.pre_processing.create_dict import tuple_to_dict
 from clotho.profiling.process_channels_lenguages import detect_lang_list_dict
 from clotho.profiling.group_by_value_count import group_by_id_value_count
 from clotho.correlations.dict_similarity import measure_similarity
-from clotho.correlations.mix_weights import run_mix_weights
-
+from clotho.post_processing.mix_weights import run_mix_weights
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
@@ -18,7 +17,8 @@ if __name__ == "__main__":
     logger.info("Loading cloudburst signals...")
     cloudburst_signals = load_cloudburst_signals()
     logger.info("Cloudburst signals loaded")
-    logger.info("Number of signals: %s", len(cloudburst_signals))
+
+    logger.info("Number of signals extracted: %s", len(cloudburst_signals))
 
     logger.info("Converting to dictionary...")
     cloudburst_signals_df = tuple_to_dict(
