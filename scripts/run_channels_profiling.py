@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
 
 if __name__ == "__main__":
-
+    # Download the signals data for channels profiling #######################
     logger.info("Loading cloudburst signals...")
     cloudburst_signals = load_cloudburst_signals()
     logger.info("Cloudburst signals loaded")
@@ -25,21 +25,32 @@ if __name__ == "__main__":
         cloudburst_signals, keys=COLUMNS_NAMES_SIGNALS
     )
     logger.info("Cloudburst signals converted to dictionary")
+    ###########################################################################
 
+    # Correlate signals time #################################################
+    logger.info("Correlating signals time...")
+    ### ADD CODE HERE ###
+    logger.info("Signals time correlated")
+    ###########################################################################
+
+    # Detect languages #########################################################
     logger.info("Detecting languages...")
     cloudburst_signals_featured = detect_lang_list_dict(cloudburst_signals_df)
     logger.info("Languages detected")
 
     logger.info("Grouping by entity_id and language...")
-    channels_leng_count = group_by_id_value_count(
+    channels_lang_count = group_by_id_value_count(
         cloudburst_signals_featured, "entity_id", "language"
     )
     logger.info("Grouped by entity_id and language")
 
     logger.info("Measuring similarity...")
-    channels_similarity = measure_similarity(channels_leng_count)
+    channels_similarity = measure_similarity(channels_lang_count)
     logger.info("Similarity measured")
+    ###########################################################################
 
+    # Mix weights for neo4j ##########################################################
     logger.info("Running mix weights...")
     channels_mix_weights = run_mix_weights([channels_similarity])
     logger.info("Mix weights run")
+    #################################################################################
