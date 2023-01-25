@@ -2,9 +2,27 @@
 This module contains the functions to extract the urls, accounts and hashtags from the bio of each user
 """
 import re
-import pycountry
+import unicodedata
 from urllib.parse import urlparse
-from clotho.profiling.process_users_characters import detect_script_on_characters
+
+
+def get_script(string: str) -> list[str]:
+    """
+    This function detects the scripts of a string
+    :param string: String to detect the scripts
+    :return: List of scripts detected
+    """
+    scripts_detected = []
+    try:
+        for character in string:
+            name = unicodedata.name(character)
+            # If the first word in the name is on known_scripts, replace name with it
+            name = name.split(sep=" ")[0]
+            scripts_detected.append(name)
+        # Return the non repeated scripts
+        return list(set(scripts_detected))
+    except (ValueError, TypeError):
+        return scripts_detected
 
 
 def extract_urls(string: str) -> list[str]:
@@ -14,10 +32,15 @@ def extract_urls(string: str) -> list[str]:
     :return: List of urls extracted
     """
     try:
-        return re.findall(
+        urls = re.findall(
             r"(?:(?:https?|ftp):\/\/)?[\w/\-?=%.]+(?<!\.)(?<!\.)\.[\w/\-?=%.]+(?<!\.)",
             string,
         )
+
+        pattern = re.compile(
+            r"(?:(?:https?|ftp):\/\/)?[\w/\-?=%.]+[a-zA-Z]{2,}\.[\w/\-?=%.]+(?<!\.)"
+        )
+        return [url for url in urls if pattern.match(url)]
     except TypeError:
         return []
 
@@ -74,7 +97,7 @@ def extract_domain(url: str) -> str:
     return parsed_url.netloc
 
 
-def extract_phone_numbers(string: str) -> list[str]:
+def get_possible_phone_numbers(string: str) -> list[str]:
     """
     Extracts the phone numbers of a string
     :param string: String to extract the phone numbers
@@ -86,41 +109,16 @@ def extract_phone_numbers(string: str) -> list[str]:
         return []
 
 
-def append_phone_numbers(data: list[dict], key: str) -> list[dict]:
-    """
-    Appends the phone numbers to the data to the key = phone_number, don't overwrite
-    if the key is not present, we will create it
-    :param data: List of users
-    :return: List of users with the phone number appended
-    """
-    for user in data:
-        if "phone_number_extracted" in user:
-            if (
-                user["phone_number_extracted"] is None
-                or user["phone_number_extracted"] == []
-            ):
-                user["phone_number_extracted"] = []
-            else:
-                if not isinstance(user["phone_number_extracted"], list):
-                    user["phone_number_extracted"] = [user["phone_number_extracted"]]
-            extracted_phone_numbers = extract_phone_numbers(user[key])
-            user["phone_number_extracted"] += extracted_phone_numbers
-        else:
-            user["phone_number_extracted"] = extract_phone_numbers(user[key])
-    return data
-
-
 def extract_features(data: list[dict], key_list: list[str]) -> list[dict]:
     """
-    Extracts the urls, accounts, hashtags, domains, script, and phone numbers from the bio of each user
-    :param data: List of users
-    :return: List of users with the urls, accounts, hashtags, domains, script, and phone numbers extracted
+    Extracts the urls, accounts, hashtags, script, phone numbers, and email addresses from the keys in the key_list
+    :return: List dictionaries from the users with the urls, accounts, hashtags,
+    script, phone numbers, and email addresses appended
     """
     check_list = [
         "urls",
         "accounts",
         "hashtags",
-        "domains",
         "script",
         "phone_numbers",
         "emails_adresses",
@@ -131,21 +129,24 @@ def extract_features(data: list[dict], key_list: list[str]) -> list[dict]:
             # check if the key already exists in the user dictionary
             if any(key in user for key in check_list):
                 user["urls"] += extract_urls(user[k])
+                user["domains"] += [extract_domain(url) for url in user["urls"]]
                 user["accounts"] += get_accounts(user[k])
                 user["hashtags"] += get_hashtags(user[k])
-                user["domains"] += [extract_domain(url) for url in user["urls"]]
-                user["script"] += detect_script_on_characters(user[k])
+                user["script"] += get_script(user[k])
+                user["phone_number_extracted"] += get_possible_phone_numbers(user[k])
                 user["emails_adresses"] += get_email(user[k])
             else:
                 user["urls"] = extract_urls(user[k])
+                user["domains"] = [extract_domain(url) for url in user["urls"]]
                 user["accounts"] = get_accounts(user[k])
                 user["hashtags"] = get_hashtags(user[k])
-                user["domains"] = [extract_domain(url) for url in user["urls"]]
-                user["script"] = detect_script_on_characters(user[k])
+                user["script"] = get_script(user[k])
+                user["phone_number_extracted"] = get_possible_phone_numbers(user[k])
                 user["emails_adresses"] = get_email(user[k])
 
-        data = append_phone_numbers(data, k)
-
+    # Clean the list from the key script from duplicates
+    for user in data:
+        user["script"] = list(set(user["script"]))
     return data
 
 
@@ -174,7 +175,10 @@ if __name__ == "__main__":
         {"pid": 31, "bio": "fghj"},
         {"pid": 32, "bio": "fb.com/ahmed.ahmed.507"},
         {"pid": 33, "bio": "تعاملاتي : @repsReal_orez اكثر من 550 تقيم"},
-        {"pid": 34, "bio": "www.instagram.com/ahmed_ahmed_507 sandiasndiands"},
+        {
+            "pid": 34,
+            "bio": "www.instagram.com/ahmed_ahmed_507 sandiasndiands somtheing@some.as",
+        },
         {"pid": 35, "bio": "تعاملاتي : @repsReal_orez اكثر من 550 تقيم"},
         {"pid": 36, "bio": None},
         {"pid": 37, "bio": ""},
