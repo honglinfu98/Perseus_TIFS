@@ -21,7 +21,7 @@ QUERY_SIGNALS = (
     "SELECT "
     + ", ".join(COLUMNS_NAMES_SIGNALS)
     + """
-FROM cloudburst_signals WHERE message_text IS NOT NULL LIMIT 100000
+FROM cloudburst_signals WHERE message_text IS NOT NULL
 """
 )
 
@@ -81,6 +81,7 @@ COLUMNS_NAMES_USERS = [
     "updated_at",
     "bot",
     "premium",
+    "bio",
     "last_online_at",
 ]
 

@@ -2,24 +2,7 @@
 This script processes the users characters
 for instance, it detects the scripts of the usernames, first names and last names
 """
-
-import pandas as pd
 import unicodedata
-
-
-def filter_usernames(users_members: pd.DataFrame) -> pd.DataFrame:
-    """
-    This function filters the usernames, first names and last names of the users
-    :param users_members: Merged dataframe
-    :return: Dataframe with the usernames, first names and last names
-    """
-    users_members_characters = users_members[
-        ["user_PID", "username", "first_name", "last_name"]
-    ]
-    return users_members_characters
-
-
-# Scripts in unicode: "Arabic", "Cyrillic", "Greek", "Hebrew", "Japanese", "Korean", "Latin", "Thai"
 
 
 def detect_script_on_characters(string: str) -> list[str]:
@@ -41,43 +24,61 @@ def detect_script_on_characters(string: str) -> list[str]:
         return scripts_detected
 
 
-def detect_scripts(users_members_characters: pd.DataFrame) -> pd.DataFrame:
+def detect_scripts(data: list[dict], script_keys: list[str]) -> list[dict]:
     """
-    This function detects the scripts of the usernames, first names and last names
-    and append to a new column
-    :param users_members_characters: Dataframe with the usernames, first names and last names
-    :return: Dataframe with the usernames, first names, last names and the scripts detected
+    This function filters the data by the keys specified and detects the scripts of the values of the keys specified
+    :param data: List of dictionaries to filter and detect scripts on
+    :param script_keys: List of keys to detect scripts on
+    :return: List of dictionaries with the data and the added "scripts" key
     """
-    users_members_characters["username_scripts"] = users_members_characters[
-        "username"
-    ].apply(detect_script_on_characters)
-    users_members_characters["first_name_scripts"] = users_members_characters[
-        "first_name"
-    ].apply(detect_script_on_characters)
-    users_members_characters["last_name_scripts"] = users_members_characters[
-        "last_name"
-    ].apply(detect_script_on_characters)
-    # Merge the scripts detected in one column
-    users_members_characters["scripts"] = (
-        users_members_characters["username_scripts"]
-        + users_members_characters["first_name_scripts"]
-        + users_members_characters["last_name_scripts"]
-    )
-    # Remove the repeated scripts
-    users_members_characters["scripts"] = users_members_characters["scripts"].apply(
-        lambda x: list(set(x))
-    )
-    # Delete the first three columns created
-    users_members_characters = users_members_characters.drop(
-        columns=["username_scripts", "first_name_scripts", "last_name_scripts"]
-    )
-    return users_members_characters
+    # Create a new list to store the filtered data
+    filtered_data = []
+    # Check key by key if their are empty or has None value and detect the scripts on the all the keys with values
+    for row in data:
+        scripts = {}
+        for key in script_keys:
+            if row[key] is None or row[key] == "":
+                continue
+            else:
+                scripts[key] = detect_script_on_characters(row[key])
+        row["scripts"] = scripts
+        # Transform the dictionary from scripts to a single list of scripts
+        row["scripts"] = list(
+            set([script for key in row["scripts"] for script in row["scripts"][key]])
+        )
+        filtered_data.append(row)
+
+    return filtered_data
 
 
-def run_detect_scripts(members_users: pd.DataFrame) -> pd.DataFrame:
-    """
-    This function runs the detect_scripts function
-    """
-    users_members_characters = filter_usernames(members_users)
-    users_members_detected_scripts = detect_scripts(users_members_characters)
-    return users_members_detected_scripts
+if __name__ == "__main__":
+    # Example usage:
+    data = [
+        {
+            "user_PID": "1",
+            "username": "بالعالم",
+            "first_name": "باعالم",
+            "last_name": "last_name2",
+        },
+        {
+            "user_PID": "2",
+            "username": "你好",
+            "first_name": "first_name2",
+            "last_name": "last_name2",
+        },
+        {
+            "user_PID": "3",
+            "username": "username3",
+            "first_name": "first_name3",
+            "last_name": "",
+        },
+        {
+            "user_PID": "4",
+            "username": None,
+            "first_name": None,
+            "last_name": None,
+        },
+    ]
+    filter_keys = ["username", "first_name", "last_name"]
+    script_keys = ["username", "first_name", "last_name"]
+    users_data_with_scripts = detect_scripts(data, script_keys)
