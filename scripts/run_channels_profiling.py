@@ -6,6 +6,7 @@ from clotho.extraction.loader import load_cloudburst_signals, COLUMNS_NAMES_SIGN
 from clotho.pre_processing.create_dict import tuple_to_dict
 from clotho.profiling.process_channels_lenguages import detect_lang_list_dict
 from clotho.post_processing.group_by_value_count import group_by_id_value_count
+from clotho.post_processing.clean_keys import clean_keys
 from clotho.correlations.dict_similarity import measure_similarity
 from clotho.correlations.correlate_times import round_and_correlate
 from clotho.post_processing.mix_weights import run_mix_weights
@@ -52,26 +53,16 @@ if __name__ == "__main__":
     ###########################################################################
 
     # TODO ADD TIME_PUMP CORRELATION SPECIFICALLY #############################
+    # SEE HOW TO DO IT WITH THE CORRELATE_TIMES FUNCTION
+    ###########################################################################
 
     # Measure similarity on languages #########################################
-
-    # Remove all the keys 'en' and 'too short' from the dictionary inside lenguages before measuring similarity
-    # TODO move this away to another .py
-    def remove_keys(data):
-        cleaned_data = []
-        for d in data:
-            if "language" in d:
-                if "en" in d["language"]:
-                    del d["language"]["en"]
-                if "Too short" in d["language"]:
-                    del d["language"]["Too short"]
-                if d["language"]:
-                    cleaned_data.append(d)
-        return cleaned_data
-
-    channels_lang_count_clean = remove_keys(channels_lang_count)
-
+    logger.info("Cleaning keys...")
+    channels_lang_count_clean = clean_keys(
+        channels_lang_count, "language", ["en", "Too short"]
+    )
     logger.info("Measuring similarity...")
+    # TODO CALIBRATE SIMILARITY THE WEIGHTS ARE NOT GOOD YET
     channels_similarity = measure_similarity(channels_lang_count_clean)
     logger.info("Similarity measured")
     ###########################################################################
