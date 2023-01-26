@@ -35,8 +35,11 @@ def calculate_similarity(language1: dict[str, int], language2: dict[str, int]) -
     set1 = set(language1.keys())
     set2 = set(language2.keys())
     # TODO Check how to include the count on the correlation
-    jaccard = len(set1.intersection(set2)) / len(set1.union(set2))
-    return jaccard
+    try:
+        jaccard = len(set1.intersection(set2)) / len(set1.union(set2))
+        return jaccard
+    except ZeroDivisionError:
+        return 0.0
 
 
 if __name__ == "__main__":

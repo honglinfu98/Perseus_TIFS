@@ -42,6 +42,8 @@ if __name__ == "__main__":
     cloudburst_signals_featured = detect_lang_list_dict(cloudburst_signals_df)
     logger.info("Languages detected")
 
+    # Clean languages ##########################################################
+
     logger.info("Grouping by entity_id and language...")
     channels_lang_count = group_by_id_value_count(
         cloudburst_signals_featured, "entity_id", "language"
@@ -57,12 +59,15 @@ if __name__ == "__main__":
     ###########################################################################
 
     # Measure similarity on languages #########################################
+
+    # Clean keys ##############################################################
     logger.info("Cleaning keys...")
     channels_lang_count_clean = clean_keys(
         channels_lang_count, "language", ["en", "Too short"]
     )
-    logger.info("Measuring similarity...")
+
     # TODO CALIBRATE SIMILARITY THE WEIGHTS ARE NOT GOOD YET
+    logger.info("Measuring similarity...")
     channels_similarity = measure_similarity(channels_lang_count_clean)
     logger.info("Similarity measured")
     ###########################################################################
