@@ -1,7 +1,8 @@
 """
 Unit tests for process_users_phonenumbers_library.py
 """
-from profiling.process_users_phone_numbers_library import get_region, get_country
+from clotho.profiling.extract_phonenumbers_data import get_region, get_country
+
 
 def test_get_region():
     """
@@ -17,6 +18,7 @@ def test_get_region():
     assert get_region("999025550176") == "Unknown"
     print(get_country("None"))
     assert get_country("None") == "Unknown"
+
 
 def test_get_country():
     """

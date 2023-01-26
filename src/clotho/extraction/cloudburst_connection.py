@@ -1,49 +1,49 @@
 """
 Script for connecting with cloudburst database
 """
-import logging
-import os
 import psycopg2
 from sshtunnel import SSHTunnelForwarder
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger()
+from clotho.config import (
+    CLOUDBURST_HOST,
+    CLOUDBURST_USERNAME,
+    CLOUDBURST_PASS,
+    SSH_PKEY,
+    SSH_PRIVATE_KEY_PASSWORD,
+)
+
 
 class CloudburstDataBaseConnection:
     """
     Class for extracting tables from cloudburst through a SQL query
     """
 
-    def __init__(self, sql_query: str, table_name: str):
+    def __init__(self, sql_query: str, table_name: str) -> None:
         self.sql_query = sql_query
         self.table_name = table_name
 
     @classmethod
     def fetch_data(
         cls,
-        sql_query,
-        ssh_private_key_password: str = "",
-        ssh_pkey: str = os.environ.get("SSH_PKEY").rstrip("\r"),
-        db_username: str = os.environ.get("DB_USERNAME").rstrip("\r"),
-        db_password: str = os.environ.get("DB_PASS").rstrip("\r"),
-        db_host="cloudburst-db-do-user-11945868-0.b.db.ondigitalocean.com",
+        sql_query: str,
+        db_username: str | None = CLOUDBURST_USERNAME,
+        db_password: str | None = CLOUDBURST_PASS,
+        db_host: str | None = CLOUDBURST_HOST,
         db_port=25060,
         remote_host="161.35.13.185",
         remote_ssh_port=22,
         remote_username="root",
-    ):
+    ) -> list[tuple]:
         """
         Establish connection with cloudburst database
         """
         with SSHTunnelForwarder(
             (remote_host, remote_ssh_port),
             ssh_username=remote_username,
-            ssh_pkey=ssh_pkey,
-            ssh_private_key_password=ssh_private_key_password,
             remote_bind_address=(db_host, db_port),
+            ssh_pkey=SSH_PKEY,
+            ssh_private_key_password=SSH_PRIVATE_KEY_PASSWORD,
         ) as ssh_tunnel:
-            logger.info("SSH tunnel connected")
-
             try:
                 conn = psycopg2.connect(
                     host="localhost",

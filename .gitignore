@@ -130,11 +130,8 @@ dmypy.json
 
 #Big files
 /**/*.DS_Store
+.vscode/
 
 #Playground
 development/
 data/
-scores_scripts/*.csv
-data2/
-ploting_scripts/plots/*
-bayesian_vs_mixed_effect/
