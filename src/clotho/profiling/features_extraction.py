@@ -1,5 +1,14 @@
 """
-This module contains the functions to extract the urls, accounts and hashtags from the bio of each user
+This module contains the functions to extract features from the users data
+it request for the keys to process and the users data.
+It returns the users data with the features extracted:
+    - urls
+    - accounts
+    - hashtags
+    - domains
+    - script
+    - phone_numbers
+    - emails_adresses
 """
 import re
 import unicodedata
@@ -152,7 +161,7 @@ def extract_features(data: list[dict], key_list: list[str]) -> list[dict]:
 
 if __name__ == "__main__":
 
-    dict = [
+    test_data = [
         {"pid": 1, "bio": "Blockchain is the Future"},
         {"pid": 2, "bio": "أول منصة عراقية للعملات الرقمية | @nakhlexchange"},
         {"pid": 3, "bio": "Nothing."},
@@ -186,4 +195,4 @@ if __name__ == "__main__":
 
     from pprint import pprint
 
-    pprint(extract_features(dict, ["bio"]))
+    pprint(extract_features(test_data, ["bio"]))

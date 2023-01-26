@@ -5,7 +5,7 @@ import logging
 from clotho.extraction.loader import load_cloudburst_signals, COLUMNS_NAMES_SIGNALS
 from clotho.pre_processing.create_dict import tuple_to_dict
 from clotho.profiling.process_channels_lenguages import detect_lang_list_dict
-from clotho.profiling.group_by_value_count import group_by_id_value_count
+from clotho.post_processing.group_by_value_count import group_by_id_value_count
 from clotho.correlations.dict_similarity import measure_similarity
 from clotho.correlations.correlate_times import round_and_correlate
 from clotho.post_processing.mix_weights import run_mix_weights
@@ -46,6 +46,14 @@ if __name__ == "__main__":
         cloudburst_signals_featured, "entity_id", "language"
     )
     logger.info("Grouped by entity_id and language")
+
+    ###########################################################################
+    # Correlations ############################################################
+    ###########################################################################
+
+    # TODO ADD TIME_PUMP CORRELATION SPECIFICALLY #############################
+
+    # Measure similarity on languages #########################################
 
     # Remove all the keys 'en' and 'too short' from the dictionary inside lenguages before measuring similarity
     # TODO move this away to another .py

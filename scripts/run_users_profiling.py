@@ -4,9 +4,10 @@ This script runs the flowork of the users profiling.
 import logging
 from clotho.extraction.loader import load_cloudburst_users, COLUMNS_NAMES_USERS
 from clotho.pre_processing.create_dict import tuple_to_dict
-
-# from clotho.profiling.process_users_characters import detect_scripts
 from clotho.profiling.features_extraction import extract_features
+from clotho.profiling.process_users_phone_numbers_library import (
+    extract_data_phonenumber,
+)
 
 # from clotho.profiling.process_users_bio import
 
@@ -14,18 +15,19 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
 
 if __name__ == "__main__":
-    # Download the users data for users profiling ##############################
+    # Download the users data for users profiling ############################
     logger.info("Loading users")
     users_data = load_cloudburst_users()
     logger.info("Users loaded")
-
     logger.info("Number of users extracted: %s", len(users_data))
 
+    # Convert to dictionary ##################################################
     logger.info("Converting to dictionary...")
     users_data_dict = tuple_to_dict(users_data, keys=COLUMNS_NAMES_USERS)
     logger.info("Users converted to dictionary")
+    ###########################################################################
 
-    # Extract features from: username, first_name, last_name, bio ###############
+    # Extract features from: username, first_name, last_name, bio #############
     logger.info("Extracting features from: username, first_name, last_name, bio")
     script_keys_to_process = ["username", "first_name", "last_name", "bio"]
     # We will extract the features from the keys in the script_keys_to_process list
@@ -34,16 +36,17 @@ if __name__ == "__main__":
     logger.info("Features extracted")
     ###########################################################################
 
-
-
-
-
-
-
-
+    # Extract phone numbers data###############################################
+    logger.info("Extracting phone numbers data")
+    users_data_featured = extract_data_phonenumber(
+        users_data_featured, "phone_number", "phone_number_extracted"
+    )
+    logger.info("Phone numbers data extracted")
+    ###########################################################################
 
     ###########################################################################
-    #Checking of the results ##################################################
+    ###########################################################################
+    # Checking of the results #################################################
     # Filters #################################################################
     filt_users_phones = []
     for user in users_data_featured:
@@ -149,3 +152,17 @@ if __name__ == "__main__":
         if any("CYRILLIC" in s for s in user["script"]):
             filt_users_russian.append(user)
     pprint(filt_users_russian[0:1])
+
+    # From filt_phone_numbers_list to filter a dict with only the keys that we want
+
+    keys_list = [
+        "username",
+        "first_name",
+        "last_name",
+        "bio",
+        "phone_number",
+        "phone_number_extracted",
+    ]
+    filt_users_phones = [
+        {k: v for k, v in user.items() if k in keys_list} for user in filt_users_phones
+    ]
