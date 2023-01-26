@@ -5,7 +5,7 @@ import logging
 from clotho.extraction.loader import load_cloudburst_users, COLUMNS_NAMES_USERS
 from clotho.pre_processing.create_dict import tuple_to_dict
 from clotho.profiling.features_extraction import extract_features
-from clotho.profiling.process_users_phone_numbers_library import (
+from clotho.profiling.extract_phonenumbers_data import (
     extract_data_phonenumber,
 )
 

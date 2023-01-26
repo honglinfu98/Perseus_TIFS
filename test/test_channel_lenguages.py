@@ -3,7 +3,7 @@ Unit tests for process_users_phone_numbers.py
 """
 import pytest
 import pandas as pd
-from clotho.profiling.process_channels_lenguages import detect_and_group_by_language
+from clotho.profiling.process_lenguages import detect_and_group_by_language
 
 # df -> Columns on input: channel_id, name, message_text
 # list[tuples] -> Columns on output: channel_id, name, languages
