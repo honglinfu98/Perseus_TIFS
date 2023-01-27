@@ -2,6 +2,9 @@
 Unit tests for process_users_phonenumbers_library.py
 """
 from clotho.profiling.extract_phonenumbers_data import get_region, get_country
+import sys
+
+sys.path.append("..")
 
 
 def test_get_region():

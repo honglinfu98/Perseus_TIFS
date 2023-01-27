@@ -4,6 +4,10 @@ Test the process_lenguages.py module
 
 from clotho.profiling.process_lenguages import detect_language, detect_lang_list_dict
 
+import sys
+
+sys.path.append("..")
+
 
 def test_detect_language():
     """

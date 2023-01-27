@@ -10,6 +10,9 @@ from clotho.profiling.features_extraction import (
     extract_urls,
     extract_domain,
 )
+import sys
+
+sys.path.append("..")
 
 
 def test_get_script():
