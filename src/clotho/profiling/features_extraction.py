@@ -37,6 +37,7 @@ def get_script(string: str) -> list[str]:
 def extract_urls(string: str) -> list[str]:
     """
     Extracts the urls of a string
+    And polish the urls extraction with regex
     :param string: String to extract the urls
     :return: List of urls extracted
     """
@@ -46,10 +47,16 @@ def extract_urls(string: str) -> list[str]:
             string,
         )
 
-        pattern = re.compile(
-            r"(?:(?:https?|ftp):\/\/)?[\w/\-?=%.]+[a-zA-Z]{2,}\.[\w/\-?=%.]+(?<!\.)"
-        )
-        return [url for url in urls if pattern.match(url)]
+        # Another step regex to avoid extraction when there is a only on character before the dot
+        urls = [url for url in urls if not re.match(r"\.[a-z]", url)]
+
+        # Another step regex to avoid extraction when there is an @ before the first dot
+        urls = [url for url in urls if not re.match(r".*@.*\..*", url)]
+
+        # Another step regex to avoid extraction when there is cases like ".a..b..c.""
+        urls = [url for url in urls if not re.match(r".*\..*\..*\.*", url)]
+
+        return urls
     except TypeError:
         return []
 
@@ -70,15 +77,11 @@ def get_email(string: str) -> list[str]:
     """
     Extracts the email of a string
     :param string: String to extract the email
-    :return: List of email extracted
+    :return: List of all the emails extracted
     """
     try:
-        return [
-            word
-            for word in string.split()
-            if re.match("^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$", word)
-        ]
-    except AttributeError:
+        return re.findall(r"[a-z0-9\.\-+_]+@[a-z0-9\.\-+_]+\.[a-z]+", string)
+    except TypeError:
         return []
 
 
@@ -113,7 +116,7 @@ def get_possible_phone_numbers(string: str) -> list[str]:
     :return: List of phone numbers extracted
     """
     try:
-        return re.findall(r"\+?[0-9]{10,}", string)
+        return re.findall(r"\+?[0-9]{7,}", string)
     except TypeError:
         return []
 

@@ -65,6 +65,7 @@ if __name__ == "__main__":
     channels_lang_count_clean = clean_keys(
         channels_lang_count, "language", ["en", "Too short"]
     )
+    ###########################################################################
 
     # TODO CALIBRATE SIMILARITY THE WEIGHTS ARE NOT GOOD YET
     logger.info("Measuring similarity...")
