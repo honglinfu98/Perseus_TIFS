@@ -44,11 +44,10 @@ jobs:
       - name: Create virtual environment
         run: |
           python -m venv env
-          which python
 
       - name: Activate virtual environment
         run: |
-          source /opt/hostedtoolcache/Python/3.10.9/x64/bin/activate
+          .venv/bin/activate
 
       - name: Install dependencies
         run: |
