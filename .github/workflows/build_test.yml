@@ -47,7 +47,7 @@ jobs:
 
       - name: Activate virtual environment
         run: |
-          env\Scripts\activate
+          source venv/Scripts/activate
 
       - name: Install dependencies
         run: |
