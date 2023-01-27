@@ -1,7 +1,4 @@
-on:
-  push:
-    branches:
-    - fran/unit_testing
+on: [push]
 
 jobs:
   build:
