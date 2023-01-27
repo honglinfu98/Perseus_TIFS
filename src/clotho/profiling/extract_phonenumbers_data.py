@@ -2,7 +2,6 @@
 This script processes the phone numbers of the users
 with the help of the phonenumbers library
 """
-import pandas as pd
 import pycountry
 import phonenumbers
 from phonenumbers import geocoder
