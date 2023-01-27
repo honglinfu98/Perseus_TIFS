@@ -41,24 +41,26 @@ jobs:
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-      - name: Create virtual environment
-        run: |
-          python -m venv env
+      - name: Run test
+          python3 -m pytest src/clotho/tests/ --cov clotho --cov-branch
 
-      - name: Activate virtual environment
-        run: |
-          . venv/bin/activate
+      # coverage badge
+      - name: Coverage Badge
+        uses: tj-actions/coverage-badge-py@v1.8
 
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          pip install -r dev-requirements.txt
+      - name: Verify Changed files
+        uses: tj-actions/verify-changed-files@v9
+        id: changed_files
+        with:
+          files: coverage.svg
 
-      - name: Run tests
+      - name: Commit files
+        if: steps.changed_files.outputs.files_changed == 'true'
         run: |
-          pytest
-          coverage run -m pytest
-          coverage report
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add coverage.svg
+          git commit -m "Updated coverage.svg"
 
       - name: Security test with bandit
         run: |
