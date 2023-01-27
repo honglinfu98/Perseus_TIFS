@@ -48,7 +48,7 @@ jobs:
 
       - name: Activate virtual environment
         run: |
-          source venv/bin/activate
+          source /opt/hostedtoolcache/Python/3.10.9/x64/bin/activate
 
       - name: Install dependencies
         run: |
