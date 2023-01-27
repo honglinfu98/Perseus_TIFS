@@ -1,7 +1,6 @@
 on:
   push:
     branches:
-    # - main
     - fran/unit_testing
 
 jobs:
@@ -44,7 +43,6 @@ jobs:
       - name: Run test
           python3 -m pytest src/clotho/tests/ --cov clotho --cov-branch
 
-      # coverage badge
       - name: Coverage Badge
         uses: tj-actions/coverage-badge-py@v1.8
 
