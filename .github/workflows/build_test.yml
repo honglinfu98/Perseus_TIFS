@@ -32,7 +32,7 @@ jobs:
       - name: Add root directory to PYTHONPATH
         run: |
           export PYTHONPATH=$PYTHONPATH:$PWD
-
+          python print PYTHONPATH
       - name: Lint with flake8
         run: |
           # stop the build if there are Python syntax errors or undefined names
