@@ -47,7 +47,7 @@ jobs:
 
       - name: Activate virtual environment
         run: |
-          .venv/bin/activate
+          . venv/bin/activate
 
       - name: Install dependencies
         run: |
