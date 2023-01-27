@@ -9,7 +9,8 @@ jobs:
       matrix:
         python-version: ["3.10"]
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v2
       
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
@@ -26,7 +27,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install flake8 pytest
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          if [ -f dev-requirements.txt ]; then pip install -r dev-requirements.txt; fi
+          if [ -f dev-requirements.txt ];then pip install -r dev-requirements.txt; fi
 
       - name: Add root directory to PYTHONPATH
         run: |
@@ -40,7 +41,7 @@ jobs:
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
       - name: Run test
-          python3 -m pytest src/clotho/tests/ --cov clotho --cov-branch
+        run: python3 -m pytest src/clotho/tests/ --cov clotho --cov-branch
 
       - name: Security test with bandit
         run: |
