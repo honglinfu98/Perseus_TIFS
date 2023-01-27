@@ -2,8 +2,7 @@ bandit
 black==22.12.0
 flake8==6.0.0
 jupyter
-pre-commit==2.20.0
+pre-commit==3.0.0
 
 pytest
 pytest-cov
-pytest-asyncio
