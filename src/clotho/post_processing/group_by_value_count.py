@@ -14,6 +14,12 @@ def group_by_id_value_count(
     [{"entity_id": channel1 , "key_to_value_count":{key_to_value_count1: count, key_to_value_count2: count, ...}},
     {"entity_id": channel2 , "key_to_value_count":{key_to_value_count2: count, key_to_value_count2: count, ...}},]
     """
+    # if the key_to_value_count is a list, convert it to a string
+    if isinstance(data_for_process[0][key_to_value_count], list):
+        data_for_process = [
+            dict((k, ", ".join(v)) if k == "language" else (k, v) for k, v in d.items())
+            for d in data_for_process
+        ]
     # Create a dictionary with the entity_id as key and the value is a dictionary with the languages as keys and the count as values
     entity_langs = {}
     for data in data_for_process:
@@ -35,11 +41,11 @@ def group_by_id_value_count(
 if __name__ == "__main__":
     # Test the function
     messages = [
-        {"entity_id": "channel1", "language": "en"},
-        {"entity_id": "channel1", "language": "fr"},
-        {"entity_id": "channel1", "language": "es"},
-        {"entity_id": "channel1", "language": "en"},
-        {"entity_id": "channel2", "language": "es"},
+        {"entity_id": "channel1", "language": ["en"]},
+        {"entity_id": "channel1", "language": ["fr"]},
+        {"entity_id": "channel1", "language": ["es"]},
+        {"entity_id": "channel1", "language": ["en"]},
+        {"entity_id": "channel2", "language": ["es"]},
     ]
     import pprint
 

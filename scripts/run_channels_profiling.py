@@ -39,7 +39,9 @@ if __name__ == "__main__":
 
     # Detect languages #########################################################
     logger.info("Detecting languages...")
-    cloudburst_signals_featured = detect_lang_list_dict(cloudburst_signals_df)
+    cloudburst_signals_featured = detect_lang_list_dict(
+        cloudburst_signals_df, ["message_text"]
+    )
     logger.info("Languages detected")
 
     # Clean languages ##########################################################
