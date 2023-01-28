@@ -17,9 +17,13 @@ def round_time(time: datetime.datetime, round_to: int = 60) -> datetime.datetime
     :param round_to: Closest number of seconds to round to, default 1 minute
     :return: The rounded time
     """
-    seconds = (time - time.min).seconds
-    rounding = (seconds + round_to / 2) // round_to * round_to
-    return time + datetime.timedelta(0, rounding - seconds, -time.microsecond)
+    try:
+        seconds = (time - time.min).seconds
+        rounding = (seconds + round_to / 2) // round_to * round_to
+        return time + datetime.timedelta(0, rounding - seconds, -time.microsecond)
+    except AttributeError:
+        logger.error("Error rounding time: %s", time)
+        return time
 
 
 def count_pair_features(data: list[dict], id_key: str, time_key: str) -> list[dict]:

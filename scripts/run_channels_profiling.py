@@ -7,7 +7,7 @@ from clotho.pre_processing.create_dict import tuple_to_dict
 from clotho.profiling.process_lenguages import detect_lang_list_dict
 from clotho.post_processing.group_by_value_count import group_by_id_value_count
 from clotho.post_processing.clean_keys import clean_keys
-from clotho.correlations.dict_similarity import measure_similarity
+from clotho.correlations.correlate_dicts import measure_similarity
 from clotho.correlations.correlate_times import round_and_correlate
 from clotho.post_processing.mix_weights import run_mix_weights
 
