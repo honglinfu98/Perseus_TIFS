@@ -21,7 +21,7 @@ QUERY_SIGNALS = (
     "SELECT "
     + ", ".join(COLUMNS_NAMES_SIGNALS)
     + """
-FROM cloudburst_signals WHERE message_text IS NOT NULL
+FROM cloudburst_signals WHERE message_text IS NOT NULL limit 10000
 """
 )
 
