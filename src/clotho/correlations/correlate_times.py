@@ -56,7 +56,7 @@ def count_pair_features(data: list[dict], id_key: str, time_key: str) -> list[di
     # Create a list to store the output data
     result = []
     # Iterate through the pair counts and create the output data
-    for pair, count in pair_counts.items():
+    for idx, (pair, count) in enumerate(pair_counts.items()):
         entities = list(pair)
         feature1 = entities[0]
         feature2 = entities[1]
@@ -64,7 +64,9 @@ def count_pair_features(data: list[dict], id_key: str, time_key: str) -> list[di
         result.append(
             {"start": feature1, "end": feature2, "weight_time": weight_time / 2}
         )
-
+        # One logger for 1000 pairs
+        if idx % 1000 == 0:
+            logger.info("Pair %s of %s", idx, len(pair_counts))
     for d in result:
         d["weight_time"] = normalize_weight(d["weight_time"])
 
@@ -108,43 +110,43 @@ if __name__ == "__main__":
     data = [
         {
             "entity_id": "1",
-            "time": datetime.datetime(2023, 1, 20, 21, 37, 20, 12093),
+            "time": datetime.datetime(2023, 1, 20, 21, 37),
         },  # 21:37
         {
             "entity_id": "2",
-            "time": datetime.datetime(2023, 1, 20, 21, 37, 20, 12093),
+            "time": datetime.datetime(2023, 1, 20, 21, 37),
         },  # 21:37
         {
             "entity_id": "1",
-            "time": datetime.datetime(2023, 1, 20, 21, 39, 20, 12093),
+            "time": datetime.datetime(2023, 1, 20, 21, 39),
         },  # 21:39
         {
             "entity_id": "2",
-            "time": datetime.datetime(2023, 1, 20, 21, 38, 20, 12093),
+            "time": datetime.datetime(2023, 1, 20, 21, 38),
         },  # 21:38
         {
             "entity_id": "1",
-            "time": datetime.datetime(2023, 1, 20, 22, 39, 20, 12093),
+            "time": datetime.datetime(2023, 1, 20, 22, 39),
         },  # 22:39
         {
             "entity_id": "2",
-            "time": datetime.datetime(2023, 1, 20, 22, 39, 20, 12093),
+            "time": datetime.datetime(2023, 1, 20, 22, 39),
         },  # 22:39
         {
             "entity_id": "1",
-            "time": datetime.datetime(2023, 1, 20, 21, 38, 20, 12093),
+            "time": datetime.datetime(2023, 1, 20, 21, 38),
         },  # 21:38
         {
             "entity_id": "2",
-            "time": datetime.datetime(2023, 1, 20, 21, 56, 20, 12093),
+            "time": datetime.datetime(2023, 1, 20, 21, 56),
         },  # 21:56
         {
             "entity_id": "3",
-            "time": datetime.datetime(2023, 1, 20, 21, 36, 20, 12093),
+            "time": datetime.datetime(2023, 1, 20, 21, 36),
         },  # 21:36
         {
             "entity_id": "4",
-            "time": datetime.datetime(2023, 1, 20, 21, 36, 20, 12093),
+            "time": datetime.datetime(2023, 1, 20, 21, 36),
         },  # 21:36
     ]
 

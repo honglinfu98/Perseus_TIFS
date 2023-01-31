@@ -53,9 +53,6 @@ if __name__ == "__main__":
 
     # Run both functions for list ["created_at", "updated_at", "last_updated"]
 
-    # SAMPLE
-    users_featured = users_featured[:10000]
-
     # Filter list of keys from the dicts in the list of dicts
     logger.info("Filtering list of keys from the dicts in the list of dicts")
     data_for_correlate_dicts = filter_dict_list(
@@ -69,7 +66,7 @@ if __name__ == "__main__":
 
     # Correlate features time format
 
-    list_keys = ["created_at", "updated_at", "last_online_at"]
+    list_keys = ["created_at", "updated_at"]
     logger.info("Correlating features time format: %s", list_keys)
     result = {}
     for key in list_keys:
@@ -79,3 +76,16 @@ if __name__ == "__main__":
         result[f"corr_{key}"] = round_and_correlate(
             users_featured_time_corr, "pid", key
         )
+
+    logger.info(
+        "Len from result %s: - %s", list_keys[0], len(result[f"corr_{list_keys[0]}"])
+    )
+    logger.info(
+        "Len from result %s: - %s", list_keys[0], len(result[f"corr_{list_keys[1]}"])
+    )
+
+    # # look for unique values in the key "weight_time"
+    # unique_values = set()
+    # for item in result[f"corr_{list_keys[1]}"]:
+    #     unique_values.add(item["weight_time"])
+    # logger.info("Unique values in the key %s: %s", list_keys[1], unique_values)
