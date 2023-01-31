@@ -10,67 +10,131 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
 
 
-if __name__ == "__main__":
-    # channel_members = load_cloudburst_channel_members()
-    # logger.info("Channel members loaded")
-    # logger.info("Number of channel members: %s", len(channel_members))
-    # channel_members_dict = tuple_to_dict(channel_members, COLUMNS_NAMES_CHANNEL_MEMBERS)
-    # logger.info("Channel members converted to dict")
-    # Dummy data
+def first_group(df_user_to_group: pd.DataFrame) -> pd.DataFrame:
+    # Change data type to string and create a new column with the correlated entity_ids for each chat_PID
+    df_user_to_group["chat_PID"] = df_user_to_group["chat_PID"].astype(str)
+    df_user_to_group["user_PID"] = df_user_to_group["user_PID"].astype(str)
 
-    # logger.info("Number of channel members: %s", len(channel_members_dict))
-    # # Run the function
+    df_user_to_group["correlated_chats_ids"] = df_user_to_group.groupby(["chat_PID"])[
+        "user_PID"
+    ].transform(lambda x: ",".join(x))
+
+    # set the new column as an array of strings to manage it better
+    df_user_to_group["correlated_chats_ids"] = df_user_to_group[
+        "correlated_chats_ids"
+    ].str.split(",")
+
+    # Remove the chats with their own from the correlated_chats_ids list
+    for index, row in df_user_to_group.iterrows():
+        correlated_chats_ids = row["correlated_chats_ids"]
+        user_PID = row["user_PID"]
+        correlated_chats_ids = [e for e in correlated_chats_ids if e != user_PID]
+        df_user_to_group.at[index, "correlated_chats_ids"] = correlated_chats_ids
+
+    # contar el número de correlated_chats_ids por chat_PID
+    df_user_to_group["correlated_chats_ids_count"] = df_user_to_group[
+        "correlated_chats_ids"
+    ].str.len()
+    # order by syze of correlated_chats_ids_count
+    df_user_to_group = df_user_to_group.sort_values(
+        by=["correlated_chats_ids_count"], ascending=False
+    )
+
+    return df_user_to_group
+
+
+def group_data(df: pd.DataFrame, appearence: int = 0) -> pd.DataFrame:
+    """
+    This function groups the data by user_PID and counts the amount of times it appears the same correlated_chats_ids,
+    then it converts the columns correlated_chats_ids from list of list to dictionary and leave only the ones who has
+    over a certain amount of times it appears
+    :param df: pd.DataFrame
+    :param appearence: int by default the value is 0
+    :return: pd.DataFrame
+    """
+    # group by user_PID and count the amount of times it appears the same correlated_chats_ids
+    grouped_df = (
+        df.groupby(["user_PID"])["correlated_chats_ids"].apply(list).reset_index()
+    )
+    # convert the columns correlated_chats_ids from list of list to dictionary
+    grouped_df["correlated_chats_ids"] = grouped_df["correlated_chats_ids"].apply(
+        lambda x: [item for sublist in x for item in sublist]
+    )
+    grouped_df["correlated_chats_ids"] = grouped_df["correlated_chats_ids"].apply(
+        lambda x: dict((i, x.count(i)) for i in x)
+    )
+    # leave only the ones who has over a certain amount of times it appears
+    grouped_df["correlated_chats_ids"] = grouped_df["correlated_chats_ids"].apply(
+        lambda x: {k: v for k, v in x.items() if v >= appearence}
+    )
+    # eliminate the rows that have an empty dictionary
+    grouped_df = grouped_df[grouped_df["correlated_chats_ids"].map(len) > 0]
+    return grouped_df
+
+
+def change_data_structure(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    This function changes the data sctructure to be able to use it in the network graph
+    :param df: pd.DataFrame
+    :return: pd.DataFrame
+    """
+    # Initialize the dataframe
+    output_df = pd.DataFrame(columns=["user1", "user2", "weight"])
+
+    # Iterate through each row of the original dataframe
+    for i, row in df.iterrows():
+        user_PID = row["user_PID"]
+        correlated_entity_ids = row["correlated_chats_ids"]
+        # Only add users that are diferent user1 from user2
+
+        for correlated_entity_id, value in correlated_entity_ids.items():
+            # Append a new row to the output dataframe
+            output_df = output_df.append(
+                {"user1": user_PID, "user2": correlated_entity_id, "weight": value},
+                ignore_index=True,
+            )
+    return output_df
+
+
+def drop_duplicated_rows(df_to_clean: pd.DataFrame) -> pd.DataFrame:
+    """
+    This function sorts the user1 and user2 columns
+    """
+    df_to_clean.iloc[:, 0:2] = list(
+        df_to_clean[["user1", "user2"]].apply(sorted, axis=1)
+    )  # type: ignore
+    # drop duplicates
+    df_to_clean = df_to_clean.drop_duplicates()
+    return df_to_clean
+
+
+if __name__ == "__main__":
+
+    # channel_members_dict = [
+    #     {"user_PID": "1", "chat_PID": "1"},
+    #     {"user_PID": "2", "chat_PID": "1"},
+    #     {"user_PID": "4", "chat_PID": "2"},
+    #     {"user_PID": "4", "chat_PID": "1"},
+    #     {"user_PID": "1", "chat_PID": "2"},
+    #     {"user_PID": "1", "chat_PID": "3"},
+    #     {"user_PID": "2", "chat_PID": "3"},
+    #     {"user_PID": "2", "chat_PID": "2"},
+    #     {"user_PID": "22", "chat_PID": "9"},
+    # ]
+
+    channel_members = load_cloudburst_channel_members()
+
+    logger.info("Channel members loaded")
+    logger.info("Number of channel members: %s", len(channel_members))
+    channel_members_dict = tuple_to_dict(channel_members, COLUMNS_NAMES_CHANNEL_MEMBERS)
+    logger.info("Channel members converted to dict")
+
+    logger.info("Number of channel members: %s", len(channel_members_dict))
+
     logger.info("Counting pair features")
 
-    def get_common_keys(channel_members_dict: pd.DataFrame) -> pd.DataFrame:
-        """
-        This function takes a list of dictionaries and returns a dataframe with a new column
-        where it stores a list of all the users that share the same chat_ID
-        """
-        df = pd.DataFrame(channel_members_dict)
-        # Create a new column where we will store in a list all the users that share the same chat_ID
-        df["common_users"] = ""
-        # Fill with all the user_ID that share the same chat_ID that the user_ID in that row
-        for index, row in df.iterrows():
-            df.at[index, "common_users"] = list(
-                df.loc[df["chat_ID"] == row["chat_ID"], "user_ID"]
-            )
-        # Delete the user_ID from the row from that list in the column common_users
-        for index, row in df.iterrows():
-            df.at[index, "common_users"] = [
-                x for x in row["common_users"] if x != row["user_ID"]
-            ]
-
-        return df
-
-    # Iterate to create a new dataframe:
-    # Each combination will be a row (user_id, commor_user, value) the value will be always 1 at the moment
-    # The new dataframe will have the following columns: user_id, common_use, value
-    # At the end will leave only one combination per row (user_id, common_user) no matter the order it's the same
-    def create_new_df(df: pd.DataFrame) -> pd.DataFrame:
-        new_df = pd.DataFrame(columns=["user_id", "common_user", "value"])
-        for index, row in df.iterrows():
-            for user in row["common_users"]:
-                new_df = new_df.append(
-                    {"user_id": row["user_ID"], "common_user": user, "value": 0},
-                    ignore_index=True,
-                )
-        new_df = new_df.groupby(["user_id", "common_user"]).sum().reset_index()
-        new_df["value"] = 1
-        return new_df
-
-    channel_members_dict = [
-        {"user_ID": "1", "chat_ID": "1"},
-        {"user_ID": "2", "chat_ID": "1"},
-        {"user_ID": "4", "chat_ID": "2"},
-        {"user_ID": "4", "chat_ID": "1"},
-        {"user_ID": "1", "chat_ID": "2"},
-        {"user_ID": "2", "chat_ID": "2"},
-        {"user_ID": "22", "chat_ID": "9"},
-    ]
-
-    output = get_common_keys(channel_members_dict)
-    output = create_new_df(output)
-    from pprint import pprint
-
-    pprint(output)
+    channel_members_dict = pd.DataFrame(channel_members_dict)
+    output_1 = first_group(channel_members_dict)
+    output_1 = group_data(channel_members_dict, 3)
+    output_corr = change_data_structure(output_1)
+    output_corr = drop_duplicated_rows(output_corr)
