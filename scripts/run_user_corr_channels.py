@@ -1,5 +1,4 @@
 import logging
-import pandas as pd
 from clotho.extraction.loader import (
     load_cloudburst_channel_members,
     COLUMNS_NAMES_CHANNEL_MEMBERS,
@@ -10,102 +9,70 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
 
 
-def first_group(df_user_to_group: pd.DataFrame) -> pd.DataFrame:
-    # Change data type to string and create a new column with the correlated entity_ids for each chat_PID
-    df_user_to_group["chat_PID"] = df_user_to_group["chat_PID"].astype(str)
-    df_user_to_group["user_PID"] = df_user_to_group["user_PID"].astype(str)
-
-    df_user_to_group["correlated_chats_ids"] = df_user_to_group.groupby(["chat_PID"])[
-        "user_PID"
-    ].transform(lambda x: ",".join(x))
-
-    # set the new column as an array of strings to manage it better
-    df_user_to_group["correlated_chats_ids"] = df_user_to_group[
-        "correlated_chats_ids"
-    ].str.split(",")
-
-    # Remove the chats with their own from the correlated_chats_ids list
-    for index, row in df_user_to_group.iterrows():
-        correlated_chats_ids = row["correlated_chats_ids"]
-        user_PID = row["user_PID"]
-        correlated_chats_ids = [e for e in correlated_chats_ids if e != user_PID]
-        df_user_to_group.at[index, "correlated_chats_ids"] = correlated_chats_ids
-
-    # contar el número de correlated_chats_ids por chat_PID
-    df_user_to_group["correlated_chats_ids_count"] = df_user_to_group[
-        "correlated_chats_ids"
-    ].str.len()
-    # order by syze of correlated_chats_ids_count
-    df_user_to_group = df_user_to_group.sort_values(
-        by=["correlated_chats_ids_count"], ascending=False
-    )
-
-    return df_user_to_group
-
-
-def group_data(df: pd.DataFrame, appearence: int = 0) -> pd.DataFrame:
+def users_chats_dict(data: list[dict]) -> dict:
     """
-    This function groups the data by user_PID and counts the amount of times it appears the same correlated_chats_ids,
-    then it converts the columns correlated_chats_ids from list of list to dictionary and leave only the ones who has
-    over a certain amount of times it appears
-    :param df: pd.DataFrame
-    :param appearence: int by default the value is 0
-    :return: pd.DataFrame
+    Creates a dict of users and the chats they are in
+    :param data: list of dicts (user_PID, chat_PID)
+    example: [{"user_PID": "1", "chat_PID": "1"}, {"user_PID": "2", "chat_PID": "2"}]
+    :return: dict of users and the chats they are in
+    example: {"1": {"1"}, "2": {"2"}}
     """
-    # group by user_PID and count the amount of times it appears the same correlated_chats_ids
-    grouped_df = (
-        df.groupby(["user_PID"])["correlated_chats_ids"].apply(list).reset_index()
-    )
-    # convert the columns correlated_chats_ids from list of list to dictionary
-    grouped_df["correlated_chats_ids"] = grouped_df["correlated_chats_ids"].apply(
-        lambda x: [item for sublist in x for item in sublist]
-    )
-    grouped_df["correlated_chats_ids"] = grouped_df["correlated_chats_ids"].apply(
-        lambda x: dict((i, x.count(i)) for i in x)
-    )
-    # leave only the ones who has over a certain amount of times it appears
-    grouped_df["correlated_chats_ids"] = grouped_df["correlated_chats_ids"].apply(
-        lambda x: {k: v for k, v in x.items() if v >= appearence}
-    )
-    # eliminate the rows that have an empty dictionary
-    grouped_df = grouped_df[grouped_df["correlated_chats_ids"].map(len) > 0]
-    return grouped_df
+    users = {}
+    logger.info("Step 1: Creating users dict")
+    for idx, d in enumerate(data):
+        user_PID = d["user_PID"]
+        chat_PID = d["chat_PID"]
+        if user_PID in users:
+            users[user_PID].add(chat_PID)
+        else:
+            users[user_PID] = set([chat_PID])
+        if idx % 1000 == 0:
+            logger.info("Processed %s rows - Step 1", idx)
+
+    return users
 
 
-def change_data_structure(df: pd.DataFrame) -> pd.DataFrame:
+def delete_users(users: dict, min_values: int) -> dict:
     """
-    This function changes the data sctructure to be able to use it in the network graph
-    :param df: pd.DataFrame
-    :return: pd.DataFrame
+    Remove users with less than min_values chats
+    :param users: dict of users and the chats they are in
+    example: {"1": {"1", "2", "3"}, "2": {"1", "2"}}
+    :param min_values: minimum number of chats
+    example: 3
+    :return: dict of users and the chats they are in
+    example: {"1": {"1", "2", "3"}}
     """
-    # Initialize the dataframe
-    output_df = pd.DataFrame(columns=["user1", "user2", "weight"])
-
-    # Iterate through each row of the original dataframe
-    for i, row in df.iterrows():
-        user_PID = row["user_PID"]
-        correlated_entity_ids = row["correlated_chats_ids"]
-        # Only add users that are diferent user1 from user2
-
-        for correlated_entity_id, value in correlated_entity_ids.items():
-            # Append a new row to the output dataframe
-            output_df = output_df.append(
-                {"user1": user_PID, "user2": correlated_entity_id, "weight": value},
-                ignore_index=True,
-            )
-    return output_df
+    logger.info("Deleting users with less than %s chats", min_values)
+    result = {}
+    for idx, (user, chats) in enumerate(users.items()):
+        if len(chats) >= min_values:
+            result[user] = chats
+        if idx % 1000 == 0:
+            logger.info("Processed %s users - Step 2", idx)
+    return result
 
 
-def drop_duplicated_rows(df_to_clean: pd.DataFrame) -> pd.DataFrame:
+def counting_shared_chats(users: dict) -> list[dict]:
     """
-    This function sorts the user1 and user2 columns
+    Counts the number of shared chats between users
+    :param users: dict of users and the chats they are in
+    example: {"1": {"1", "2", "3"}, "2": {"1", "2", "3"}}
+    :return: dict of users and the number of shared chats
+    example: {"1,2": 3, "1,3": 1}
     """
-    df_to_clean.iloc[:, 0:2] = list(
-        df_to_clean[["user1", "user2"]].apply(sorted, axis=1)
-    )  # type: ignore
-    # drop duplicates
-    df_to_clean = df_to_clean.drop_duplicates()
-    return df_to_clean
+    result = []
+    logger.info("Step 2: Counting shared chats")
+    for idx, (u1, chats1) in enumerate(users.items()):
+        for u2, chats2 in users.items():
+            if u1 < u2:
+                shared = chats1 & chats2
+                if len(shared) >= 3:
+                    result.append(
+                        {"user1_PID": u1, "user2_PID": u2, "shared": len(shared)}
+                    )
+        if idx % 1000 == 0:
+            logger.info("Processed %s users - Step 2", idx)
+    return result
 
 
 if __name__ == "__main__":
@@ -125,21 +92,42 @@ if __name__ == "__main__":
     channel_members = load_cloudburst_channel_members()
 
     logger.info("Channel members loaded")
-    logger.info("Number of channel members: %s", len(channel_members))
-    channel_members_dict = tuple_to_dict(channel_members, COLUMNS_NAMES_CHANNEL_MEMBERS)
-    logger.info("Channel members converted to dict")
 
-    logger.info("Number of channel members: %s", len(channel_members_dict))
+    channel_members_dict = tuple_to_dict(channel_members, COLUMNS_NAMES_CHANNEL_MEMBERS)
+
+    logger.info("Channel members converted to dict")
 
     logger.info("Counting pair features")
 
-    channel_members_dict = pd.DataFrame(channel_members_dict)
-    logger.info("Channel members converted to dataframe")
-    output = first_group(channel_members_dict)
-    logger.info("First group done")
-    output = group_data(channel_members_dict, 3)
-    logger.info("Group data done")
-    output = change_data_structure(output)
-    logger.info("Change data structure done")
-    output = drop_duplicated_rows(output)
-    logger.info("Drop duplicated rows done")
+    users_chats = users_chats_dict(channel_members_dict)
+    logger.info("Users dict created, length: %s", len(users_chats))
+
+    users_chat_filtered = delete_users(users_chats, 2)
+    logger.info(
+        "Users with less than 3 chats deleted, new length: %s", len(users_chat_filtered)
+    )
+
+    result = counting_shared_chats(users_chat_filtered)
+
+    # Filter shared chats > 3
+    # result = [r for r in result if r["shared"] > 3]
+
+    # Save dict as csv
+    # import csv
+
+    # with open("shared_chats.csv", "w", newline="") as csvfile:
+    #     fieldnames = ["user1_PID", "user2_PID", "shared"]
+    #     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+    #     writer.writeheader()
+    #     for r in result:
+    #         writer.writerow(r)
+
+    # # Save users_chats_filtered as csv
+    # with open("users_chats_filtered.csv", "w", newline="") as csvfile:
+    #     fieldnames = ["user_PID", "chats"]
+    #     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+    #     writer.writeheader()
+    #     for user, chats in users_chat_filtered.items():
+    #         writer.writerow({"user_PID": user, "chats": chats})
