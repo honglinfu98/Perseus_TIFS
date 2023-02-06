@@ -25,16 +25,14 @@ def users_chats_dict(data: list[dict]) -> list[dict]:
     example: {"1": {"1"}, "2": {"2"}}
     """
     users = {}
-    logger.info("Step 1: Creating users dict")
-    for idx, d in enumerate(data):
+    for d in data:
         user_PID = d["user_PID"]
         chat_PID = d["chat_PID"]
         if user_PID in users:
             users[user_PID].add(chat_PID)
         else:
             users[user_PID] = set([chat_PID])
-        if idx % 1000 == 0:
-            logger.info("Processed %s rows - Step 1", idx)
+
     # create a new dict with the following structure:
     # {"user_PID": user.keys(), "chat_PID": user.values()}
     dict_users = []
@@ -132,7 +130,8 @@ def score_users(channels_with_score: list[dict], users_list: list[dict]) -> list
     return users_list
 
 
-if __name__ == "__main__":
+# Function that run the whole process
+def run_users_scoring() -> list[dict]:
     # Download the signals data for users scoring ############################
     signals_data = load_cloudburst_signals()
     signals_data_dict = tuple_to_dict(signals_data, COLUMNS_NAMES_SIGNALS)
@@ -164,6 +163,14 @@ if __name__ == "__main__":
     users_entity_id = map_chat_entities(users_chats, chats_data_dict_filtered)
     ###########################################################################
 
+    return score_users(channels_with_scores, users_entity_id)
+
+
+if __name__ == "__main__":
+
+    users_scored = run_users_scoring()
+
+    ###########################################################################
     # # Test data for users scoring
     # channels_with_scores = [
     #     {
@@ -190,21 +197,21 @@ if __name__ == "__main__":
     # ]
 
     # Score users based on the channels they are in ###########################
-    users_with_score = score_users(channels_with_scores, users_entity_id)
+    # users_with_score = score_users(channels_with_scores, users_entity_id)
     ###########################################################################
 
     # Filter users with scores != 0 ###########################################
-    users_with_score_filtered = [
-        user for user in users_with_score if user["user_time_score"] != 0
-    ]
-    users_with_score_filtered_2 = [
-        user for user in users_with_score_filtered if user["user_crowd_score"] != 0
-    ]
+    # users_with_score_filtered_time_0 = [
+    #     user for user in users_with_score if user["user_time_score"] != 0
+    # ]
+    # users_with_score_filtered_crowd_0 = [
+    #     user for user in users_with_score if user["user_crowd_score"] != 0
+    # ]
 
-    users_with_score_filtered = [
-        user for user in users_with_score if user["user_time_score"] > 1
-    ]
-    users_with_score_filtered_2 = [
-        user for user in users_with_score_filtered if user["user_crowd_score"] > 1
-    ]
+    # users_with_score_filtered_time_1 = [
+    #     user for user in users_with_score if user["user_time_score"] > 1
+    # ]
+    # users_with_score_filtered_crowd_1 = [
+    #     user for user in users_with_score if user["user_crowd_score"] > 1
+    # ]
     ###########################################################################
