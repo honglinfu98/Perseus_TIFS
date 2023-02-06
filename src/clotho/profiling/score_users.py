@@ -11,7 +11,6 @@ from clotho.extraction.loader import (
     COLUMN_NAMES_CHANNELS,
 )
 from clotho.pre_processing.create_dict import tuple_to_dict
-from clotho.pre_processing.merge_dicts import merge_dicts
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
@@ -80,7 +79,6 @@ def filter_channels_with_score(channels_data_dict: list[dict]) -> list:
     return channels_with_score
 
 
-# Filter from chats keys pid and entity_id
 def filter_entity_id_and_pid(chats_data_dict: list[dict]) -> list[dict]:
     """
     Filter from chats keys pid and entity_id.
@@ -99,6 +97,12 @@ def filter_entity_id_and_pid(chats_data_dict: list[dict]) -> list[dict]:
 
 
 def map_chat_entities(users, entities):
+    """
+    Map chat entities to users.
+    :param users: List of dicts with users data.
+    :param entities: List of dicts with entities data.
+    :return: List of dicts with users data and their chat entities.
+    """
     entity_map = {entity["chat_PID"]: entity["entity_id"] for entity in entities}
     result = []
     for user in users:
@@ -129,60 +133,61 @@ def score_users(channels_with_score: list[dict], users_list: list[dict]) -> list
 
 
 if __name__ == "__main__":
-    # # Download the signals data for users scoring ############################
-    # signals_data = load_cloudburst_signals()
-    # signals_data_dict = tuple_to_dict(signals_data, COLUMNS_NAMES_SIGNALS)
-    # # ###########################################################################
-
-    # # Filter channels and their scores ########################################
-    # channels_with_score = filter_channels_with_score(signals_data_dict)
-    # # ###########################################################################
-
-    # # Download the users data for users scoring ##############################
-    # users_data = load_cloudburst_channel_members()
-    # users_data_dict = tuple_to_dict(users_data, COLUMNS_NAMES_CHANNEL_MEMBERS)
+    # Download the signals data for users scoring ############################
+    signals_data = load_cloudburst_signals()
+    signals_data_dict = tuple_to_dict(signals_data, COLUMNS_NAMES_SIGNALS)
     # ###########################################################################
 
-    # # Create a dict with users and their chats ################################
-    # users_chats = users_chats_dict(users_data_dict)
+    # Filter channels and their scores ########################################
+    channels_with_scores = filter_channels_with_score(signals_data_dict)
     # ###########################################################################
 
-    # # Download the channels data for users scoring ###########################
-    # channels_data = load_cloudburst_channels()
-    # channels_data_dict = tuple_to_dict(channels_data, COLUMN_NAMES_CHANNELS)
-    # # ###########################################################################
+    # Download the users data for users scoring ##############################
+    users_data = load_cloudburst_channel_members()
+    users_data_dict = tuple_to_dict(users_data, COLUMNS_NAMES_CHANNEL_MEMBERS)
+    ###########################################################################
 
-    # # Filter from chats keys pid and entity_id ###############################
-    # chats_data_dict_filtered = filter_entity_id_and_pid(channels_data_dict)
-    # # ###########################################################################
+    # Create a dict with users and their chats ################################
+    users_chats = users_chats_dict(users_data_dict)
+    ###########################################################################
 
-    # # Score users based on the channels they are in ###########################
-    # users_entity_id = map_chat_entities(users_chats, chats_data_dict_filtered)
+    # Download the channels data for users scoring ###########################
+    channels_data = load_cloudburst_channels()
+    channels_data_dict = tuple_to_dict(channels_data, COLUMN_NAMES_CHANNELS)
     # ###########################################################################
 
-    channels_with_scores = [
-        {
-            "entity_id": "1234",
-            "channel_time_score": 0.0,
-            "channel_crowd_score": 0.5,
-        },
-        {
-            "entity_id": "12345",
-            "channel_time_score": 0.6,
-            "channel_crowd_score": 0.0,
-        },
-        {
-            "entity_id": "123456",
-            "channel_time_score": 0.0,
-            "channel_crowd_score": 0.9,
-        },
-    ]
+    # Filter from chats keys pid and entity_id ###############################
+    chats_data_dict_filtered = filter_entity_id_and_pid(channels_data_dict)
+    # ###########################################################################
 
-    users_entity_id = [
-        {"user_PID": "1", "chat_PID": ["1234", "12345", "123456"]},
-        {"user_PID": "2", "chat_PID": ["1234"]},
-        {"user_PID": "3", "chat_PID": ["1234", "12345"]},
-    ]
+    # Score users based on the channels they are in ###########################
+    users_entity_id = map_chat_entities(users_chats, chats_data_dict_filtered)
+    ###########################################################################
+
+    # # Test data for users scoring
+    # channels_with_scores = [
+    #     {
+    #         "entity_id": "1234",
+    #         "channel_time_score": 0.0,
+    #         "channel_crowd_score": 0.5,
+    #     },
+    #     {
+    #         "entity_id": "12345",
+    #         "channel_time_score": 0.6,
+    #         "channel_crowd_score": 0.0,
+    #     },
+    #     {
+    #         "entity_id": "123456",
+    #         "channel_time_score": 0.0,
+    #         "channel_crowd_score": 0.9,
+    #     },
+    # ]
+
+    # users_entity_id = [
+    #     {"user_PID": "1", "chat_PID": ["1234", "12345", "123456"]},
+    #     {"user_PID": "2", "chat_PID": ["1234"]},
+    #     {"user_PID": "3", "chat_PID": ["1234", "12345"]},
+    # ]
 
     # Score users based on the channels they are in ###########################
     users_with_score = score_users(channels_with_scores, users_entity_id)
@@ -192,7 +197,14 @@ if __name__ == "__main__":
     users_with_score_filtered = [
         user for user in users_with_score if user["user_time_score"] != 0
     ]
-    users_with_score_filtered = [
+    users_with_score_filtered_2 = [
         user for user in users_with_score_filtered if user["user_crowd_score"] != 0
+    ]
+
+    users_with_score_filtered = [
+        user for user in users_with_score if user["user_time_score"] > 1
+    ]
+    users_with_score_filtered_2 = [
+        user for user in users_with_score_filtered if user["user_crowd_score"] > 1
     ]
     ###########################################################################
