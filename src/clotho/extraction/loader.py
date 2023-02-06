@@ -89,7 +89,7 @@ MEMBERS_QUERY = (
     "SELECT "
     + ", ".join(COLUMNS_NAMES_USERS)
     + """
-FROM telegram_users
+FROM telegram_users limit 100000
 """
 )
 

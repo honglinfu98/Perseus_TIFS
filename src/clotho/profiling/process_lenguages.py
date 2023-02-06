@@ -53,8 +53,9 @@ def detect_lang_list_dict(
     :return: List of dictionaries with the messages and the language detected
     """
 
-    for message in messages:
-
+    for idx, message in enumerate(messages):
+        if idx % 1000 == 0:
+            logger.info("Processed %s messages", idx)
         for key in keys_to_process:
 
             if "language" in message.keys():

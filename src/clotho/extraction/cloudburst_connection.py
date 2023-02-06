@@ -19,6 +19,10 @@ class CloudburstDataBaseConnection:
     """
 
     def __init__(self, sql_query: str, table_name: str) -> None:
+        """
+        Initialize the class
+        """
+
         self.sql_query = sql_query
         self.table_name = table_name
 
@@ -47,7 +51,7 @@ class CloudburstDataBaseConnection:
             try:
                 conn = psycopg2.connect(
                     host="localhost",
-                    port=ssh_tunnel.local_bind_port,
+                    port=ssh_tunnel.local_bind_port, # type: ignore #TODO: fix this
                     user=db_username,
                     password=db_password,
                     database="cloudburst",
@@ -58,5 +62,5 @@ class CloudburstDataBaseConnection:
                 return cursor.fetchall()
 
             finally:
-                cursor.close()
-                conn.close()
+                cursor.close() # type: ignore #TODO: fix this
+                conn.close() # type: ignore #TODO: fix this
