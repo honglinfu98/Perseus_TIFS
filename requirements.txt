@@ -1,5 +1,5 @@
 coverage==7.1.0
-ipykernel==6.20.2
+ipykernel==6.21.1
 langdetect==1.0.9
 matplotlib==3.6.3
 matplotlib-inline==0.1.6
