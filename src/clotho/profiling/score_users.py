@@ -139,7 +139,7 @@ def run_users_scoring() -> list[dict]:
 
     # Filter channels and their scores ########################################
     channels_with_scores = filter_channels_with_score(signals_data_dict)
-    # ###########################################################################
+    ############################################################################
 
     # Download the users data for users scoring ##############################
     users_data = load_cloudburst_channel_members()
