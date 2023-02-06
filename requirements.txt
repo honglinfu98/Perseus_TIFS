@@ -10,7 +10,7 @@ phonenumbers==8.13.5
 plotly==5.13.0
 psycopg2-binary==2.9.5
 pycountry==22.3.5
-pylint==2.15.10
+pylint==2.16.1
 pytz==2022.7.1
 sshtunnel==0.4.0
 datetime
