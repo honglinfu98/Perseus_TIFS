@@ -1,3 +1,6 @@
+"""
+Script to run the correlation between channels's signals times and lenguage.
+"""
 import logging
 import pandas as pd
 from clotho.extraction.loader import load_cloudburst_signals, COLUMNS_NAMES_SIGNALS

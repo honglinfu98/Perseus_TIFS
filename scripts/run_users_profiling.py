@@ -6,12 +6,6 @@ from clotho.extraction.loader import load_cloudburst_users, COLUMNS_NAMES_USERS
 from clotho.pre_processing.create_dict import tuple_to_dict
 from clotho.profiling.features_extraction import extract_features
 
-# from clotho.profiling.extract_phonenumbers_data import (
-#     extract_data_phonenumber,
-# )
-
-# from clotho.profiling.process_users_bio import
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
 
@@ -38,6 +32,7 @@ if __name__ == "__main__":
     ###########################################################################
 
     # Extract phone numbers data###############################################
+    # I think Alex has already done this, so I will comment it out for now
     # logger.info("Extracting phone numbers data")
     # users_data_featured = extract_data_phonenumber(
     #     users_data_featured, "phone_number", "phone_number_extracted"

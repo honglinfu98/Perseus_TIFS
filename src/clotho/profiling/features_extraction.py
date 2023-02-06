@@ -7,6 +7,7 @@ It returns the users data with the features extracted:
     - hashtags
     - domains
     - script
+    - alphabets_detected
     - phone_numbers
     - emails_adresses
 """
@@ -116,6 +117,7 @@ def get_possible_phone_numbers(string: str) -> list[str]:
     :param string: String to extract the phone numbers
     :return: List of phone numbers extracted
     """
+    # TODO: Improve the regex to extract the phone numbers
     try:
         return re.findall(r"\+?[0-9]{7,}", string)
     except TypeError:
@@ -132,15 +134,15 @@ def filter_alphabets_from_script(
     :return: List of dictionaries with the script filtered
     """
     for x in script:
-        for y in x["script"]:
-            if y in list_alphabets:
-                if "script_alphabet" in x:
+        for script in x["script"]:
+            if script in list_alphabets:
+                if "alphabets_detected" in x:
                     # Change the value to a list if it's not already
                     if not isinstance(x["alphabets_detected"], list):
                         x["alphabets_detected"] = [x["alphabets_detected"]]
-                    x["script_alphabet"].append(y)
+                    x["alphabets_detected"].append(script)
                 else:
-                    x["alphabets_detected"] = [y]
+                    x["alphabets_detected"] = [script]
 
     return script
 
@@ -202,7 +204,7 @@ if __name__ == "__main__":
 
     test_data = [
         {"pid": 1, "bio": "Blockchain is the Future"},
-        {"pid": 2, "bio": "أول منصة عراقية للعملات الرقمية | @nakhlexchange"},
+        {"pid": 2, "bio": "@nakhlexchange, أول منصة عراقية للعملات الرقمية"},
         {"pid": 3, "bio": "Nothing."},
         {"pid": 4, "bio": "،", "phone_number": "431532453245"},
         {
@@ -264,4 +266,4 @@ if __name__ == "__main__":
 
     pprint(test_data)
 
-    pprint(test_data2)
+    # pprint(test_data2)

@@ -15,13 +15,15 @@ COLUMNS_NAMES_SIGNALS = [
     "commodity",
     "channel_participants",
     "message_text",
+    "channel_crowd_score",
+    "channel_time_score",
 ]
 
 QUERY_SIGNALS = (
     "SELECT "
     + ", ".join(COLUMNS_NAMES_SIGNALS)
     + """
-FROM cloudburst_signals WHERE message_text IS NOT NULL limit 10000
+FROM cloudburst_signals WHERE message_text IS NOT NULL
 """
 )
 
