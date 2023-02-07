@@ -1,3 +1,4 @@
+--Merge all the scores for each user and calculate the total score--
 WITH avg_scores AS (
 SELECT
 entity_id,

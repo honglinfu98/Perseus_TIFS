@@ -2,7 +2,6 @@
 This script runs the flowork of the users profiling.
 """
 import logging
-import pandas as pd
 from clotho.extraction.loader import load_cloudburst_users, COLUMNS_NAMES_USERS
 from clotho.pre_processing.create_dict import tuple_to_dict
 from clotho.profiling.features_extraction import extract_features
