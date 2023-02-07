@@ -1,7 +1,7 @@
 """
 This module loads the data from cloudburst tables
 """
-from clotho.extraction.cloudburst_connection import CloudburstDataBaseConnection
+from clotho.extraction.cloudburst_connection import cloudburst_db_connection
 
 
 # TODO add scrapper user_PID to an ignore list
@@ -35,7 +35,7 @@ def load_cloudburst_signals(signals_query: str = QUERY_SIGNALS) -> list[tuple]:
     :param QUERY_SIGNALS: Query to extract the signals from cloudburst
     :return: List of tuples with the signals
     """
-    cloudbust_signals = CloudburstDataBaseConnection.fetch_data(signals_query)
+    cloudbust_signals = cloudburst_db_connection(signals_query)
 
     return cloudbust_signals
 
@@ -66,7 +66,7 @@ def load_cloudburst_channels(channels_query: str = QUERY_CHANNELS) -> list[tuple
     :param QUERY_CHANNELS: Query to extract the signals from cloudburst
     :return: List of tuples with the signals
     """
-    cloudbust_channels = CloudburstDataBaseConnection.fetch_data(channels_query)
+    cloudbust_channels = cloudburst_db_connection(channels_query)
 
     return cloudbust_channels
 
@@ -103,7 +103,7 @@ def load_cloudburst_users(query_members: str = MEMBERS_QUERY) -> list[tuple]:
     :param MEMBERS_QUERY: Query to extract the signals from cloudburst
     :return: List of tuples with the signals
     """
-    cloudbust_members = CloudburstDataBaseConnection.fetch_data(query_members)
+    cloudbust_members = cloudburst_db_connection(query_members)
 
     return cloudbust_members
 
@@ -144,9 +144,7 @@ def load_cloudburst_channel_members(
     :param CHANNEL_MEMBERS_QUERY: Query to extract the signals from cloudburst
     :return: List of tuples with the signals
     """
-    cloudbust_channel_members = CloudburstDataBaseConnection.fetch_data(
-        query_channel_members
-    )
+    cloudbust_channel_members = cloudburst_db_connection(query_channel_members)
 
     return cloudbust_channel_members
 
@@ -163,6 +161,6 @@ def load_cloudburst_users_score() -> list[tuple]:
     with open("users_score.sql", "r") as f:
         users_score_query = f.read()
 
-    cloudbust_users_score = CloudburstDataBaseConnection.fetch_data(users_score_query)
+    cloudbust_users_score = cloudburst_db_connection(users_score_query)
 
     return cloudbust_users_score

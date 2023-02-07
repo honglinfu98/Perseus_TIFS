@@ -73,7 +73,13 @@ def counting_shared_chats(users: dict) -> list[dict]:
     return result
 
 
-def run_user_corr_channels(channel_members_dict):
+def run_user_corr_channels(channel_members_dict: list[dict]) -> list[dict]:
+    """
+    Runs the functions to correlate the number of shared chats between users
+    :param channel_members_dict: list of dicts (user_PID, chat_PID)
+    :return: list of dicts (user1_PID, user2_PID, shared)
+    """
+
     users_chats = users_chats_dict(channel_members_dict)
     logger.info("Users dict created, length: %s", len(users_chats))
 
