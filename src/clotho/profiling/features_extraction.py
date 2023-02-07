@@ -36,7 +36,7 @@ def get_script(string: str) -> list[str]:
         return scripts_detected
 
 
-def extract_urls(string: str) -> list[str]:
+def extract_urls(string: str) -> list:
     """
     Extracts the urls of a string
     And polish the urls extraction with regex
@@ -63,7 +63,7 @@ def extract_urls(string: str) -> list[str]:
         return []
 
 
-def get_accounts(string: str) -> list[str]:
+def get_accounts(string: str) -> list:
     """
     Extracts the accounts of a string
     :param string: String to extract the accounts
@@ -75,7 +75,7 @@ def get_accounts(string: str) -> list[str]:
         return []
 
 
-def get_email(string: str) -> list[str]:
+def get_email(string: str) -> list:
     """
     Extracts the email of a string
     :param string: String to extract the email
@@ -87,7 +87,7 @@ def get_email(string: str) -> list[str]:
         return []
 
 
-def get_hashtags(string: str) -> list[str]:
+def get_hashtags(string: str) -> list:
     """
     Extracts the hashtags of a string
     :param string: String to extract the hashtags
@@ -111,7 +111,7 @@ def extract_domain(url: str) -> str:
     return parsed_url.netloc
 
 
-def get_possible_phone_numbers(string: str) -> list[str]:
+def get_possible_phone_numbers(string: str) -> list:
     """
     Extracts the phone numbers of a string
     :param string: String to extract the phone numbers
@@ -169,8 +169,8 @@ def extract_features(
     for k in key_list:
         print(f"Extracting features from the key:'{k}'")
         for idx, user in enumerate(data):
-            if idx % 10000 == 0:
-                print(f"Extracting features from {idx} users")
+            # if idx % 10000 == 0:
+            #     print(f"Extracting features from {idx} users")
             # check if the key already exists in the user dictionary
             if any(key in user for key in check_list):
                 user["urls"] += extract_urls(user[k])

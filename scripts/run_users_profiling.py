@@ -5,6 +5,7 @@ import logging
 from clotho.extraction.loader import load_cloudburst_users, COLUMNS_NAMES_USERS
 from clotho.pre_processing.create_dict import tuple_to_dict
 from clotho.profiling.features_extraction import extract_features
+from clotho.extraction.loader import load_cloudburst_users_score, USERS_SCORES_COLUMNS
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
@@ -27,18 +28,32 @@ if __name__ == "__main__":
     script_keys_to_process = ["username", "first_name", "last_name", "bio"]
     # We will extract the features from the keys in the script_keys_to_process list
     # Features extracted: urls, accounts, hashtags, domains, script, phone_numbers, emails_adresses
-    users_data_featured = extract_features(users_data_dict, script_keys_to_process)
+    extract_features(users_data_dict, script_keys_to_process)
     logger.info("Features extracted")
     ###########################################################################
 
-    # Extract phone numbers data###############################################
-    # I think Alex has already done this, so I will comment it out for now
-    # logger.info("Extracting phone numbers data")
-    # users_data_featured = extract_data_phonenumber(
-    #     users_data_featured, "phone_number", "phone_number_extracted"
-    # )
-    # logger.info("Phone numbers data extracted")
+    # Load users score ########################################################
+    logger.info("Loading users score")
+    users_score = load_cloudburst_users_score()
+    logger.info("Users score loaded")
     ###########################################################################
+
+    # Convert to dictionary ##################################################
+    logger.info("Converting to dictionary...")
+    users_score_dict = tuple_to_dict(users_score, keys=USERS_SCORES_COLUMNS)
+    logger.info("Users score converted to dictionary")
+    ###########################################################################
+
+    # Merge the 2 list of dictionaries ########################################
+    # We will merge the 2 list of dictionaries based on the key "pid"
+    logger.info("Merging the 2 list of dictionaries...")
+    for idx, user in enumerate(users_data_dict):
+        if idx % 10000 == 0:
+            logger.info("Merging user %s", idx)
+        for user_score in users_score_dict:
+            if user["pid"] == user_score["pid"]:
+                user.update(user_score)
+    # ###########################################################################
 
     # ###########################################################################
     # ###########################################################################

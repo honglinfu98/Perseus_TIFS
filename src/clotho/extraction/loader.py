@@ -149,17 +149,36 @@ def load_cloudburst_channel_members(
     return cloudbust_channel_members
 
 
-def load_cloudburst_users_score() -> list[tuple]:
+USERS_SCORES_COLUMNS = [
+    "pid",
+    "admin_score",
+    "owner_score",
+    "member_score",
+    "time_score",
+    "crowd_score",
+    "total_score",
+]
+
+import os
+
+# get path to sql file
+sql_path = os.path.join(os.path.dirname(__file__), "users_score.sql")
+
+with open(sql_path, "r") as f:
+    QUERY_USERS_SCORE = f.read()
+
+
+def load_cloudburst_users_score(
+    users_score_query: str = QUERY_USERS_SCORE,
+) -> list[tuple]:
     """
-    This function loads the signals from cloudburst database
-    :param sql: Query to extract the signals from cloudburst
-    :return: List of tuples with the signals
+    This function use a query to extract the users scores from cloudburst db
+    :param sql: Query to calculate the users scores
+    :return: List of tuples with the users scores
     """
     # TODO see how to load only the column names from the query
     # Or we can just have them in a list fixed
     # because it's a really specific query
-    with open("users_score.sql", "r") as f:
-        users_score_query = f.read()
 
     cloudbust_users_score = cloudburst_db_connection(users_score_query)
 
