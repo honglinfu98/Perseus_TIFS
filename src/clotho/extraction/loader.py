@@ -3,6 +3,7 @@ This module loads the data from cloudburst tables
 """
 from clotho.extraction.cloudburst_connection import CloudburstDataBaseConnection
 
+
 # TODO add scrapper user_PID to an ignore list
 
 ### Query for extracting channels signals from cloudburst data#########
@@ -148,3 +149,20 @@ def load_cloudburst_channel_members(
     )
 
     return cloudbust_channel_members
+
+
+def load_cloudburst_users_score() -> list[tuple]:
+    """
+    This function loads the signals from cloudburst database
+    :param sql: Query to extract the signals from cloudburst
+    :return: List of tuples with the signals
+    """
+    # TODO see how to load only the column names from the query
+    # Or we can just have them in a list fixed
+    # because it's a really specific query
+    with open("users_score.sql", "r") as f:
+        users_score_query = f.read()
+
+    cloudbust_users_score = CloudburstDataBaseConnection.fetch_data(users_score_query)
+
+    return cloudbust_users_score
