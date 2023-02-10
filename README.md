@@ -73,6 +73,22 @@ run/run_channels_profiling.py
 run/run_users_profiling.py
 ```
 
+### create the local neo4j conection for the graph feature extraction:
+- create a neo4j database in your local machine v5.2.0 with admin as a password
+- Install plugins called: APOC and Graph data science library (v2.3.0) in neo4j database 
+- go to the "import" folder in "DBMS" folder created when created the database
+- drop the .csv with the nodes properties and the nodes relations in the folder
+- run neo4j browser and run this 2 query:
+-- LOAD CSV WITH HEADERS FROM 'file:///users_nodes.csv' AS row 
+FIELDTERMINATOR ',' CREATE (:User {user_id: toInteger(row.pid), username: row.username, first_name:row.first_name, last_name:row.last_name,alphabets:row.alphabets_detected, admin_score:row.admin_score,owner_score:row.owner_score, member_score:row.member_score,time_score:row.time_score, crowd_score:row.crowd_score,  total_score:row.total_score})
+-- LOAD CSV WITH HEADERS FROM 'file:///users_corr_filtered.csv' AS row
+FIELDTERMINATOR ',' MATCH (User1:User {user_id: toInteger(row.user1_PID)}),
+(User2:User {user_id: toInteger(row.user2_PID)}) CREATE (User1)-[:CONNECT_TO {importance:toFloat(row.shared)}]->(User2)
+- Now you should be able to run the script by adding your localhost conection provided by neo4j
+
+
+```bash
+
 ## Testing and Coverage
 
 We use pytest as our testing framework and coverage to measure code coverage.
