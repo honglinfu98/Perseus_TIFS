@@ -7,12 +7,14 @@ It returns the users data with the features extracted:
     - hashtags
     - domains
     - script
+    - alphabets_detected
     - phone_numbers
     - emails_adresses
 """
 import re
 import unicodedata
 from urllib.parse import urlparse
+from clotho.constants import LIST_OF_ALPHABETS
 
 
 def get_script(string: str) -> list[str]:
@@ -34,7 +36,7 @@ def get_script(string: str) -> list[str]:
         return scripts_detected
 
 
-def extract_urls(string: str) -> list[str]:
+def extract_urls(string: str) -> list:
     """
     Extracts the urls of a string
     And polish the urls extraction with regex
@@ -61,7 +63,7 @@ def extract_urls(string: str) -> list[str]:
         return []
 
 
-def get_accounts(string: str) -> list[str]:
+def get_accounts(string: str) -> list:
     """
     Extracts the accounts of a string
     :param string: String to extract the accounts
@@ -73,7 +75,7 @@ def get_accounts(string: str) -> list[str]:
         return []
 
 
-def get_email(string: str) -> list[str]:
+def get_email(string: str) -> list:
     """
     Extracts the email of a string
     :param string: String to extract the email
@@ -85,7 +87,7 @@ def get_email(string: str) -> list[str]:
         return []
 
 
-def get_hashtags(string: str) -> list[str]:
+def get_hashtags(string: str) -> list:
     """
     Extracts the hashtags of a string
     :param string: String to extract the hashtags
@@ -109,19 +111,47 @@ def extract_domain(url: str) -> str:
     return parsed_url.netloc
 
 
-def get_possible_phone_numbers(string: str) -> list[str]:
+def get_possible_phone_numbers(string: str) -> list:
     """
     Extracts the phone numbers of a string
     :param string: String to extract the phone numbers
     :return: List of phone numbers extracted
     """
+    # TODO: Improve the regex to extract the phone numbers
     try:
         return re.findall(r"\+?[0-9]{7,}", string)
     except TypeError:
         return []
 
 
-def extract_features(data: list[dict], key_list: list[str]) -> list[dict]:
+def filter_alphabets_from_script(
+    script: list[dict], list_alphabets: list[str]
+) -> list[dict]:
+    """
+    Filters the alphabets from the script
+    :param script: List of dictionaries with the script
+    :param list_alphabets: List of alphabets to filter
+    :return: List of dictionaries with the script filtered
+    """
+    for x in script:
+        for script in x["script"]:
+            if script in list_alphabets:
+                if "alphabets_detected" in x:
+                    # Change the value to a list if it's not already
+                    if not isinstance(x["alphabets_detected"], list):
+                        x["alphabets_detected"] = [x["alphabets_detected"]]
+                    x["alphabets_detected"].append(script)
+                else:
+                    x["alphabets_detected"] = [script]
+
+    return script
+
+
+def extract_features(
+    data: list[dict],
+    key_list: list[str],
+    list_of_alphabets: list[str] = LIST_OF_ALPHABETS,
+) -> list[dict]:
     """
     Extracts the urls, accounts, hashtags, script, phone numbers, and email addresses from the keys in the key_list
     :return: List dictionaries from the users with the urls, accounts, hashtags,
@@ -137,7 +167,10 @@ def extract_features(data: list[dict], key_list: list[str]) -> list[dict]:
     ]
 
     for k in key_list:
-        for user in data:
+        print(f"Extracting features from the key:'{k}'")
+        for idx, user in enumerate(data):
+            # if idx % 10000 == 0:
+            #     print(f"Extracting features from {idx} users")
             # check if the key already exists in the user dictionary
             if any(key in user for key in check_list):
                 user["urls"] += extract_urls(user[k])
@@ -159,43 +192,78 @@ def extract_features(data: list[dict], key_list: list[str]) -> list[dict]:
     # Clean the list from the key script from duplicates
     for user in data:
         user["script"] = list(set(user["script"]))
+
+    data = filter_alphabets_from_script(data, list_of_alphabets)
+
     return data
 
 
 if __name__ == "__main__":
 
+    from pprint import pprint
+
     test_data = [
         {"pid": 1, "bio": "Blockchain is the Future"},
-        {"pid": 2, "bio": "أول منصة عراقية للعملات الرقمية | @nakhlexchange"},
+        {"pid": 2, "bio": "@nakhlexchange, أول منصة عراقية للعملات الرقمية"},
         {"pid": 3, "bio": "Nothing."},
-        {"pid": 7, "bio": "،", "phone_number": "431532453245"},
+        {"pid": 4, "bio": "،", "phone_number": "431532453245"},
         {
             "pid": 8,
             "bio": "elegant girl✨. 34613794258",
             "phone_number": "431532453245",
         },
-        {"pid": 9, "bio": "..."},
-        {"pid": 14, "bio": "تسجيل كباتن كريم واوبر وجيني", "phone_number": []},
-        {"pid": 15, "bio": "تبو قحطان"},
-        {"pid": 16, "bio": "https://t.me/li5x12", "phone_number": None},
-        {"pid": 17, "bio": "Twitter : @angieo4_ Tg: @angiedaguro"},
-        {"pid": 25, "bio": "@mmmmmm"},
-        {"pid": 26, "bio": ".للتواصل معي اࢪسل ڪلمة (ﺣّ͠ـلْـم) او(𝙳𝚁𝙴𝙰𝙼) 🙂"},
-        {"pid": 27, "bio": "6 year experience in trading ❤️"},
-        {"pid": 28, "bio": "Anh Tài"},
-        {"pid": 29, "bio": "ــ ㅤㅤ(:♡0:00 ●━━━━━━─────── ♾ ⇆ㅤㅤ◁ㅤㅤ❚❚ㅤㅤ▷ㅤㅤㅤㅤ↻"},
-        {"pid": 31, "bio": "fghj"},
-        {"pid": 32, "bio": "fb.com/ahmed.ahmed.507"},
-        {"pid": 33, "bio": "تعاملاتي : @repsReal_orez اكثر من 550 تقيم"},
+        {"pid": 5, "bio": "..."},
+        {"pid": 6, "bio": "تسجيل كباتن كريم واوبر وجيني", "phone_number": []},
+        {"pid": 7, "bio": "تبو قحطان"},
+        {"pid": 8, "bio": "https://t.me/li5x12", "phone_number": None},
+        {"pid": 9, "bio": "Twitter : @angieo4_ Tg: @angiedaguro"},
+        {"pid": 11, "bio": "@mmmmmm"},
+        {"pid": 12, "bio": ".للتواصل معي اࢪسل ڪلمة (ﺣّ͠ـلْـم) او(𝙳𝚁𝙴𝙰𝙼) 🙂"},
+        {"pid": 13, "bio": "6 year experience in trading ❤️"},
+        {"pid": 14, "bio": "Anh Tài"},
+        {"pid": 15, "bio": "ــ ㅤㅤ(:♡0:00 ●━━━━━━─────── ♾ ⇆ㅤㅤ◁ㅤㅤ❚❚ㅤㅤ▷ㅤㅤㅤㅤ↻"},
+        {"pid": 16, "bio": "fghj"},
+        {"pid": 17, "bio": "fb.com/ahmed.ahmed.507"},
+        {"pid": 18, "bio": "تعاملاتي : @repsReal_orez اكثر من 550 تقيم"},
         {
-            "pid": 34,
+            "pid": 19,
             "bio": "www.instagram.com/ahmed_ahmed_507 sandiasndiands somtheing@some.as",
         },
-        {"pid": 35, "bio": "تعاملاتي : @repsReal_orez اكثر من 550 تقيم"},
-        {"pid": 36, "bio": None},
-        {"pid": 37, "bio": ""},
+        {"pid": 20, "bio": "تعاملاتي : @repsReal_orez اكثر من 550 تقيم"},
+        {"pid": 21, "bio": None},
+        {"pid": 22, "bio": ""},
     ]
 
-    from pprint import pprint
+    # the same test data but adding a random username key
+    test_data2 = [
+        {"pid": 1, "bio": "Blockchain is the Future", "username": "blockchain"},
+        {
+            "pid": 2,
+            "bio": "أول منصة عراقية للعملات الرقمية | @nakhlexchange",
+            "username": "nakhlexchange",
+        },
+        {"pid": 3, "bio": "Nothing.", "username": "nothing"},
+        {"pid": 4, "bio": "،", "phone_number": "431532453245", "username": "nothing"},
+        {
+            "pid": 8,
+            "bio": "elegant girl✨. 34613794258",
+            "phone_number": "431532453245",
+            "username": "nothing",
+        },
+        {"pid": 5, "bio": "...", "username": "nothing"},
+        {
+            "pid": 6,
+            "bio": "تسجيل كباتن كريم واوبر وجيني",
+            "phone_number": [],
+            "username": "my_email@something.com",
+        },
+        {"pid": 7, "bio": "تبو قحطان", "username": "nothing"},
+    ]
 
-    pprint(extract_features(test_data, ["bio"]))
+    extract_features(test_data, ["bio"])
+
+    extract_features(test_data2, ["bio", "username"])
+
+    pprint(test_data)
+
+    # pprint(test_data2)

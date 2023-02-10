@@ -13,50 +13,39 @@ from clotho.config import (
 )
 
 
-class CloudburstDataBaseConnection:
+def cloudburst_db_connection(
+    sql_query: str,
+    db_username: str | None = CLOUDBURST_USERNAME,
+    db_password: str | None = CLOUDBURST_PASS,
+    db_host: str | None = CLOUDBURST_HOST,
+    db_port=25060,
+    remote_host="161.35.13.185",
+    remote_ssh_port=22,
+    remote_username="root",
+) -> list[tuple]:
     """
-    Class for extracting tables from cloudburst through a SQL query
+    Establish connection with cloudburst database
     """
+    with SSHTunnelForwarder(
+        (remote_host, remote_ssh_port),
+        ssh_username=remote_username,
+        remote_bind_address=(db_host, db_port),
+        ssh_pkey=SSH_PKEY,
+        ssh_private_key_password=SSH_PRIVATE_KEY_PASSWORD,
+    ) as ssh_tunnel:
+        try:
+            conn = psycopg2.connect(
+                host="localhost",
+                port=ssh_tunnel.local_bind_port,  # type: ignore #TODO: fix this
+                user=db_username,
+                password=db_password,
+                database="cloudburst",
+            )
 
-    def __init__(self, sql_query: str, table_name: str) -> None:
-        self.sql_query = sql_query
-        self.table_name = table_name
+            cursor = conn.cursor()
+            cursor.execute(sql_query)
+            return cursor.fetchall()
 
-    @classmethod
-    def fetch_data(
-        cls,
-        sql_query: str,
-        db_username: str | None = CLOUDBURST_USERNAME,
-        db_password: str | None = CLOUDBURST_PASS,
-        db_host: str | None = CLOUDBURST_HOST,
-        db_port=25060,
-        remote_host="161.35.13.185",
-        remote_ssh_port=22,
-        remote_username="root",
-    ) -> list[tuple]:
-        """
-        Establish connection with cloudburst database
-        """
-        with SSHTunnelForwarder(
-            (remote_host, remote_ssh_port),
-            ssh_username=remote_username,
-            remote_bind_address=(db_host, db_port),
-            ssh_pkey=SSH_PKEY,
-            ssh_private_key_password=SSH_PRIVATE_KEY_PASSWORD,
-        ) as ssh_tunnel:
-            try:
-                conn = psycopg2.connect(
-                    host="localhost",
-                    port=ssh_tunnel.local_bind_port,
-                    user=db_username,
-                    password=db_password,
-                    database="cloudburst",
-                )
-
-                cursor = conn.cursor()
-                cursor.execute(sql_query)
-                return cursor.fetchall()
-
-            finally:
-                cursor.close()
-                conn.close()
+        finally:
+            cursor.close()  # type: ignore #TODO: fix this
+            conn.close()  # type: ignore #TODO: fix this
