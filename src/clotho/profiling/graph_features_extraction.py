@@ -4,7 +4,9 @@ This module only work as a local conection to the Neo4j graph.
 Neo4j must be open and the graph must be created.
 """
 # !pip install neo4j
+# !pip install py2neo
 from neo4j import GraphDatabase
+from py2neo import Node
 
 
 class Neo4jConnection:
@@ -64,7 +66,7 @@ class Neo4jConnection:
 
 
 def get_connection_projection(
-    localhost: int, name_projection: str = "users_relations"
+    localhost: int, name_projection: str = "Users_relations"
 ) -> Neo4jConnection:
     """
     This function creates the connection and the projection of the graph in the database.
@@ -75,12 +77,40 @@ def get_connection_projection(
     conn = Neo4jConnection(
         uri="bolt://localhost:" + str(localhost), user="neo4j", pwd="admin"
     )
-    conn.query(
-        "CALL gds.graph.project('"
-        + name_projection
-        + "','User', {CONNECT_TO: {orientation: 'UNDIRECTED'}}, {relationshipProperties: 'importance'})"
-    )
+    try:
+        conn.query(
+            "CALL gds.graph.project('"
+            + name_projection
+            + "','User', {CONNECT_TO: {orientation: 'UNDIRECTED'}}, {relationshipProperties: 'importance'})"
+        )
+    except Exception as error_projection:
+        print("Projection failed:", error_projection)
     return conn
+
+
+def create_nodes_and_correlations(localhost: int):
+    """
+    This function creates the nodes and the correlations in the graph database.
+    :param localhost: the port of the database
+    """
+    conn = Neo4jConnection(
+        uri="bolt://localhost:" + str(localhost), user="neo4j", pwd="admin"
+    )
+    conn.query(
+        """
+    LOAD CSV WITH HEADERS FROM 'file:///users_nodes_filtered.csv' AS row 
+    FIELDTERMINATOR ',' CREATE (:User {user_id: toInteger(row.pid), username: row.username, first_name:row.first_name, last_name:row.last_name,alphabets:row.alphabets_detected, admin_score:row.admin_score,owner_score:row.owner_score, member_score:row.member_score,time_score:row.time_score, crowd_score:row.crowd_score,  total_score:row.total_score})    """
+    )
+    conn.query(
+        """
+        LOAD CSV WITH HEADERS FROM 'file:///users_corr_filtered.csv' AS row
+        FIELDTERMINATOR ','
+        MATCH (User1:User {user_id: toInteger(row.user1_PID)}),
+        (User2:User {user_id: toInteger(row.user2_PID)})
+        CREATE (User1)-[:CONNECT_TO {importance:toFloat(row.shared)}]->(User2)
+    """
+    )
+    return "connection created"
 
 
 # Create a function that extract the features from the graph
@@ -91,7 +121,6 @@ def get_features_from_graph(localhost: int):
     :param user_id: the id of the user
     :return: a dictionary with the features
     """
-    conn = get_connection_projection(localhost)
     # get the features from the graph
     # PageRank as a meassure of centrality
     pageranks = conn.query(
@@ -159,6 +188,7 @@ def extract_new_features_from_graph(localhost: int):
 
 if "__main__" == __name__:
     localhost = 7687
+    create_nodes_and_correlations(localhost)
     conn = get_connection_projection(localhost)
     # get the features from the graph
     features = get_features_from_graph(localhost)
