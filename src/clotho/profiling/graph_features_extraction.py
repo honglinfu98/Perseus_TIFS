@@ -112,7 +112,7 @@ def create_nodes_and_correlations(localhost: int):
 
 
 # Create a function that extract the features from the graph
-def get_features_from_graph(localhost: int):
+def get_features_from_graph(connection: Neo4jConnection):
     """
     This function extract the features from the graph and return them in a dictionary.
     :param conn: the connection to the database
@@ -121,27 +121,27 @@ def get_features_from_graph(localhost: int):
     """
     # get the features from the graph
     # PageRank as a meassure of centrality
-    pageranks = conn.query(
+    pageranks = connection.query(
         "CALL gds.pageRank.write('Users_relations', {relationshipWeightProperty: 'importance', maxIterations: 20, dampingFactor: 0.85, writeProperty: 'pagerank'}) YIELD nodePropertiesWritten, ranIterations"
     )
     # degree centrality as a second meassure of centrality
-    centrality = conn.query(
+    centrality = connection.query(
         "CALL gds.degree.write('Users_relations', {relationshipWeightProperty: 'importance', writeProperty: 'centrality'}) YIELD nodePropertiesWritten"
     )
     # louvain as a community detector
-    louvain = conn.query(
+    louvain = connection.query(
         "CALL gds.louvain.write('Users_relations', {relationshipWeightProperty: 'importance', writeProperty: 'community'})YIELD communityCount, modularity, modularities"
     )
     # label propagation as a second community detector
-    labelpropagation = conn.query(
+    labelpropagation = connection.query(
         "CALL gds.labelPropagation.write('Users_relations', {relationshipWeightProperty: 'importance', writeProperty: 'labelPropagation'}) YIELD nodePropertiesWritten, ranIterations"
     )
     # triangle count
-    triangle = conn.query(
+    triangle = connection.query(
         "CALL gds.triangleCount.write('Users_relations', {writeProperty: 'triangleCount'}) YIELD nodePropertiesWritten"
     )
     # local clustering coefficient as a third commyunity detector
-    local_clustering = conn.query(
+    local_clustering = connection.query(
         "CALL gds.localClusteringCoefficient.write('Users_relations', {writeProperty: 'localClusteringCoefficient'}) YIELD nodePropertiesWritten"
     )
     features = {
@@ -189,7 +189,7 @@ if "__main__" == __name__:
     create_nodes_and_correlations(localhost)
     conn = get_connection_projection(localhost)
     # get the features from the graph
-    features = get_features_from_graph(localhost)
+    features = get_features_from_graph(conn)
     # get the new features from the graph
     new_features = extract_new_features_from_graph(localhost)
 
