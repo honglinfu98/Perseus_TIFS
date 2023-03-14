@@ -3,8 +3,6 @@ In this module, we extract the features from the Neo4j graph and add it to the u
 This module only work as a local conection to the Neo4j graph.
 Neo4j must be open and the graph must be created.
 """
-# !pip install neo4j
-# !pip install py2neo
 from neo4j import GraphDatabase
 from py2neo import Node
 
