@@ -73,6 +73,14 @@ run/run_channels_profiling.py
 run/run_users_profiling.py
 ```
 
+### create the local neo4j conection for the graph feature extraction:
+- create a neo4j database in your local machine v5.2.0 with admin as a password
+- Install plugins called: APOC and Graph data science library (v2.3.0) in neo4j database 
+- go to the "import" folder in "DBMS" folder created when created the database
+- drop the .csv with the nodes properties and the nodes relations in the folder
+
+```bash
+
 ## Testing and Coverage
 
 We use pytest as our testing framework and coverage to measure code coverage.
