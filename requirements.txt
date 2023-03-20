@@ -1,4 +1,4 @@
-coverage==7.1.0
+coverage==7.2.2
 ipykernel==6.21.2
 langdetect==1.0.9
 matplotlib==3.7.1
