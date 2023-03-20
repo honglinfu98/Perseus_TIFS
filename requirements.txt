@@ -17,3 +17,5 @@ datetime
 pyvis
 gunicorn
 nbformat
+neo4j
+py2neo
