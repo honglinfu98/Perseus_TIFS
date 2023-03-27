@@ -1,7 +1,8 @@
 """
 This module loads the data from cloudburst tables
 """
-from clotho.extraction.cloudburst_connection import cloudburst_db_connection
+import os
+from clotho.extraction.cloudburst_connection import cloudburst_connection
 
 
 # TODO add scrapper user_PID to an ignore list
@@ -35,7 +36,7 @@ def load_cloudburst_signals(signals_query: str = QUERY_SIGNALS) -> list[tuple]:
     :param QUERY_SIGNALS: Query to extract the signals from cloudburst
     :return: List of tuples with the signals
     """
-    cloudbust_signals = cloudburst_db_connection(signals_query)
+    cloudbust_signals = cloudburst_connection(signals_query)
 
     return cloudbust_signals
 
@@ -66,7 +67,7 @@ def load_cloudburst_channels(channels_query: str = QUERY_CHANNELS) -> list[tuple
     :param QUERY_CHANNELS: Query to extract the signals from cloudburst
     :return: List of tuples with the signals
     """
-    cloudbust_channels = cloudburst_db_connection(channels_query)
+    cloudbust_channels = cloudburst_connection(channels_query)
 
     return cloudbust_channels
 
@@ -103,7 +104,7 @@ def load_cloudburst_users(query_members: str = MEMBERS_QUERY) -> list[tuple]:
     :param MEMBERS_QUERY: Query to extract the signals from cloudburst
     :return: List of tuples with the signals
     """
-    cloudbust_members = cloudburst_db_connection(query_members)
+    cloudbust_members = cloudburst_connection(query_members)
 
     return cloudbust_members
 
@@ -144,7 +145,7 @@ def load_cloudburst_channel_members(
     :param CHANNEL_MEMBERS_QUERY: Query to extract the signals from cloudburst
     :return: List of tuples with the signals
     """
-    cloudbust_channel_members = cloudburst_db_connection(query_channel_members)
+    cloudbust_channel_members = cloudburst_connection(query_channel_members)
 
     return cloudbust_channel_members
 
@@ -159,7 +160,6 @@ USERS_SCORES_COLUMNS = [
     "total_score",
 ]
 
-import os
 
 # get path to sql file
 sql_path = os.path.join(os.path.dirname(__file__), "users_score.sql")
@@ -180,6 +180,6 @@ def load_cloudburst_users_score(
     # Or we can just have them in a list fixed
     # because it's a really specific query
 
-    cloudbust_users_score = cloudburst_db_connection(users_score_query)
+    cloudbust_users_score = cloudburst_connection(users_score_query)
 
     return cloudbust_users_score
