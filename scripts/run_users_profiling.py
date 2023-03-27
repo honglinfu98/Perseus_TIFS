@@ -1,15 +1,33 @@
 """
 This script runs the flowork of the users profiling.
 """
+import json
 import logging
-from clotho.extraction.loader import load_cloudburst_users, COLUMNS_NAMES_USERS
+from datetime import datetime
+from decimal import Decimal
+
+from clotho.extraction.loader import (
+    COLUMNS_NAMES_USERS,
+    USERS_SCORES_COLUMNS,
+    load_cloudburst_users,
+    load_cloudburst_users_score,
+)
+from clotho.post_processing.merge_dicts import merge_dicts
 from clotho.pre_processing.create_dict import tuple_to_dict
 from clotho.profiling.features_extraction import extract_features
-from clotho.extraction.loader import load_cloudburst_users_score, USERS_SCORES_COLUMNS
-from clotho.post_processing.merge_dicts import merge_dicts
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
+
+
+# Custom serialization for datetime and Decimal objects
+def custom_serializer(obj):
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    if isinstance(obj, Decimal):
+        return float(obj)
+    raise TypeError(f"Type {type(obj)} not serializable")
+
 
 if __name__ == "__main__":
     # Download the users data for users profiling ############################
@@ -49,4 +67,9 @@ if __name__ == "__main__":
     logger.info("Merging the 2 list of dictionaries...")
     users_featured = merge_dicts(users_data_dict, users_score_dict, join_attr="pid")
     logger.info("Merged")
+
     ###########################################################################
+    # Save the object to a JSON file
+    output_file_path = "../data/users_data_featured.json"
+    with open(output_file_path, "w") as outfile:
+        json.dump(users_featured, outfile, default=custom_serializer, indent=2)

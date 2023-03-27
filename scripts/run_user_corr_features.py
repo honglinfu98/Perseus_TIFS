@@ -43,7 +43,6 @@ def filter_dict_list(data: list[dict], keys: list[str]) -> list[dict]:
 
 
 if __name__ == "__main__":
-
     # Import json file
     __path__ = "../data/users_data_featured.json"
     logger.info("Importing json file: %s", __path__)
@@ -55,9 +54,7 @@ if __name__ == "__main__":
 
     # Filter list of keys from the dicts in the list of dicts
     logger.info("Filtering list of keys from the dicts in the list of dicts")
-    data_for_correlate_dicts = filter_dict_list(
-        users_featured, ["pid", "country", "script"]
-    )
+    data_for_correlate_dicts = filter_dict_list(users_featured, ["pid", "script"])
     logger.info("List of keys filtered")
     # Correlate dicts
     logger.info("Correlating dicts")
