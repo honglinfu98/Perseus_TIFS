@@ -1,8 +1,18 @@
 """
 This script runs the flowork of the users profiling.
 """
+import json
 import logging
-from clotho.extraction.loader import load_cloudburst_users, COLUMNS_NAMES_USERS
+from datetime import datetime
+from decimal import Decimal
+
+from clotho.extraction.loader import (
+    COLUMNS_NAMES_USERS,
+    USERS_SCORES_COLUMNS,
+    load_cloudburst_users,
+    load_cloudburst_users_score,
+)
+from clotho.post_processing.merge_dicts import merge_dicts
 from clotho.pre_processing.create_dict import tuple_to_dict
 from clotho.profiling.features_extraction import extract_features
 from clotho.profiling.extract_phonenumbers_data import extract_data_phonenumber
@@ -10,8 +20,19 @@ from clotho.extraction.loader import load_cloudburst_users_score, USERS_SCORES_C
 from clotho.post_processing.merge_dicts import merge_dicts
 from clotho.post_processing.save_dict_to_json import save_dict
 
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
+
+
+# Custom serialization for datetime and Decimal objects
+def custom_serializer(obj):
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    if isinstance(obj, Decimal):
+        return float(obj)
+    raise TypeError(f"Type {type(obj)} not serializable")
+
 
 if __name__ == "__main__":
     # Download the users data for users profiling ############################
@@ -59,9 +80,11 @@ if __name__ == "__main__":
         users_data_dict_country, users_score_dict, join_attr="pid"
     )
     logger.info("Merged")
+
     ###########################################################################
 
     # Save dict to json file ##################################################
     logger.info("Saving to json file...")
     save_dict(users_featured, "users_featured.json")
     logger.info("Saved")
+

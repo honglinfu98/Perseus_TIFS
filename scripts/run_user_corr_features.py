@@ -43,7 +43,6 @@ def filter_dict_list(data: list[dict], keys: list[str]) -> list[dict]:
 
 
 if __name__ == "__main__":
-
     # Import json file
     __path__ = "../data/users_featured.json"
     logger.info("Importing json file: %s", __path__)
