@@ -11,7 +11,7 @@ def cloudburst_connection(
     db_password=CLOUDBURST_PASS,
     db_host=CLOUDBURST_HOST,
     db_port=25060,
-):
+) -> list[tuple]:
     """
     Establish connection with cloudburst database
     :param sql_query: SQL query to execute

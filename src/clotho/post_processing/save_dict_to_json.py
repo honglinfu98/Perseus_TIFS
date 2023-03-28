@@ -2,8 +2,17 @@
 Save dict to json file.
 """
 import json
+import os
 from datetime import datetime
+from decimal import Decimal
+
 import pandas as pd
+
+
+def handle_non_serializable_objects(obj):
+    if isinstance(obj, Decimal):
+        return float(obj)
+    raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
 
 
 def save_dict_to_json(dict_to_save: list[dict], file_name: str) -> None:
@@ -13,41 +22,52 @@ def save_dict_to_json(dict_to_save: list[dict], file_name: str) -> None:
     :param file_name: name of the file
     """
     with open(file_name, "w") as outfile:
-        json.dump(dict_to_save, outfile)
+        json.dump(dict_to_save, outfile, default=handle_non_serializable_objects)
 
 
-def detect_datetime_format(list_of_dicts: list[dict]) -> list[str]:
-    """ "
-    Chek all the keys on the first dict from the list and return name
-    of the key with the datetime format.
-    :param list_of_dicts: list of dicts
-    :return: name of the keys with the datetime format
-    """
+def detect_datetime_format(list_of_dicts):
     list_of_keys = []
     for key in list_of_dicts[0].keys():
-        try:
-            pd.to_datetime(list_of_dicts[0][key])
-            list_of_keys.append(key)
-        except ValueError:
-            continue
+        if isinstance(
+            list_of_dicts[0][key], str
+        ):  # Add this line to check if the value is a string
+            try:
+                pd.to_datetime(list_of_dicts[0][key])
+                list_of_keys.append(key)
+            except (AttributeError, TypeError):
+                pass
     return list_of_keys
 
 
-def convert_datetime_to_string(data_list: list[dict], keys: list) -> list[dict]:
+def convert_timestamps_to_strings(data_list: list[dict]) -> list[dict]:
     """
-    Convert datetime to string.
+    Convert timestamps to strings.
     :param data_list: list of dicts
-    :param keys: list of keys with datetime format
     :return: list of dicts
     """
-    for item in data_list:
-        for key in keys:
-            try:
-                if key in item:
-                    item[key] = item[key].strftime("%Y-%m-%d %H:%M:%S")
-            except (AttributeError):
-                continue
+
+    for data_dict in data_list:
+        for key, value in data_dict.items():
+            if isinstance(value, pd.Timestamp):
+                data_dict[key] = value.strftime("%Y-%m-%dT%H:%M:%S")
+            elif value is pd.NaT:  # Check for pd.NaT objects
+                data_dict[key] = None
     return data_list
+
+
+def save_dict(data_list: list[dict], file_name: str) -> None:
+    """
+    Save dict to json file.
+    :param data_list: list of dicts
+    :param file_name: name of the file
+    """
+    # Check if the folder exists
+    if not os.path.exists("../data"):
+        os.makedirs("../data")
+    # Add the path to the file name
+    file_name = "../data/" + file_name
+    data_list_for_json = convert_timestamps_to_strings(data_list)
+    save_dict_to_json(data_list_for_json, file_name)
 
 
 if __name__ == "__main__":
@@ -69,9 +89,6 @@ if __name__ == "__main__":
             "message_text": "Hello",
         },
     ]
-    # convert datetime to string
-    dummy_dicts_list_for_json = convert_datetime_to_string(
-        dummy_dicts_list, detect_datetime_format(dummy_dicts_list)
-    )
-    # save to json
-    save_dict_to_json(dummy_dicts_list_for_json, "test.json")
+
+    # save dict to json file
+    save_dict(dummy_dicts_list, "dummy_dicts_list.json")
