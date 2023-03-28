@@ -24,16 +24,6 @@ from clotho.post_processing.save_dict_to_json import save_dict
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
 
-
-# Custom serialization for datetime and Decimal objects
-def custom_serializer(obj):
-    if isinstance(obj, datetime):
-        return obj.isoformat()
-    if isinstance(obj, Decimal):
-        return float(obj)
-    raise TypeError(f"Type {type(obj)} not serializable")
-
-
 if __name__ == "__main__":
     # Download the users data for users profiling ############################
     logger.info("Loading users")
@@ -87,4 +77,3 @@ if __name__ == "__main__":
     logger.info("Saving to json file...")
     save_dict(users_featured, "users_featured.json")
     logger.info("Saved")
-

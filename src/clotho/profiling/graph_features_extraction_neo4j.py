@@ -17,6 +17,37 @@ from neo4j import GraphDatabase
 import logging
 from neo4j.exceptions import ServiceUnavailable
 
+from neo4j import GraphDatabase
+from typing import Dict
+import csv
+import json
+
+
+# convert users_nodes_filtered.csv to users_nodes_filtered.json
+def convert_csv_to_json(csv_url: str, json_url: str):
+    """
+    This function converts a csv file to json.
+    :param csv_url: the url of the csv file
+    :param json_url: the url of the json file
+    """
+    with open(csv_url, newline="") as csvfile:
+        reader = csv.DictReader(csvfile)
+        rows = list(reader)
+    with open(json_url, "w") as jsonfile:
+        json.dump(rows, jsonfile)
+
+
+# user conver_csv_to_json to convert users_nodes_filtered.csv to users_nodes_filtered.json
+convert_csv_to_json(
+    "C:/Users/nagge/Desktop/Nico/Cloudburst/clotho/data/users_nodes_filtered.csv",
+    "users_nodes_filtered.json",
+)
+# convert users_edges_filtered.csv to users_edges_filtered.json
+convert_csv_to_json(
+    "C:/Users/nagge/Desktop/Nico/Cloudburst/clotho/data/users_edges_filtered.csv",
+    "users_edges_filtered.json",
+)
+
 
 class Neo4jConnection:
     """
