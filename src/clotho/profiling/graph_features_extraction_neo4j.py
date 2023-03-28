@@ -23,30 +23,58 @@ import csv
 import json
 
 
-# convert users_nodes_filtered.csv to users_nodes_filtered.json
-def convert_csv_to_json(csv_url: str, json_url: str):
+# read a jsonfile and store it
+def read_json_file(json_file: str) -> Dict:
     """
-    This function converts a csv file to json.
-    :param csv_url: the url of the csv file
-    :param json_url: the url of the json file
+    This function reads a json file and returns a dictionary with the information.
+    :param json_file: the path of the json file
+    :return: the dictionary with the information
     """
-    with open(csv_url, newline="") as csvfile:
-        reader = csv.DictReader(csvfile)
-        rows = list(reader)
-    with open(json_url, "w") as jsonfile:
-        json.dump(rows, jsonfile)
+    with open(json_file, "r") as f:
+        return json.load(f)
 
 
-# user conver_csv_to_json to convert users_nodes_filtered.csv to users_nodes_filtered.json
-convert_csv_to_json(
-    "C:/Users/nagge/Desktop/Nico/Cloudburst/clotho/data/users_nodes_filtered.csv",
-    "users_nodes_filtered.json",
+edges = read_json_file(
+    "C:/Users/nagge/Desktop/Nico/Cloudburst/clotho/data/channel_members_dict.json"
 )
-# convert users_edges_filtered.csv to users_edges_filtered.json
-convert_csv_to_json(
-    "C:/Users/nagge/Desktop/Nico/Cloudburst/clotho/data/users_edges_filtered.csv",
-    "users_edges_filtered.json",
+nodes = read_json_file(
+    "C:/Users/nagge/Desktop/Nico/Cloudburst/clotho/data/users_featured.json"
 )
+
+
+def filter_shared_values(dictionary_list, min_shared):
+    filtered_list = []
+    for d in dictionary_list:
+        if d["shared"] >= min_shared:
+            filtered_list.append(d)
+    return filtered_list
+
+
+edges_filtered = filter_shared_values(edges, 7)
+
+
+def filter_nodes(nodes, edges):
+    pid_set = set()
+    for edge in edges:
+        pid_set.add(edge["user1_PID"])
+        pid_set.add(edge["user2_PID"])
+    print(len(pid_set))
+    print(pid_set)
+    nodes_filtered = [node for node in nodes if node["pid"] in pid_set]
+    return nodes_filtered
+
+
+nodes_filtered = filter_nodes(nodes, edges_filtered)
+# how many nodes are in the nodes_filtered list?
+print(len(nodes_filtered))
+
+# filter the nodes that are not in the edges
+nodes_filtered = []
+for node in nodes:
+    for edge in edges_filtered:
+        if node["pid"] == edge["user1_PID"] or node["pid"] == edge["user2_PID"]:
+            nodes_filtered.append(node)
+            break
 
 
 class Neo4jConnection:
