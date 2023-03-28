@@ -11,10 +11,15 @@ It returns the users data with the features extracted:
     - phone_numbers
     - emails_adresses
 """
+import logging
 import re
 import unicodedata
 from urllib.parse import urlparse
+
 from clotho.constants import LIST_OF_ALPHABETS
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def get_script(string: str) -> list[str]:
@@ -167,7 +172,7 @@ def extract_features(
     ]
 
     for k in key_list:
-        print(f"Extracting features from the key:'{k}'")
+        logger.info(f"Extracting features from the key:'{k}'")
         for idx, user in enumerate(data):
             # if idx % 10000 == 0:
             #     print(f"Extracting features from {idx} users")

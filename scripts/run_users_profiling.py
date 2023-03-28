@@ -5,8 +5,10 @@ import logging
 from clotho.extraction.loader import load_cloudburst_users, COLUMNS_NAMES_USERS
 from clotho.pre_processing.create_dict import tuple_to_dict
 from clotho.profiling.features_extraction import extract_features
+from clotho.profiling.extract_phonenumbers_data import extract_data_phonenumber
 from clotho.extraction.loader import load_cloudburst_users_score, USERS_SCORES_COLUMNS
 from clotho.post_processing.merge_dicts import merge_dicts
+from clotho.post_processing.save_dict_to_json import save_dict
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
@@ -33,6 +35,12 @@ if __name__ == "__main__":
     logger.info("Features extracted")
     ###########################################################################
 
+    # Extract features from: phone_numbers ####################################
+    logger.info("Extracting features from: phone_number and phone_number_extracted")
+    users_data_dict_country = extract_data_phonenumber(
+        users_data_dict, "phone_number", "phone_number_extracted"
+    )
+
     # Load users score ########################################################
     logger.info("Loading users score")
     users_score = load_cloudburst_users_score()
@@ -47,6 +55,13 @@ if __name__ == "__main__":
 
     # Merge the 2 list of dictionaries ########################################
     logger.info("Merging the 2 list of dictionaries...")
-    users_featured = merge_dicts(users_data_dict, users_score_dict, join_attr="pid")
+    users_featured = merge_dicts(
+        users_data_dict_country, users_score_dict, join_attr="pid"
+    )
     logger.info("Merged")
     ###########################################################################
+
+    # Save dict to json file ##################################################
+    logger.info("Saving to json file...")
+    save_dict(users_featured, "users_featured.json")
+    logger.info("Saved")

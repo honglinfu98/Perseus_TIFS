@@ -20,7 +20,7 @@ def convert_str_to_datetime(data: list[dict], key: str) -> list[dict]:
     # format example  "2022-10-24 11:35:01"
     for item in data:
         try:
-            item[key] = datetime.datetime.strptime(item[key], "%Y-%m-%d %H:%M:%S")
+            item[key] = datetime.datetime.strptime(item[key], "%Y-%m-%dT%H:%M:%S")
         except TypeError:
             logger.error("Error converting %s", item[key])
     return data
@@ -45,7 +45,7 @@ def filter_dict_list(data: list[dict], keys: list[str]) -> list[dict]:
 if __name__ == "__main__":
 
     # Import json file
-    __path__ = "../data/users_data_featured.json"
+    __path__ = "../data/users_featured.json"
     logger.info("Importing json file: %s", __path__)
     with open(__path__, "r") as f:
         users_featured = json.load(f)
@@ -55,9 +55,7 @@ if __name__ == "__main__":
 
     # Filter list of keys from the dicts in the list of dicts
     logger.info("Filtering list of keys from the dicts in the list of dicts")
-    data_for_correlate_dicts = filter_dict_list(
-        users_featured, ["pid", "country", "script"]
-    )
+    data_for_correlate_dicts = filter_dict_list(users_featured, ["pid", "script"])
     logger.info("List of keys filtered")
     # Correlate dicts
     logger.info("Correlating dicts")
