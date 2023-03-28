@@ -63,6 +63,26 @@ class Neo4jConnection:
                 f"Edges {batch_start + 1}-{min(batch_start + batch_size, len(dictionary_edges))}/{len(dictionary_edges)} added to the database"
             )
 
+    def create_graph_projection(
+        self,
+        name_projection: str,
+        relationship_type: str = "SHARED",
+        relationship_property: str = "shared",
+    ):
+        query = f"""
+        CALL gds.graph.create(
+            '{name_projection}',
+            'User',
+            '{relationship_type}',
+            {{
+                relationshipProperties: '{relationship_property}',
+                orientation: 'UNDIRECTED'
+            }}
+        )
+        """
+        self.query(query)
+        logger.info(f"Graph projection '{name_projection}' created.")
+
     def __enter__(self):
         return self
 
