@@ -17,30 +17,30 @@ import json
 
 
 # read a jsonfile and store it
-def read_json_file(json_file: str) -> dict:
+def read_json_file(json_file: str) -> list:
     """
-    This function reads a json file and returns a dictionary with the information.
+    This function reads a json file and returns a list of dictionaries with the information.
     :param json_file: the path of the json file
-    :return: the dictionary with the information
+    :return: the list of dictionaries with the information
     """
     with open(json_file, "r", encoding="utf-8") as document:
         return json.load(document)
 
 
-def filter_shared_values(dictionary: dict, min_shared: int) -> list:
+def filter_shared_values(dictionary_list: list, min_shared: int) -> list:
     filtered_list = []
-    for d in dictionary.values():
-        if d["shared"] >= min_shared:
-            filtered_list.append(d)
+    for dictionary in dictionary_list:
+        if dictionary["shared"] >= min_shared:
+            filtered_list.append(dictionary)
     return filtered_list
 
 
-def filter_nodes(nodes: dict, edges: list) -> list:
+def filter_nodes(nodes_list: list, edges: list) -> list:
     pid_set = set()
     for edge in edges:
         pid_set.add(edge["user1_PID"])
         pid_set.add(edge["user2_PID"])
-    filtered_nodes = [node for node in nodes.values() if node["pid"] in pid_set]
+    filtered_nodes = [node for node in nodes_list if node["pid"] in pid_set]
     return filtered_nodes
 
 
