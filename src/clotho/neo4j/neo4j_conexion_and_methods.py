@@ -63,6 +63,9 @@ class Neo4jConnection:
             )
 
     def delete_nodes_by_pid(self, pids: list):
+        """
+        Delete nodes from the graph database by PID.
+        """
         query = """
         UNWIND $pids AS pid
         MATCH (n:User {pid: pid})
