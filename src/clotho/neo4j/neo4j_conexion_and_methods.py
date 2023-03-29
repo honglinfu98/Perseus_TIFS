@@ -1,7 +1,6 @@
 """
-In this module, we extract the features from the Neo4j graph and add it to the user information.
-This module only work as a local conection to the Neo4j graph.
-Neo4j must be open and the graph must be created.
+This module contains the class Neo4jConnection and the methods to create a connection to the graph database and to add nodes and edges to the graph.
+
 """
 import logging
 
@@ -30,7 +29,7 @@ class Neo4jConnection:
             result = session.run(query, parameters)
             return result.data()
 
-    def add_nodes(self, dictionary_nodes: list, batch_size=1000):
+    def add_nodes(self, dictionary_nodes: list, batch_size: int = 1000):
         for batch_start in range(0, len(dictionary_nodes), batch_size):
             batch = dictionary_nodes[batch_start : batch_start + batch_size]
             query = """
@@ -50,7 +49,7 @@ class Neo4jConnection:
                 f"Nodes {batch_start + 1}-{min(batch_start + batch_size, len(dictionary_nodes))}/{len(dictionary_nodes)} added to the database"
             )
 
-    def add_edges(self, dictionary_edges: list, batch_size=1000):
+    def add_edges(self, dictionary_edges: list, batch_size: int = 1000):
         for batch_start in range(0, len(dictionary_edges), batch_size):
             batch = dictionary_edges[batch_start : batch_start + batch_size]
             query = """

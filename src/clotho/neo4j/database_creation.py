@@ -55,5 +55,5 @@ if __name__ == "__main__":
     nodes_filtered = filter_nodes(nodes, edges_filtered)
 
     with Neo4jConnection(NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD) as conn:  # type: ignore
-        conn.add_nodes(nodes_filtered)
-        conn.add_edges(edges_filtered)
+        conn.add_nodes(nodes_filtered, 1000)
+        conn.add_edges(edges_filtered, 2000)
