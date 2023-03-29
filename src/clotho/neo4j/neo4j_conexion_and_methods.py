@@ -62,6 +62,15 @@ class Neo4jConnection:
                 f"Edges {batch_start + 1}-{min(batch_start + batch_size, len(dictionary_edges))}/{len(dictionary_edges)} added to the database"
             )
 
+    def delete_nodes_by_pid(self, pids: list):
+        query = """
+        UNWIND $pids AS pid
+        MATCH (n:User {pid: pid})
+        DETACH DELETE n
+        """
+        self.query(query, parameters={"pids": pids})
+        logger.info(f"{len(pids)} nodes with specified PIDs deleted from the database.")
+
     def create_graph_projection(
         self,
         name_projection: str,
