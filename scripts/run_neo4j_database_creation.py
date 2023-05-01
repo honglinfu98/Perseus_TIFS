@@ -37,3 +37,4 @@ if __name__ == "__main__":
     with Neo4jConnection(NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD) as conn:  # type: ignore
         conn.add_nodes(nodes_filtered, 1000)
         conn.add_edges(edges_filtered, 2000)
+        conn.delete_nodes_by_pid(["1"])
