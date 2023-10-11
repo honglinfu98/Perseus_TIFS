@@ -34,7 +34,7 @@ python -m venv venv
 - macOS
 
 ```bash
-. venv/bin/activate
+source venv/bin/activate
 ```
 
 - Windows (in Bash, NOT Powershell)
