@@ -62,6 +62,14 @@ def process_dataframe(df: pd.DataFrame):
         lambda x: "long" if x["start_price"] < x["end_price"] else "short", axis=1
     )
 
+    df["parsed_rate"] = df["targets_achieved_rate"].apply(json.loads)
+    df["targets_achieved"] = df["parsed_rate"].apply(
+        lambda x: x.get("targets_achieved", None)
+    )
+    df["total_targets"] = df["parsed_rate"].apply(
+        lambda x: x.get("total_targets", None)
+    )
+
     # Parsing 'duration' and extracting the values
     df["parsed_duration"] = df["duration"].apply(json.loads)
     df["duration_min"] = df["parsed_duration"].apply(
@@ -160,6 +168,8 @@ def features_engineer(df: pd.DataFrame):
                 "speed": "mean",
                 "id": "count",
                 "chat_crowd_score": "last",
+                "targets_achieved": "sum",
+                "total_targets": "sum",
             }
         )
         .reset_index()
@@ -169,6 +179,8 @@ def features_engineer(df: pd.DataFrame):
                 "speed": "average_speed",
                 "id": "number_of_signals",
                 "chat_crowd_score": "latest_chat_crowd_score",
+                "targets_achieved": "sum_targets_achieved",
+                "total_targets": "sum_total_targets",
             }
         )
     )
@@ -183,8 +195,16 @@ def features_engineer(df: pd.DataFrame):
                 "average_speed",
                 "number_of_signals",
                 "latest_chat_crowd_score",
+                "sum_targets_achieved",
+                "sum_total_targets",
             ]
         ]
+
+    for commodity, df in result_dict.items():
+        result_dict[commodity]["rating"] = (
+            result_dict[commodity]["sum_targets_achieved"]
+            / result_dict[commodity]["sum_total_targets"]
+        )
 
     return result_dict
 

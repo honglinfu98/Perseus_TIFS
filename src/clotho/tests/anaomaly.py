@@ -14,7 +14,7 @@ import torch
 # import pandas as pd
 # import networkx as nx
 # from pygod.utils import load_data
-from pygod.detector import DOMINANT
+from pygod.detector import DOMINANT, AnomalyDAE, CONAD
 
 from clotho.extract.cloudburst_connection import get_scored_signals
 from clotho.post_processing.graph_inferring import get_graphs
@@ -47,9 +47,10 @@ def anamoly_detection(graphs_dict: dict, features_dict: dict):
         # Selecting feature columns for normalization
         feature_columns = [
             "average_increase_percentage",
-            # 'average_speed',
+            "average_speed",
             "number_of_signals",
             "latest_chat_crowd_score",
+            "rating",
         ]
 
         # Extracting features to be normalized
@@ -89,6 +90,10 @@ def anamoly_detection(graphs_dict: dict, features_dict: dict):
         graph = data.to(device)
 
         model = DOMINANT(num_layers=4)
+        # model = AnomalyDAE()
+        # model = OCGNN()
+        # model = CONAD()
+
         model = model.fit(graph)
 
         scores = model.decision_score_.numpy()

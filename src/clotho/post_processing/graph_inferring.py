@@ -18,16 +18,16 @@ def get_graphs(cascade: dict, no_nodes: dict, id_mapping: dict):
     :param id_mapping: the mapping between the commodity and the id
     :return: the graphs
     """
-    more_than_three = {}
-    # Filter the no_nodes that have more than 3 nodes
+    ensure_graph_learned = {}
+    # Filter the no_nodes that have more than 3 nodes and have more than no nodes cascade
     for key, value in no_nodes.items():
-        if value > 3:
-            more_than_three[key] = value
+        if value > 3 and value < len(cascade[key]):
+            ensure_graph_learned[key] = value
 
     # Create the graphs for each commodity using moer_than_three
     graphs = {}
-    for key, value in more_than_three.items():
-        graphs[key], _, _ = DANI(more_than_three[key], cascade[key], 0.2)
+    for key, value in ensure_graph_learned.items():
+        graphs[key], _, _ = DANI(ensure_graph_learned[key], cascade[key], 0.2)
         graphs[key] = nx.relabel_nodes(graphs[key], id_mapping[key]["new_to_id"])
 
     return graphs
