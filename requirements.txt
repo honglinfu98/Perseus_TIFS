@@ -1,3 +1,11 @@
+torch==1.9.0
+torchvision==0.10.0
+torch-scatter
+torch-sparse
+torch-geometric
+torch-cluster
+pygod
+scipy>=1.6.0
 python-coinmarketcap
 coverage==7.2.7
 ipykernel==6.22.0

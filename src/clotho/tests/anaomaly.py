@@ -47,10 +47,10 @@ def anamoly_detection(graphs_dict: dict, features_dict: dict):
         # Selecting feature columns for normalization
         feature_columns = [
             "average_increase_percentage",
-            "average_speed",
+            # "average_speed",
             "number_of_signals",
-            "latest_chat_crowd_score",
-            "rating",
+            # "latest_chat_crowd_score",
+            # "rating",
         ]
 
         # Extracting features to be normalized
@@ -111,11 +111,28 @@ def anamoly_detection(graphs_dict: dict, features_dict: dict):
     return mastermind_score
 
 
+def map_the_id_back_cascade(cascade, id_mapping):
+    new_cascades = {}
+    for algo, mappings in cascade.items():
+        new_cascades[algo] = []
+        for mapping in mappings:
+            new_mapping = {}
+            for key, value in mapping.items():
+                if key == "T":
+                    new_mapping[key] = value
+                else:
+                    new_mapping[id_mapping[algo]["new_to_id"][key]] = value
+            new_cascades[algo].append(new_mapping)
+
+    return new_cascades
+
+
 if __name__ == "__main__":
     signals = get_scored_signals()
     processed_signals = process_dataframe(signals)
     ided_signals = assign_event_ids(processed_signals)
     cascade, no_nodes, id_mapping = aggregate_data(ided_signals)
     gs = get_graphs(cascade, no_nodes, id_mapping)
+    cascade_old_id = map_the_id_back_cascade(cascade, id_mapping)
     features = features_engineer(processed_signals)
     scores = anamoly_detection(gs, features)

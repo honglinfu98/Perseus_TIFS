@@ -27,7 +27,7 @@ def get_graphs(cascade: dict, no_nodes: dict, id_mapping: dict):
     # Create the graphs for each commodity using moer_than_three
     graphs = {}
     for key, value in ensure_graph_learned.items():
-        graphs[key], _, _ = DANI(ensure_graph_learned[key], cascade[key], 0.2)
+        graphs[key], _, _ = DANI(ensure_graph_learned[key], cascade[key])
         graphs[key] = nx.relabel_nodes(graphs[key], id_mapping[key]["new_to_id"])
 
     return graphs

@@ -3,7 +3,8 @@ SELECT
     s.telegram_chat_id, -- This will select telegram_chat_id from signals_signal
     s.commodity,
     s.source_posted_at,
-    s.signal_position
+    s.signal_position,
+	s.message_text
 FROM 
     signals_pumpsignal p
 JOIN

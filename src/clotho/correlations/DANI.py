@@ -2,6 +2,8 @@
 This algorithm is used to create netwrok of the channeles and based on the paper below:
 DANI: A Fast Diffusion Aware Network Inference Algorithm
 
+
+information casades
 """
 import numpy as np
 import networkx as nx
@@ -54,8 +56,8 @@ def get_index(cascade):
     return CV
 
 
-def DANI(N, cascades, H):
-    K = int(N * (N - 1) * 0.5 * H)
+def DANI(N, cascades):
+    # K = int(N * (N - 1) * 0.5 * H)
 
     P = np.zeros([N, N])
 
@@ -122,7 +124,8 @@ def DANI(N, cascades, H):
     #         IG.add_edge(u, v)
     #     elif P[u][v] < P[v][u]:
     #         IG.add_edge(v, u)
-    while len(IG.edges) < K:
+    i = 0
+    while result[i][1] != 0:
         u, v = result[i][0]
         # For directed graph, add edge from u to v or v to u based on larger influence
         if P_dict[(u, v)] > P_dict[(v, u)]:
