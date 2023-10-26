@@ -1,0 +1,5 @@
+bandit
+black==23.3.0
+flake8==6.0.0
+jupyter
+pre-commit==3.3.2
