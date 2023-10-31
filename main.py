@@ -1,10 +1,7 @@
 import pandas as pd
-
-from torch_geometric.data import Data
-
-
 import torch
 
+from torch_geometric.data import Data
 
 from pygod.detector import DOMINANT
 

@@ -1,5 +1,6 @@
 torch
 torchvision
+torch_geometric
 pygod
 scipy
 python-coinmarketcap
@@ -13,5 +14,4 @@ pandas==1.5.3
 plotly==5.14.1
 sshtunnel==0.4.0
 datetime
-psycopg2
 psycopg2-binary==2.9.5
