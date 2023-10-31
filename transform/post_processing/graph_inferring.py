@@ -1,7 +1,8 @@
 from matplotlib import pyplot as plt
 import pandas as pd
 import networkx as nx
-from pre_processing_summary.scored_signals import (
+
+from transform.pre_processing_summary.scored_signals import (
     assign_event_ids,
     process_dataframe,
     aggregate_data,
