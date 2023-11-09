@@ -1,4 +1,4 @@
-# perseus
+# Perseus
 Inspired by Perseus’s clever and strategic approach to challenges, this repository meticulously analyzes information to expose the mastermind behind crypto market manipulation.
 
 
@@ -25,3 +25,14 @@ pip install -r requirements.txt
 pip install -r dev-requirements.txt
 export $(cat .env | xargs)
 ```
+
+# Run the torch install
+
+Run the Jupyter notebook torch_install.ipynb to install torch dependencies
+
+### For running 
+
+```bash
+python3 main.py
+```
+

@@ -15,17 +15,6 @@ from transform.pre_processing_summary.scored_signals import (
 )
 
 
-# import pickle
-
-# # Load features.pkl
-# with open('features.pkl', 'rb') as file:
-#     features = pickle.load(file)
-
-# # Load graph.pkl
-# with open('graph.pkl', 'rb') as file:
-#     graph_nx = pickle.load(file)
-
-
 def anamoly_detection(graphs_dict: dict, features_dict: dict):
     mastermind_score = {}
 
@@ -45,8 +34,6 @@ def anamoly_detection(graphs_dict: dict, features_dict: dict):
         # Extracting features to be normalized
         features_to_normalize = features[feature_columns]
 
-        # Normalization (Min-Max Scaling)
-        # normalized_features_min_max = (features_to_normalize - features_to_normalize.min()) / (features_to_normalize.max() - features_to_normalize.min())
 
         # OR Normalization (Z-score Normalization)
         normalized_features_z_score = (
@@ -114,7 +101,6 @@ def map_the_id_back_cascade(cascade, id_mapping):
             new_cascades[algo].append(new_mapping)
 
     return new_cascades
-
 
 if __name__ == "__main__":
     signals = get_scored_signals()
