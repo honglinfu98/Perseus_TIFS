@@ -21,16 +21,21 @@ def get_graphs(cascade: dict, no_nodes: dict, id_mapping: dict):
     ensure_graph_learned = {}
     # Filter the no_nodes that have more than 3 nodes and have more than no nodes cascade
     for key, value in no_nodes.items():
-        if value > 3 and value < len(cascade[key]):
+        if value > 3:  #  and value < len(cascade[key])
             ensure_graph_learned[key] = value
 
     # Create the graphs for each commodity using moer_than_three
     graphs = {}
+    result = {}
+    A = {}
+    P_dict = {}
     for key, value in ensure_graph_learned.items():
-        graphs[key], _, _ = DANI(ensure_graph_learned[key], cascade[key])
+        graphs[key], result[key], A[key], P_dict[key] = DANI(
+            ensure_graph_learned[key], cascade[key]
+        )
         graphs[key] = nx.relabel_nodes(graphs[key], id_mapping[key]["new_to_id"])
 
-    return graphs
+    return graphs, result, A, P_dict
 
 
 def btw_cen_vs_avg_return_by_node(processed_signals: pd.DataFrame, graphs: dict):
@@ -263,7 +268,7 @@ if __name__ == "__main__":
     processed_signals = process_dataframe(signals)
     ided_signals = assign_event_ids(processed_signals)
     cascade, no_nodes, id_mapping = aggregate_data(ided_signals)
-    gs = get_graphs(cascade, no_nodes, id_mapping)
+    gs, results, As, P_dict = get_graphs(cascade, no_nodes, id_mapping)
     # btw_cen_vs_avg_return_by_node(ided_signals, gs)
     # in_out_cen_vs_avg_return_by_node(processed_signals,gs)
-    draw_graph_with_avg_return(processed_signals, gs)
+    # draw_graph_with_avg_return(processed_signals, gs)

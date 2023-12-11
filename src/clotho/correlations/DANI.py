@@ -118,12 +118,6 @@ def DANI(N, cascades):
 
     IG = nx.DiGraph()
 
-    # for key in A.keys():
-    #     u, v = key
-    #     if P[u][v] > P[v][u]:
-    #         IG.add_edge(u, v)
-    #     elif P[u][v] < P[v][u]:
-    #         IG.add_edge(v, u)
     i = 0
     while result[i][1] != 0:
         u, v = result[i][0]
@@ -136,4 +130,5 @@ def DANI(N, cascades):
         i += 1
         if i >= len(result):
             break
-    return IG, result, A
+
+    return IG, result, A, P_dict
