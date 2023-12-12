@@ -187,31 +187,31 @@ def plot_heatmap(scores: dict):
     plt.show()
 
 
-def calculate_effsize_efficiency(G, ego):
-    # Get the ego network
-    ego_net = nx.ego_graph(G, ego, undirected=False)
+# def calculate_effsize_efficiency(G, ego):
+#     # Get the ego network
+#     ego_net = nx.ego_graph(G, ego, undirected=False)
 
-    # Get alters in the ego network (excluding ego)
-    alters = set(ego_net.nodes()) - {ego}
-    num_alters = len(alters)
-    # Inside your calculate_effsize_efficiency function:
-    avg_degree = 0  # Default to 0
-    if num_alters > 0:
-        avg_degree = (
-            sum(
-                ego_net.degree(n) - (1 if ego_net.has_edge(n, ego) else 0)
-                for n in alters
-            )
-            / num_alters
-        )
+#     # Get alters in the ego network (excluding ego)
+#     alters = set(ego_net.nodes()) - {ego}
+#     num_alters = len(alters)
+#     # Inside your calculate_effsize_efficiency function:
+#     avg_degree = 0  # Default to 0
+#     if num_alters > 0:
+#         avg_degree = (
+#             sum(
+#                 ego_net.degree(n) - (1 if ego_net.has_edge(n, ego) else 0)
+#                 for n in alters
+#             )
+#             / num_alters
+#         )
 
-    # Calculate effective size
-    eff_size = num_alters - avg_degree
+#     # Calculate effective size
+#     eff_size = num_alters - avg_degree
 
-    # Calculate efficiency
-    efficiency = eff_size / num_alters if num_alters > 0 else 0
+#     # Calculate efficiency
+#     efficiency = eff_size / num_alters if num_alters > 0 else 0
 
-    return eff_size, efficiency
+#     return eff_size, efficiency
 
 
 def anamoly_detection(graphs_dict: dict, features_dict: dict):
@@ -302,26 +302,6 @@ def map_the_id_back_cascade(cascade, id_mapping):
             new_cascades[algo].append(new_mapping)
 
     return new_cascades
-
-
-def out_ego_graph(G, node, radius=1):
-    """
-    Extract the out-ego network of a specified node in a directed graph.
-    """
-    # Extract the out-ego network
-    out_ego = nx.ego_graph(G, node, radius=radius)
-    return out_ego
-
-
-def in_ego_graph(G, node, radius=1):
-    """
-    Extract the in-ego network of a specified node in a directed graph.
-    """
-    # Reverse the graph
-    G_reverse = G.reverse(copy=True)
-    # Extract the in-ego network
-    in_ego = nx.ego_graph(G_reverse, node, radius=radius)
-    return in_ego
 
 
 def plot_summary(gs):

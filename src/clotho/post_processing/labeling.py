@@ -2,25 +2,7 @@ from clotho.extract.cloudburst_connection import get_masterminds
 
 
 # Function to create label mapping based on top n frequency
-def create_label_mapping(commodity_frequency_lists, n):
-    label_mapping = {}
-    for commodity, freq_list in commodity_frequency_lists.items():
-        # Sort and take top n
-        top_n_chat_ids = set(
-            [
-                chat_id
-                for chat_id, _ in sorted(freq_list, key=lambda x: x[1], reverse=True)[
-                    :n
-                ]
-            ]
-        )
-        label_mapping[commodity] = {
-            chat_id: 1 if chat_id in top_n_chat_ids else 0 for chat_id, _ in freq_list
-        }
-    return label_mapping
-
-
-if __name__ == "__main__":
+def create_label_mapping(n):
     # signals = get_scored_signals()
     data = get_masterminds()
 
@@ -42,5 +24,34 @@ if __name__ == "__main__":
     )
 
     # Example: Create label mapping for top 3 telegram_chat_ids for each commodity
-    n = 3
-    label_mapping = create_label_mapping(commodity_frequency_lists, n)
+    label_mapping = {}
+    for commodity, freq_list in commodity_frequency_lists.items():
+        # Sort and take top n
+        top_n_chat_ids = set(
+            [
+                chat_id
+                for chat_id, _ in sorted(freq_list, key=lambda x: x[1], reverse=True)[
+                    :n
+                ]
+            ]
+        )
+        label_mapping[commodity] = {
+            chat_id: 1 if chat_id in top_n_chat_ids else 0 for chat_id, _ in freq_list
+        }
+
+    label_mapping_2 = {}
+
+    for key in label_mapping:
+        inner_dict = label_mapping[key]
+        first_key = next(iter(inner_dict))  # Get the first key of the inner dictionary
+        inner_dict[first_key] = [
+            inner_dict[first_key],
+            2,
+        ]  # Change the first key's value to a list [1, 2]
+        label_mapping_2[key] = inner_dict
+
+    return label_mapping_2
+
+
+if __name__ == "__main__":
+    label_mapping = create_label_mapping(3)
