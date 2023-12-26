@@ -36,6 +36,53 @@ from statsmodels.formula.api import ols
 #     features = pickle.load(file)
 
 
+def calculate_effsize_efficiency(G, ego):
+    # Get the ego network
+    ego_net = nx.ego_graph(G, ego, undirected=False)
+
+    # Get alters in the ego network (excluding ego)
+    alters = set(ego_net.nodes()) - {ego}
+    num_alters = len(alters)
+    # Inside your calculate_effsize_efficiency function:
+    avg_degree = 0  # Default to 0
+    if num_alters > 0:
+        avg_degree = (
+            sum(
+                ego_net.degree(n) - (1 if ego_net.has_edge(n, ego) else 0)
+                for n in alters
+            )
+            / num_alters
+        )
+
+    # Calculate effective size
+    eff_size = num_alters - avg_degree
+
+    # Calculate efficiency
+    efficiency = eff_size / num_alters if num_alters > 0 else 0
+
+    return eff_size, efficiency
+
+
+def out_ego_graph(G, node, radius=1):
+    """
+    Extract the out-ego network of a specified node in a directed graph.
+    """
+    # Extract the out-ego network
+    out_ego = nx.ego_graph(G, node, radius=radius)
+    return out_ego
+
+
+def in_ego_graph(G, node, radius=1):
+    """
+    Extract the in-ego network of a specified node in a directed graph.
+    """
+    # Reverse the graph
+    G_reverse = G.reverse(copy=True)
+    # Extract the in-ego network
+    in_ego = nx.ego_graph(G_reverse, node, radius=radius)
+    return in_ego
+
+
 # # Load graph.pkl
 # with open('graph.pkl', 'rb') as file:
 #     graph_nx = pickle.load(file)
@@ -53,12 +100,16 @@ def calculate_mean(data):
     return head_data.mean(), tail_data.mean()
 
 
-def plot_aggregated_data(dfs):
-    # Storing mean values
+def plot_aggregated_data(dfs, label_fontsize=28, tick_fontsize=10, title_fontsize=14):
+    # Storing mean values (assuming aggregate_data_eff is defined elsewhere)
     aggregate_means, first_ranked_values = aggregate_data_eff(dfs)
 
     # Plotting
-    labels = ["Mastermind", "Top 25% by ranking", "Bottom 75% by ranking"]
+    labels = [
+        "Mastermind",
+        "Top 25% by probability ranking",
+        "Bottom 75% by probability ranking",
+    ]
     x = np.arange(len(labels))  # the label locations
 
     width = 0.25  # the width of the bars
@@ -66,8 +117,8 @@ def plot_aggregated_data(dfs):
     fig, ax1 = plt.subplots()
 
     color = "tab:blue"
-    ax1.set_xlabel("Groups")
-    ax1.set_ylabel("Effetive Size", color=color)
+    ax1.set_xlabel("Groups", fontsize=label_fontsize)
+    ax1.set_ylabel("Effective Size", color=color, fontsize=label_fontsize)
     rects1 = ax1.bar(
         x - width / 2,
         [
@@ -79,12 +130,12 @@ def plot_aggregated_data(dfs):
         label="Eff Size",
         color=color,
     )
-    ax1.tick_params(axis="y", labelcolor=color)
+    ax1.tick_params(axis="y", labelcolor=color, labelsize=tick_fontsize)
 
     ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
 
     color = "tab:red"
-    ax2.set_ylabel("Efficiency", color=color)
+    ax2.set_ylabel("Efficiency", color=color, fontsize=label_fontsize)
     rects2 = ax2.bar(
         x + width / 2,
         [
@@ -96,14 +147,67 @@ def plot_aggregated_data(dfs):
         label="Efficiency",
         color=color,
     )
-    ax2.tick_params(axis="y", labelcolor=color)
+    ax2.tick_params(axis="y", labelcolor=color, labelsize=tick_fontsize)
 
     ax1.set_xticks(x)
-    ax1.set_xticklabels(labels)
+    ax1.set_xticklabels(labels, fontsize=tick_fontsize)
 
     fig.tight_layout()  # otherwise the right y-label is slightly clipped
     fig.savefig(path.join(PROJECT_ROOT, "data", "effective.pdf"))
     plt.show()
+
+
+# def plot_aggregated_data(dfs):
+#     # Storing mean values
+#     aggregate_means, first_ranked_values = aggregate_data_eff(dfs)
+
+#     # Plotting
+#     labels = ["Mastermind", "Top 25% by probability ranking", "Bottom 75% by probability ranking"]
+#     x = np.arange(len(labels))  # the label locations
+
+#     width = 0.25  # the width of the bars
+
+#     fig, ax1 = plt.subplots()
+
+#     color = "tab:blue"
+#     ax1.set_xlabel("Groups")
+#     ax1.set_ylabel("Effetive Size", color=color)
+#     rects1 = ax1.bar(
+#         x - width / 2,
+#         [
+#             first_ranked_values["eff_size"],
+#             aggregate_means["head_eff_size"],
+#             aggregate_means["tail_eff_size"],
+#         ],
+#         width,
+#         label="Eff Size",
+#         color=color,
+#     )
+#     ax1.tick_params(axis="y", labelcolor=color)
+
+#     ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+
+#     color = "tab:red"
+#     ax2.set_ylabel("Efficiency", color=color)
+#     rects2 = ax2.bar(
+#         x + width / 2,
+#         [
+#             first_ranked_values["efficiency"],
+#             aggregate_means["head_efficiency"],
+#             aggregate_means["tail_efficiency"],
+#         ],
+#         width,
+#         label="Efficiency",
+#         color=color,
+#     )
+#     ax2.tick_params(axis="y", labelcolor=color)
+
+#     ax1.set_xticks(x)
+#     ax1.set_xticklabels(labels)
+
+#     fig.tight_layout()  # otherwise the right y-label is slightly clipped
+#     fig.savefig(path.join(PROJECT_ROOT, "data", "effective.pdf"))
+#     plt.show()
 
 
 # Helper function to aggregate data
@@ -375,20 +479,20 @@ def plot_cascade(cascade_old_id):
         alpha=0.7,
         edgecolor="black",
     )
-    plt.title("Histogram of Number of Senders", fontsize=18)
-    plt.xlabel("Number of Senders", fontsize=18)
-    plt.ylabel("Frequency", fontsize=18)
-    plt.xticks(fontsize=18)
-    plt.yticks(fontsize=18)
+    plt.title("Histogram of Number of Senders", fontsize=28)
+    plt.xlabel("Number of Senders", fontsize=28)
+    plt.ylabel("Frequency", fontsize=28)
+    plt.xticks(fontsize=28)
+    plt.yticks(fontsize=28)
 
     # Histogram for total durations
     plt.subplot(1, 2, 2)
     plt.hist(total_durations, bins=10, color="blue", alpha=0.7, edgecolor="black")
-    plt.title("Histogram of Total Durations", fontsize=18)
-    plt.xlabel("Total Duration", fontsize=18)
-    plt.ylabel("Frequency", fontsize=18)
-    plt.xticks(fontsize=18)
-    plt.yticks(fontsize=18)
+    plt.title("Histogram of Total Durations", fontsize=28)
+    plt.xlabel("Total Duration", fontsize=28)
+    plt.ylabel("Frequency", fontsize=28)
+    plt.xticks(fontsize=28)
+    plt.yticks(fontsize=28)
 
     # Displaying the plot
     plt.tight_layout()
@@ -435,9 +539,9 @@ def plot_comparison(cascade_old_id, scores):
         labels=["Mastermind", "Others"],
         autopct="%1.1f%%",
         startangle=140,
-        textprops={"fontsize": 18},
+        textprops={"fontsize": 28},
     )
-    plt.title("Proportion of cascades initiated by masterminds", fontsize=18)
+    # plt.title("Proportion of cascades initiated by masterminds", fontsize=28)
     plt.axis("equal")  # Equal aspect ratio ensures that pie is drawn as a circle.
 
     # Creating the pie chart for the aggregated proportion of the top three senders compared to total senders
@@ -447,9 +551,9 @@ def plot_comparison(cascade_old_id, scores):
         labels=["Mastermind", "Others"],
         autopct="%1.1f%%",
         startangle=140,
-        textprops={"fontsize": 18},
+        textprops={"fontsize": 28},
     )
-    plt.title("Number of masterminds compared to other channels", fontsize=18)
+    # plt.title("Number of masterminds compared to other channels", fontsize=28)
     plt.axis("equal")  # Equal aspect ratio ensures that pie is drawn as a circle.
 
     # Displaying the plots
