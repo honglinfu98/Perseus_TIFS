@@ -1,21 +1,20 @@
 """
 Download signals from Cloudburst database.
 """
-import pickle
 import os
 import psycopg2
 import pandas as pd
-
-GAIA_DB_HOST = os.getenv("GAIA_DB_HOST")
-GAIA_DB_PORT = os.getenv("GAIA_DB_PORT")
-GAIA_DB_USER = os.getenv("GAIA_DB_USER")
-GAIA_DB_PASSWORD = os.getenv("GAIA_DB_PASSWORD")
-GAIA_DB_DB = os.getenv("GAIA_DB_DB")
+from clotho.config import (
+    GAIA_DB_DB,
+    GAIA_DB_HOST,
+    GAIA_DB_PASSWORD,
+    GAIA_DB_PORT,
+    GAIA_DB_USER,
+)
 
 
 # get path to sql file
 sql_path = os.path.join(os.path.dirname(__file__), "scored_pumps.sql")
-
 mastermind_path = os.path.join(os.path.dirname(__file__), "mastermind.sql")
 
 with open(sql_path, "r") as f:
@@ -63,7 +62,7 @@ def get_masterminds(query: str = QUERY_MASTERMIND):
 
 
 if __name__ == "__main__":
-    # signals = get_scored_signals()
+    signals = get_scored_signals()
     mastermind = get_masterminds()
 
     # with open("signals.pkl", "wb") as file:

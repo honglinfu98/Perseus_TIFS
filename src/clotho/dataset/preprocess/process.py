@@ -2,11 +2,11 @@
 This script is used to process the scored signals and create summary for the data
 """
 from datetime import timedelta
-import pandas as pd
 import json
-import matplotlib.pyplot as plt
-
-from clotho.extract.cloudburst_connection import get_scored_signals
+import pandas as pd
+import networkx as nx
+from clotho.dataset.extract.cloudburst_connection import get_scored_signals
+from clotho.dataset.preprocess.DANI import DANI
 
 
 def assign_event_ids(df: pd.DataFrame):
@@ -209,51 +209,37 @@ def features_engineer(df: pd.DataFrame):
     return result_dict
 
 
-# The function has been defined with the necessary modifications.
+def get_graphs(cascade: dict, no_nodes: dict, id_mapping: dict):
+    """
+    This function creates the graphs for the cascadeX
+    :param cascade: the cascade
+    :param no_nodes: the number of nodes for each commodity
+    :param id_mapping: the mapping between the commodity and the id
+    :return: the graphs
+    """
+    ensure_graph_learned = {}
+    # Filter the no_nodes that have more than 3 nodes and have more than no nodes cascade
+    for key, value in no_nodes.items():
+        if value > 3:  #  and value < len(cascade[key])
+            ensure_graph_learned[key] = value
 
-# Example
-# a_cap = pd.DataFrame(...)
-# cleaned_df = process_dataframe(a_cap)
+    # Create the graphs for each commodity using moer_than_three
+    graphs = {}
+    result = {}
+    A = {}
+    P_dict = {}
+    for key, value in ensure_graph_learned.items():
+        graphs[key], result[key], A[key], P_dict[key] = DANI(
+            ensure_graph_learned[key], cascade[key]
+        )
+        graphs[key] = nx.relabel_nodes(graphs[key], id_mapping[key]["new_to_id"])
 
-
-# # Group by 'telegram_chat_id' and day using 'start_date'
-# grouped_signals_daily = signals.groupby(['telegram_chat_id', pd.Grouper(key='start_date', freq='D')]).size().reset_index(name='signal_count')
-
-# # Drop rows with telegram_chat_id = 79
-# grouped_signals_daily = grouped_signals_daily[grouped_signals_daily['telegram_chat_id'] != 79]
-
-# # Define a set of readable colors
-# colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
-
-# # Plotting
-# plt.figure(figsize=(14, 8))
-# for i, (chat_id, group) in enumerate(grouped_signals_daily.groupby('telegram_chat_id')):
-#     plt.plot(group['start_date'], group['signal_count'], label=f'Telegram Chat ID: {chat_id}', marker='o', color=colors[i % len(colors)])
-
-# plt.title('Total Number of Signals Over Time by Telegram Chat ID (Excluding ID 79) - Daily')
-# plt.xlabel('Date')
-# plt.ylabel('Number of Signals')
-# plt.legend()
-# plt.grid(True, which='both', linestyle='--', linewidth=0.5)
-# plt.tight_layout()
-# plt.show()
+    return graphs, result, A, P_dict
 
 
 if __name__ == "__main__":
     signals = get_scored_signals()
-    # Plot the total number of signals again the time by each telegram_chat_id
-
-    # signals["start_date"].hist(bins=100)
-
-    # df = process_dataframe(signals)
-    # df = assign_event_ids(df)
-    # a, b, c = aggregate_data(df)
-
-    # # check if the end_date has duplicates
-    # print(df["end_date"].duplicated().sum())
-    # # Group by commodity and end_date for the duplicates
-
-    # grouped = df.groupby(["commodity", "end_date"])
-    # # And see each seperate group
-    # for group in grouped.groups:
-    #     print(grouped.get_group(group))
+    processed_signals = process_dataframe(signals)
+    ided_signals = assign_event_ids(processed_signals)
+    cascade, no_nodes, id_mapping = aggregate_data(ided_signals)
+    gs, results, As, P_dict = get_graphs(cascade, no_nodes, id_mapping)

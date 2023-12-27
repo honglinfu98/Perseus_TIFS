@@ -9,14 +9,16 @@ from sklearn.metrics import roc_curve, auc
 import matplotlib.pyplot as plt
 from torch_geometric.loader import DataLoader
 from clotho.settings import PROJECT_ROOT
-from clotho.post_processing.graph_inferring import get_graphs
-from clotho.pre_processing_summary.scored_signals import (
+
+# Import functions from your dataset processing scripts
+from clotho.dataset.preprocess.process import (
     aggregate_data,
     assign_event_ids,
     process_dataframe,
     features_engineer,
+    get_graphs,
 )
-from clotho.post_processing.labeling import create_label_mapping
+from clotho.dataset.preprocess.groudtruth_labeling import create_label_mapping
 from clotho.dataset.gnn_dataset_preparation import (
     graph_features,
     combine_features,
@@ -106,32 +108,33 @@ train_loader = DataLoader(train_data, batch_size=1, shuffle=True)
 test_loader = DataLoader(test_data, batch_size=1, shuffle=False)
 
 
-# Training and Testing loop
-def run_experiment(model):
+def run_experiment(model, num_epochs=100):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.00005)
     loss_op = torch.nn.BCEWithLogitsLoss()
 
     def train():
-        model.train()
-        total_loss = 0
-        for data in train_loader:
-            data = data.to(device)
-            optimizer.zero_grad()
-            output = model(data.x, data.edge_index)
-            # Check output range
-            if torch.isnan(output).any() or torch.isinf(output).any():
-                print("NaN or Inf in model output")
-                continue
-            loss = loss_op(output, data.y.float())
-            if torch.isnan(loss) or torch.isinf(loss):
-                print("NaN or Inf in loss")
-                continue
-            total_loss += loss.item() * data.num_graphs
-            loss.backward()
-            optimizer.step()
-        return total_loss / len(train_loader.dataset)
+        for epoch in range(num_epochs):
+            model.train()
+            total_loss = 0
+            for data in train_loader:
+                data = data.to(device)
+                optimizer.zero_grad()
+                output = model(data.x, data.edge_index)
+                if torch.isnan(output).any() or torch.isinf(output).any():
+                    print("NaN or Inf in model output")
+                    continue
+                loss = loss_op(output, data.y.float())
+                if torch.isnan(loss) or torch.isinf(loss):
+                    print("NaN or Inf in loss")
+                    continue
+                total_loss += loss.item() * data.num_graphs
+                loss.backward()
+                optimizer.step()
+            print(
+                f"Epoch {epoch+1}/{num_epochs}, Loss: {total_loss / len(train_loader.dataset)}"
+            )
 
     @torch.no_grad()
     def test(loader):
@@ -144,37 +147,18 @@ def run_experiment(model):
             all_labels.append(data.y.cpu())
         return all_probs, all_labels
 
-    # Training and Testing loop
-    average_auc_scores = []
-    for epoch in range(1, 101):
-        train()
-        probs, labels = test(test_loader)
+    train()
+    probs, labels = test(test_loader)
+    probs = torch.cat(probs, dim=0).sigmoid().numpy()
+    labels = torch.cat(labels, dim=0).numpy()
 
-        probs = torch.cat(probs, dim=0).sigmoid().numpy()
-        labels = torch.cat(labels, dim=0).numpy()
+    # Compute ROC for each label and store
+    fpr_dict, tpr_dict, thresholds_dict = {}, {}, {}
+    for i in range(labels.shape[1]):  # Assuming labels is a 2D array: [samples, labels]
+        fpr, tpr, thresholds = roc_curve(labels[:, i], probs[:, i])
+        fpr_dict[i], tpr_dict[i], thresholds_dict[i] = fpr, tpr, thresholds
 
-        # Compute AUC for each label and average
-        auc_scores = []
-        for i in range(
-            labels.shape[1]
-        ):  # Assuming labels is a 2D array: [samples, labels]
-            fpr, tpr, _ = roc_curve(labels[:, i], probs[:, i])
-            roc_auc = auc(fpr, tpr)
-            auc_scores.append(roc_auc)
-        average_auc = np.mean(auc_scores)
-        average_auc_scores.append(average_auc)
-
-        print(f"Epoch: {epoch:03d}, Average AUC: {average_auc:.4f}")
-
-    # Plotting average AUC scores
-    plt.plot(range(1, 101), average_auc_scores, label="Average AUC")
-    plt.xlabel("Epoch")
-    plt.ylabel("Average AUC")
-    plt.title("Average AUC per Epoch")
-    plt.legend()
-    plt.show()
-
-    return average_auc_scores
+    return model, fpr_dict, tpr_dict, thresholds_dict
 
 
 # Run experiments for each model
@@ -182,23 +166,26 @@ num_features = 4  # Set this according to your dataset
 num_classes = 3  # Set this according to your dataset
 
 print("Running GAT Experiment")
-gat_auc_scores = run_experiment(Net())
+gat_model, gat_fpr, gat_tpr, _ = run_experiment(Net(), num_epochs=100)
 
 print("\nRunning GCN Experiment")
-gcn_auc_scores = run_experiment(GCNNet(num_features, num_classes))
+gcn_model, gcn_fpr, gcn_tpr, _ = run_experiment(
+    GCNNet(num_features, num_classes), num_epochs=100
+)
 
 print("\nRunning GraphSAGE Experiment")
-graphsage_auc_scores = run_experiment(GraphSAGENet(num_features, num_classes))
+graphsage_model, graphsage_fpr, graphsage_tpr, _ = run_experiment(
+    GraphSAGENet(num_features, num_classes), num_epochs=100
+)
 
-
+# Plotting ROC Curves
 plt.figure(figsize=(10, 6))
-epochs = range(1, 101)
-plt.plot(epochs, gat_auc_scores, label="GAT")
-plt.plot(epochs, gcn_auc_scores, label="GCN")
-plt.plot(epochs, graphsage_auc_scores, label="GraphSAGE")
-
-plt.xlabel("Epoch")
-plt.ylabel("Average AUC")
-plt.title("Average AUC per Epoch for GAT, GCN, and GraphSAGE")
+label = 0  # Assuming we are plotting for the first label
+plt.plot(gat_fpr[label], gat_tpr[label], label="GAT")
+plt.plot(gcn_fpr[label], gcn_tpr[label], label="GCN")
+plt.plot(graphsage_fpr[label], graphsage_tpr[label], label="GraphSAGE")
+plt.xlabel("False Positive Rate")
+plt.ylabel("True Positive Rate")
+plt.title("ROC Curves Comparison")
 plt.legend()
 plt.show()

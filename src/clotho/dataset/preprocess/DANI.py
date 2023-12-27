@@ -1,13 +1,9 @@
 """
 This algorithm is used to create netwrok of the channeles and based on the paper below:
 DANI: A Fast Diffusion Aware Network Inference Algorithm
-
-
-information casades
 """
 import numpy as np
 import networkx as nx
-import numpy as np
 from collections import defaultdict
 
 

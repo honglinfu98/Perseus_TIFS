@@ -6,14 +6,14 @@ import torch
 from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
 from clotho.settings import PROJECT_ROOT
-from clotho.post_processing.graph_inferring import get_graphs
-from clotho.pre_processing_summary.scored_signals import (
+from clotho.dataset.preprocess.process import (
     aggregate_data,
     assign_event_ids,
     process_dataframe,
     features_engineer,
+    get_graphs,
 )
-from clotho.post_processing.labeling import create_label_mapping
+from clotho.dataset.preprocess.groudtruth_labeling import create_label_mapping
 
 
 def calculate_effsize_efficiency(G, ego):

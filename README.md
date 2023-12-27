@@ -54,58 +54,12 @@ pip install -e ".[dev]"
 ## Run scripts
 
 To run the profiling:
-Include SSH_PKEY, DB_USERNAME, and DB_PASS variable assignment in the .env file,
-which correspond to SSH private key, database username, and database password.
+Include GAIA config in the .env file,
 
 ```bash
 export $(cat .env | xargs)
 ```
 
-### Run the channels profiling pipeline:
-   
-```bash
-run/run_channels_profiling.py
-```
-   
-### Run the users profiling pipeline:
-
-```bash
-run/run_users_profiling.py
-```
-
-### Neo4j flow 
-1. In order for this to work you need to have a neo4j database running. 
-2. Update .env file with the following variables:
-   - NEO4J_USERNAME
-   - NEO4J_PASSWORD
-   - NEO4J_HOST
-   - NEO4J_PORT
-3. Need to be run users_profiling and user_corr first because those files creates the .json we need to read in.
-Run the following command to start the neo4j flow:
-```bash
-run/run_neo4j_flow.py
-```
-
-
-
-## Testing and Coverage
-
-We use pytest as our testing framework and coverage to measure code coverage.
-
-To run the tests:
-
-```bash
-pytest
-```
-
-To generate a coverage report:
-
-```bash
-coverage run -m pytest
-coverage report
-```
-
-You can also use coverage html command to generate HTML files that you can view in a web browser.
 
 ## Git Large File Storage (Git LFS)
 

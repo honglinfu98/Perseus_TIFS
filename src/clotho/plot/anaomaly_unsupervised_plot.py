@@ -9,14 +9,14 @@ import scipy.stats as stats
 
 
 from clotho.settings import PROJECT_ROOT
-from clotho.extract.cloudburst_connection import get_scored_signals
-from clotho.post_processing.graph_inferring import get_graphs
+from clotho.dataset.extract.cloudburst_connection import get_scored_signals
 
-from clotho.pre_processing_summary.scored_signals import (
+from clotho.dataset.preprocess.process import (
     aggregate_data,
     assign_event_ids,
     process_dataframe,
     features_engineer,
+    get_graphs,
 )
 
 import networkx as nx
@@ -157,59 +157,6 @@ def plot_aggregated_data(dfs, label_fontsize=28, tick_fontsize=10, title_fontsiz
     plt.show()
 
 
-# def plot_aggregated_data(dfs):
-#     # Storing mean values
-#     aggregate_means, first_ranked_values = aggregate_data_eff(dfs)
-
-#     # Plotting
-#     labels = ["Mastermind", "Top 25% by probability ranking", "Bottom 75% by probability ranking"]
-#     x = np.arange(len(labels))  # the label locations
-
-#     width = 0.25  # the width of the bars
-
-#     fig, ax1 = plt.subplots()
-
-#     color = "tab:blue"
-#     ax1.set_xlabel("Groups")
-#     ax1.set_ylabel("Effetive Size", color=color)
-#     rects1 = ax1.bar(
-#         x - width / 2,
-#         [
-#             first_ranked_values["eff_size"],
-#             aggregate_means["head_eff_size"],
-#             aggregate_means["tail_eff_size"],
-#         ],
-#         width,
-#         label="Eff Size",
-#         color=color,
-#     )
-#     ax1.tick_params(axis="y", labelcolor=color)
-
-#     ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
-
-#     color = "tab:red"
-#     ax2.set_ylabel("Efficiency", color=color)
-#     rects2 = ax2.bar(
-#         x + width / 2,
-#         [
-#             first_ranked_values["efficiency"],
-#             aggregate_means["head_efficiency"],
-#             aggregate_means["tail_efficiency"],
-#         ],
-#         width,
-#         label="Efficiency",
-#         color=color,
-#     )
-#     ax2.tick_params(axis="y", labelcolor=color)
-
-#     ax1.set_xticks(x)
-#     ax1.set_xticklabels(labels)
-
-#     fig.tight_layout()  # otherwise the right y-label is slightly clipped
-#     fig.savefig(path.join(PROJECT_ROOT, "data", "effective.pdf"))
-#     plt.show()
-
-
 # Helper function to aggregate data
 def aggregate_data_eff(dfs):
     aggregate_means = {
@@ -289,33 +236,6 @@ def plot_heatmap(scores: dict):
     plt.savefig(path.join(PROJECT_ROOT, "data", "heatmap.pdf"))
 
     plt.show()
-
-
-# def calculate_effsize_efficiency(G, ego):
-#     # Get the ego network
-#     ego_net = nx.ego_graph(G, ego, undirected=False)
-
-#     # Get alters in the ego network (excluding ego)
-#     alters = set(ego_net.nodes()) - {ego}
-#     num_alters = len(alters)
-#     # Inside your calculate_effsize_efficiency function:
-#     avg_degree = 0  # Default to 0
-#     if num_alters > 0:
-#         avg_degree = (
-#             sum(
-#                 ego_net.degree(n) - (1 if ego_net.has_edge(n, ego) else 0)
-#                 for n in alters
-#             )
-#             / num_alters
-#         )
-
-#     # Calculate effective size
-#     eff_size = num_alters - avg_degree
-
-#     # Calculate efficiency
-#     efficiency = eff_size / num_alters if num_alters > 0 else 0
-
-#     return eff_size, efficiency
 
 
 def anamoly_detection(graphs_dict: dict, features_dict: dict):
@@ -577,61 +497,6 @@ if __name__ == "__main__":
     features = features_engineer(processed_signals)
     scores = anamoly_detection(gs, features)
 
-    # ratio = {}
-
-    # # Looping through each key in the scores dictionary
-    # for key in scores.keys():
-    #     ratio[key] = []  # Initializing a list to store the ratios for each key
-    #     for i in range(len(scores[key])):
-    #         node_id = scores[key]["telegram_chat_id"].iloc[i]
-
-    #         # Calculating the in-ego ratio
-    #         inn = len(in_ego_graph(gs[key], node_id).nodes) / len(gs[key])
-
-    #         # Calculating the out-ego ratio
-    #         outt = len(out_ego_graph(gs[key], node_id).nodes) / len(gs[key])
-
-    #         # Appending the ratios to the list corresponding to each key
-    #         ratio[key].append((inn, outt))
-
-    # # Creating a dictionary to store DataFrames for each key
-    # dfs = {}
-
-    # # Looping through each key in the scores dictionary
-    # for key in scores.keys():
-    #     # Creating lists to store node_ids, in-ego ratios, and out-ego ratios
-    #     node_ids = []
-    #     in_ratios = []
-    #     out_ratios = []
-
-    #     for i in range(len(scores[key])):
-    #         node_id = scores[key]["telegram_chat_id"].iloc[i]
-    #         node_ids.append(node_id)
-
-    #         # Calculating the in-ego ratio
-    #         inn = len(in_ego_graph(gs[key], node_id).nodes) / len(gs[key])
-    #         in_ratios.append(inn)
-
-    #         # Calculating the out-ego ratio
-    #         outt = len(out_ego_graph(gs[key], node_id).nodes) / len(gs[key])
-    #         out_ratios.append(outt)
-
-    #         # Calculating the size of in
-
-    #     # Creating a DataFrame for each key and storing it in the dfs dictionary
-    #     dfs[key] = pd.DataFrame(
-    #         {
-    #             "telegram_chat_id": node_ids,
-    #             "in_ratio": in_ratios,
-    #             "out_ratio": out_ratios,
-
-    #         }
-    #     )
-    # Creating a dictionary to store DataFrames for each key
-
-    # TODO: SEE THE FOLLOWING LINKS FOR MORE INFO ON EGO NETWORKS
-    # https://faculty.ucr.edu/~hanneman/nettext/C9_Ego_networks.html
-    # http://www.analytictech.com/ucinet/help/hs4126.htm
     dfs = {}
 
     # Looping through each key in the scores dictionary
@@ -787,5 +652,3 @@ if __name__ == "__main__":
         data=combined_data,
     ).fit()
     anova_results = sm.stats.anova_lm(model, typ=2)
-
-    anova_results

@@ -1,14 +1,11 @@
 """
-This script is used to get the market cap of all the coins and save it as a dictionary
+This script is used to get the circulation of all the coins and save it as a dictionary
 """
-import os
 from os import path
 import pickle
-from clotho.settings import PROJECT_ROOT
 import coinmarketcapapi
-
-
-COINMARKETCAP_API_KEY = os.getenv("COINMARKETCAP_API_KEY")
+from clotho.settings import PROJECT_ROOT
+from clotho.config import COINMARKETCAP_API_KEY
 
 
 def get_coin_circulation():

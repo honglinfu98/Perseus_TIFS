@@ -9,14 +9,14 @@ from sklearn.metrics import roc_curve, auc
 import matplotlib.pyplot as plt
 from torch_geometric.loader import DataLoader
 from clotho.settings import PROJECT_ROOT
-from clotho.post_processing.graph_inferring import get_graphs
-from clotho.pre_processing_summary.scored_signals import (
+from clotho.dataset.preprocess.process import (
     aggregate_data,
     assign_event_ids,
     process_dataframe,
     features_engineer,
+    get_graphs,
 )
-from clotho.post_processing.labeling import create_label_mapping
+from clotho.dataset.preprocess.groudtruth_labeling import create_label_mapping
 from clotho.dataset.gnn_dataset_preparation import (
     graph_features,
     combine_features,
@@ -106,6 +106,7 @@ train_loader = DataLoader(train_data, batch_size=1, shuffle=True)
 test_loader = DataLoader(test_data, batch_size=1, shuffle=False)
 
 
+# Training and Testing loop
 def run_experiment(model):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
@@ -143,34 +144,37 @@ def run_experiment(model):
             all_labels.append(data.y.cpu())
         return all_probs, all_labels
 
-    # Run training and return final test results
+    # Training and Testing loop
+    average_auc_scores = []
+    for epoch in range(1, 101):
+        train()
+        probs, labels = test(test_loader)
 
-    # TODO Extract the last epoch to draw this graph
-    # Evaluation metrics, see wechat, generate as many metrics as possible
-    # Parameter tuning (application side, different layers, to achieve better performance)
-    # One case study, one channel being the masterminds and details
-    # Time window for comparison
-    # Detect how many more masterminds in the new range
-    # Save the model, and test result, and drawing elements
+        probs = torch.cat(probs, dim=0).sigmoid().numpy()
+        labels = torch.cat(labels, dim=0).numpy()
 
-    # Methodology -- need to rewrite
-    # Pipeline redraw
-    # Methodology in details
+        # Compute AUC for each label and average
+        auc_scores = []
+        for i in range(
+            labels.shape[1]
+        ):  # Assuming labels is a 2D array: [samples, labels]
+            fpr, tpr, _ = roc_curve(labels[:, i], probs[:, i])
+            roc_auc = auc(fpr, tpr)
+            auc_scores.append(roc_auc)
+        average_auc = np.mean(auc_scores)
+        average_auc_scores.append(average_auc)
 
-    train()
-    probs, labels = test(test_loader)
-    probs = torch.cat(probs, dim=0).sigmoid().numpy()
-    labels = torch.cat(labels, dim=0).numpy()
+        print(f"Epoch: {epoch:03d}, Average AUC: {average_auc:.4f}")
 
-    # Compute ROC for each label and store
-    fpr_dict = {}
-    tpr_dict = {}
-    thresholds_dict = {}
-    for i in range(labels.shape[1]):  # Assuming labels is a 2D array: [samples, labels]
-        fpr, tpr, thresholds = roc_curve(labels[:, i], probs[:, i])
-        fpr_dict[i], tpr_dict[i], thresholds_dict[i] = fpr, tpr, thresholds
+    # Plotting average AUC scores
+    plt.plot(range(1, 101), average_auc_scores, label="Average AUC")
+    plt.xlabel("Epoch")
+    plt.ylabel("Average AUC")
+    plt.title("Average AUC per Epoch")
+    plt.legend()
+    plt.show()
 
-    return fpr_dict, tpr_dict, thresholds_dict
+    return average_auc_scores
 
 
 # Run experiments for each model
@@ -178,27 +182,23 @@ num_features = 4  # Set this according to your dataset
 num_classes = 3  # Set this according to your dataset
 
 print("Running GAT Experiment")
-gat_fpr, gat_tpr, _ = run_experiment(Net())
+gat_auc_scores = run_experiment(Net())
 
 print("\nRunning GCN Experiment")
-gcn_fpr, gcn_tpr, _ = run_experiment(GCNNet(num_features, num_classes))
+gcn_auc_scores = run_experiment(GCNNet(num_features, num_classes))
 
 print("\nRunning GraphSAGE Experiment")
-graphsage_fpr, graphsage_tpr, _ = run_experiment(
-    GraphSAGENet(num_features, num_classes)
-)
+graphsage_auc_scores = run_experiment(GraphSAGENet(num_features, num_classes))
 
 
 plt.figure(figsize=(10, 6))
+epochs = range(1, 101)
+plt.plot(epochs, gat_auc_scores, label="GAT")
+plt.plot(epochs, gcn_auc_scores, label="GCN")
+plt.plot(epochs, graphsage_auc_scores, label="GraphSAGE")
 
-# Assuming we are plotting for the first label
-label = 0
-plt.plot(gat_fpr[label], gat_tpr[label], label="GAT")
-plt.plot(gcn_fpr[label], gcn_tpr[label], label="GCN")
-plt.plot(graphsage_fpr[label], graphsage_tpr[label], label="GraphSAGE")
-
-plt.xlabel("False Positive Rate")
-plt.ylabel("True Positive Rate")
-plt.title("ROC Curves Comparison")
+plt.xlabel("Epoch")
+plt.ylabel("Average AUC")
+plt.title("Average AUC per Epoch for GAT, GCN, and GraphSAGE")
 plt.legend()
 plt.show()

@@ -1,4 +1,4 @@
-from clotho.extract.cloudburst_connection import get_masterminds
+from clotho.dataset.extract.cloudburst_connection import get_masterminds
 
 
 # Function to create label mapping based on top n frequency
