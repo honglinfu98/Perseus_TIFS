@@ -483,9 +483,9 @@ def plot_comparison(cascade_old_id, scores):
 
 
 if __name__ == "__main__":
-    # signals = get_scored_signals()
-    with open(path.join(PROJECT_ROOT, "data", "signals.pkl"), "rb") as file:
-        signals = pickle.load(file)
+    signals = get_scored_signals()
+    # with open(path.join(PROJECT_ROOT, "data", "signals.pkl"), "rb") as file:
+    # signals = pickle.load(file)
     processed_signals = process_dataframe(signals)
     ided_signals = assign_event_ids(processed_signals)
 

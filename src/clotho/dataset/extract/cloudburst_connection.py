@@ -15,14 +15,23 @@ from clotho.config import (
 
 # get path to sql file
 sql_path = os.path.join(os.path.dirname(__file__), "scored_pumps.sql")
-mastermind_path = os.path.join(os.path.dirname(__file__), "mastermind.sql")
+train_sql_path = os.path.join(os.path.dirname(__file__), "old_scored_pumps.sql")
+mastermind_path = os.path.join(os.path.dirname(__file__), "old_mastermind.sql")
+train_mastermind_path = os.path.join(os.path.dirname(__file__), "mastermind.sql")
+
 
 with open(sql_path, "r") as f:
     QUERY_SCORED_PUMPS = f.read()
 
+with open(train_sql_path, "r") as f:
+    TRAIN_QUERY_SCORED_PUMPS = f.read()
+
 
 with open(mastermind_path, "r") as f:
     QUERY_MASTERMIND = f.read()
+
+with open(train_mastermind_path, "r") as f:
+    TRAIN_QUERY_MASTERMIND = f.read()
 
 
 def get_scored_signals(query: str = QUERY_SCORED_PUMPS):
@@ -39,6 +48,42 @@ def get_scored_signals(query: str = QUERY_SCORED_PUMPS):
     conn.close()
 
     result = signals[~signals["telegram_chat_id"].isna()]
+
+    return result
+
+
+def get_train_scored_signals(query: str = TRAIN_QUERY_SCORED_PUMPS):
+    """
+    Get signals from the database for pre-pump scoring.
+    """
+
+    conn = psycopg2.connect(
+        f"dbname={GAIA_DB_DB} user={GAIA_DB_USER} password={GAIA_DB_PASSWORD} host={GAIA_DB_HOST} port={GAIA_DB_PORT}"
+    )
+
+    signals = pd.read_sql(query, conn)  # type: ignore
+
+    conn.close()
+
+    result = signals[~signals["telegram_chat_id"].isna()]
+
+    return result
+
+
+def get_train_masterminds(query: str = TRAIN_QUERY_MASTERMIND):
+    """
+    Get masterminds from the database.
+    """
+
+    conn = psycopg2.connect(
+        f"dbname={GAIA_DB_DB} user={GAIA_DB_USER} password={GAIA_DB_PASSWORD} host={GAIA_DB_HOST} port={GAIA_DB_PORT}"
+    )
+
+    mastermind = pd.read_sql(query, conn)  # type: ignore
+
+    conn.close()
+
+    result = mastermind[~mastermind["telegram_chat_id"].isna()]
 
     return result
 
@@ -62,8 +107,10 @@ def get_masterminds(query: str = QUERY_MASTERMIND):
 
 
 if __name__ == "__main__":
-    signals = get_scored_signals()
-    mastermind = get_masterminds()
+    # signals = get_scored_signals()
+    # mastermind = get_masterminds()
+    train_signals = get_train_scored_signals()
+    train_mastermind = get_train_masterminds()
 
     # with open("signals.pkl", "wb") as file:
     #     pickle.dump(signals, file)

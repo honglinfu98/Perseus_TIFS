@@ -1,29 +1,21 @@
 from os import path
-import pickle
 import torch
-import random
 import numpy as np
 import torch.nn.functional as F
 from torch_geometric.nn import GATConv, GCNConv, SAGEConv
-from sklearn.metrics import roc_curve, auc
+from sklearn.metrics import (
+    roc_curve,
+    auc,
+    precision_score,
+    recall_score,
+    f1_score,
+    accuracy_score,
+    confusion_matrix,
+)
 import matplotlib.pyplot as plt
-from torch_geometric.loader import DataLoader
-from clotho.settings import PROJECT_ROOT
+from clotho.model.data_loader import get_data_loader
 
-# Import functions from your dataset processing scripts
-from clotho.dataset.preprocess.process import (
-    aggregate_data,
-    assign_event_ids,
-    process_dataframe,
-    features_engineer,
-    get_graphs,
-)
-from clotho.dataset.preprocess.groudtruth_labeling import create_label_mapping
-from clotho.dataset.gnn_dataset_preparation import (
-    graph_features,
-    combine_features,
-    prepare_data,
-)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 # GCN Implementation
@@ -77,39 +69,11 @@ class Net(torch.nn.Module):
         return x
 
 
-with open(path.join(PROJECT_ROOT, "data", "signals.pkl"), "rb") as file:
-    signals = pickle.load(file)
-processed_signals = process_dataframe(signals)
-ided_signals = assign_event_ids(processed_signals)
-
-cascade, no_nodes, id_mapping = aggregate_data(ided_signals)
-gs, results, As, P_dict = get_graphs(cascade, no_nodes, id_mapping)
-f = graph_features(gs)
-market_features = features_engineer(processed_signals)
-c = combine_features(market_features, f)
-label_mapping = create_label_mapping(3)
-
-# Split gs into training and testing sets
-all_keys = list(gs.keys())
-random.shuffle(all_keys)
-split_index = int(len(all_keys) * 0.8)  # 80% for training
-
-train_keys = set(all_keys[:split_index])
-test_keys = set(all_keys[split_index:])
-
-train_graphs = {key: gs[key] for key in train_keys}
-test_graphs = {key: gs[key] for key in test_keys}
-
-# Prepare data for training and testing sets
-train_data = prepare_data(train_graphs, c, label_mapping)
-test_data = prepare_data(test_graphs, c, label_mapping)
-
-train_loader = DataLoader(train_data, batch_size=1, shuffle=True)
-test_loader = DataLoader(test_data, batch_size=1, shuffle=False)
+train_loader, test_loader = get_data_loader()
 
 
 def run_experiment(model, num_epochs=100):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.00005)
     loss_op = torch.nn.BCEWithLogitsLoss()
@@ -161,6 +125,96 @@ def run_experiment(model, num_epochs=100):
     return model, fpr_dict, tpr_dict, thresholds_dict
 
 
+# Updated Metrics Calculation Functions
+def calculate_accuracy(labels, preds):
+    return accuracy_score(labels, preds)
+
+
+def calculate_precision(labels, preds):
+    return precision_score(labels, preds, average="macro", zero_division=0)
+
+
+def calculate_recall(labels, preds):
+    return recall_score(labels, preds, average="macro", zero_division=0)
+
+
+def calculate_f1_score(labels, preds):
+    return f1_score(labels, preds, average="macro", zero_division=0)
+
+
+# @torch.no_grad()
+# def compute_metrics(model, loader):
+#     model.eval()
+#     all_probs, all_labels = [], []
+#     for data in loader:
+#         data = data.to(device)
+#         out = model(data.x, data.edge_index)
+#         all_probs.append(out.cpu())
+#         all_labels.append(data.y.cpu())
+#     probs = torch.cat(all_probs, dim=0).sigmoid().numpy()
+#     labels = torch.cat(all_labels, dim=0).numpy()
+#     preds = probs.argmax(axis=1)
+
+#     # Converting labels for multi-class classification
+#     labels = labels.argmax(axis=1)
+
+#     # Calculating metrics
+#     accuracy = calculate_accuracy(labels, preds)
+#     precision = calculate_precision(labels, preds)
+#     recall = calculate_recall(labels, preds)
+#     f1 = calculate_f1_score(labels, preds)
+
+
+#     return accuracy, precision, recall, f1
+@torch.no_grad()
+def compute_metrics(model, loader):
+    model.eval()
+    all_probs, all_labels = [], []
+    for data in loader:
+        data = data.to(device)
+        out = model(data.x, data.edge_index)
+        all_probs.append(out.cpu())
+        all_labels.append(data.y.cpu())
+    probs = torch.cat(all_probs, dim=0).sigmoid().numpy()
+    labels = torch.cat(all_labels, dim=0).numpy()
+    preds = probs.argmax(axis=1)
+    labels = labels.argmax(axis=1)
+
+    # Calculating metrics
+    accuracy = calculate_accuracy(labels, preds)
+    precision = calculate_precision(labels, preds)
+    recall = calculate_recall(labels, preds)
+    f1 = calculate_f1_score(labels, preds)
+
+    # Additional Metrics
+    cm = confusion_matrix(labels, preds)
+    specificity = np.mean(
+        [
+            cm[i][i] / (cm[i][i] + np.sum(cm[:, i]) - cm[i][i])
+            for i in range(cm.shape[0])
+            if np.sum(cm[:, i]) - cm[i][i] != 0
+        ]
+    )
+    prevalence = np.mean([np.sum(cm[i]) / np.sum(cm) for i in range(cm.shape[0])])
+    detection_rate = np.mean(
+        [cm[i][i] / np.sum(cm[i]) for i in range(cm.shape[0]) if np.sum(cm[i]) != 0]
+    )
+    detection_prevalence = np.mean(
+        [np.sum(cm[:, i]) / np.sum(cm) for i in range(cm.shape[0])]
+    )
+
+    return (
+        accuracy,
+        precision,
+        recall,
+        f1,
+        specificity,
+        prevalence,
+        detection_rate,
+        detection_prevalence,
+    )
+
+
 # Run experiments for each model
 num_features = 4  # Set this according to your dataset
 num_classes = 3  # Set this according to your dataset
@@ -176,6 +230,21 @@ gcn_model, gcn_fpr, gcn_tpr, _ = run_experiment(
 print("\nRunning GraphSAGE Experiment")
 graphsage_model, graphsage_fpr, graphsage_tpr, _ = run_experiment(
     GraphSAGENet(num_features, num_classes), num_epochs=100
+)
+
+gat_metrics = compute_metrics(gat_model, test_loader)
+print(
+    f"GAT Model Metrics:\nAccuracy: {gat_metrics[0]}, Precision: {gat_metrics[1]}, Recall: {gat_metrics[2]}, F1 Score: {gat_metrics[3]}, Specificity: {gat_metrics[4]}, Prevalence: {gat_metrics[5]}, Detection Rate: {gat_metrics[6]}, Detection Prevalence: {gat_metrics[7]}\n"
+)
+
+gcn_metrics = compute_metrics(gcn_model, test_loader)
+print(
+    f"GAT Model Metrics:\nAccuracy: {gcn_metrics[0]}, Precision: {gcn_metrics[1]}, Recall: {gcn_metrics[2]}, F1 Score: {gcn_metrics[3]}, Specificity: {gcn_metrics[4]}, Prevalence: {gcn_metrics[5]}, Detection Rate: {gcn_metrics[6]}, Detection Prevalence: {gcn_metrics[7]}\n"
+)
+
+graphsage_metrics = compute_metrics(graphsage_model, test_loader)
+print(
+    f"GAT Model Metrics:\nAccuracy: {graphsage_metrics[0]}, Precision: {graphsage_metrics[1]}, Recall: {graphsage_metrics[2]}, F1 Score: {graphsage_metrics[3]}, Specificity: {graphsage_metrics[4]}, Prevalence: {graphsage_metrics[5]}, Detection Rate: {graphsage_metrics[6]}, Detection Prevalence: {graphsage_metrics[7]}\n"
 )
 
 # Plotting ROC Curves

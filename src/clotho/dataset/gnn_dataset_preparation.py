@@ -5,6 +5,10 @@ import networkx as nx
 import torch
 from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
+from clotho.dataset.extract.cloudburst_connection import (
+    get_scored_signals,
+    get_train_scored_signals,
+)
 from clotho.settings import PROJECT_ROOT
 from clotho.dataset.preprocess.process import (
     aggregate_data,
@@ -235,8 +239,10 @@ def prepare_data(graphs, features, label_mapping):
 
 if __name__ == "__main__":
     # signals = get_scored_signals()
-    with open(path.join(PROJECT_ROOT, "data", "signals.pkl"), "rb") as file:
-        signals = pickle.load(file)
+    # with open(path.join(PROJECT_ROOT, "data", "signals.pkl"), "rb") as file:
+    #     signals = pickle.load(file)
+    signals = get_scored_signals()
+
     processed_signals = process_dataframe(signals)
     ided_signals = assign_event_ids(processed_signals)
 
@@ -245,6 +251,6 @@ if __name__ == "__main__":
     f = graph_features(gs)
     market_features = features_engineer(processed_signals)
     c = combine_features(market_features, f)
-    label_mapping = create_label_mapping(3)
+    label_mapping = create_label_mapping(3, "test")
     data = prepare_data(gs, c, label_mapping)
     loader = DataLoader(data, batch_size=1, shuffle=True)

@@ -1,10 +1,23 @@
-from clotho.dataset.extract.cloudburst_connection import get_masterminds
+from os import path
+import pickle
+from clotho.dataset.extract.cloudburst_connection import (
+    get_masterminds,
+    get_train_masterminds,
+    get_scored_signals,
+    get_train_scored_signals,
+)
+from clotho.settings import PROJECT_ROOT
 
 
 # Function to create label mapping based on top n frequency
-def create_label_mapping(n):
+def create_label_mapping(n: int, train_or_test: str):
     # signals = get_scored_signals()
-    data = get_masterminds()
+    if train_or_test == "test":
+        with open(path.join(PROJECT_ROOT, "data", "signals.pkl"), "rb") as file:
+            data = pickle.load(file)
+        # data = get_scored_signals()
+    elif train_or_test == "train":
+        data = get_train_scored_signals()
 
     # Grouping by commodity and telegram_chat_id and counting the occurrences
     commodity_frequency = (
@@ -54,4 +67,4 @@ def create_label_mapping(n):
 
 
 if __name__ == "__main__":
-    label_mapping = create_label_mapping(3)
+    label_mapping = create_label_mapping(3, "train")
