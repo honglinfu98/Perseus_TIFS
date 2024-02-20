@@ -5,7 +5,7 @@ from datetime import timedelta
 import json
 import pandas as pd
 import networkx as nx
-from perseus.dataset.extract.cloudburst_connection import get_scored_signals
+from perseus.dataset.preprocess.train_test_validate import get_test_scored_signals
 from perseus.dataset.preprocess.DANI import DANI
 from collections import defaultdict
 
@@ -258,7 +258,7 @@ def get_graphs(cascade: dict, no_nodes: dict, id_mapping: dict):
 
 
 if __name__ == "__main__":
-    signals = get_scored_signals()
+    signals = get_test_scored_signals()
     processed_signals = process_dataframe(signals)
     ided_signals = assign_event_ids(processed_signals)
     cascade, no_nodes, id_mapping = aggregate_data(ided_signals)

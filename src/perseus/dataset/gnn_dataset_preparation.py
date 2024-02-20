@@ -5,8 +5,8 @@ import networkx as nx
 import torch
 from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
-from perseus.dataset.extract.cloudburst_connection import (
-    get_scored_signals,
+from perseus.dataset.preprocess.train_test_validate import (
+    get_test_scored_signals,
     get_train_scored_signals,
 )
 from perseus.settings import PROJECT_ROOT

@@ -1,9 +1,6 @@
 torch
 torchvision
-torch-scatter
-torch-sparse
 torch-geometric
-torch-cluster
 pygod
 scipy>=1.6.0
 python-coinmarketcap

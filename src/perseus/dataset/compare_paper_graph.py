@@ -5,8 +5,8 @@ import networkx as nx
 import torch
 from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
-from perseus.dataset.extract.cloudburst_connection import (
-    get_scored_signals,
+from perseus.dataset.preprocess.train_test_validate import (
+    get_test_scored_signals,
     get_train_scored_signals,
 )
 from perseus.settings import PROJECT_ROOT
@@ -18,9 +18,6 @@ from perseus.dataset.preprocess.process import (
     get_graphs,
 )
 from perseus.dataset.preprocess.groudtruth_labeling import create_label_mapping
-from itertools import combinations
-from sklearn.metrics.pairwise import cosine_similarity
-from perseus.dataset.extract.cloudburst_connection import get_direct_link
 from itertools import combinations
 from sklearn.metrics.pairwise import cosine_similarity
 
