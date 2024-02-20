@@ -2,7 +2,7 @@ from os import path
 import pickle 
 from torch_geometric.loader import DataLoader
 from perseus.dataset.compare_paper_graph import combine_features, graph_features
-from perseus.dataset.extract.cloudburst_connection import get_scored_signals, get_train_scored_signals, get_valid_scored_signals
+from perseus.dataset.preprocess.train_test_validate import get_test_scored_signals, get_train_scored_signals, get_valid_scored_signals
 from perseus.dataset.preprocess.groudtruth_labeling import create_label_mapping
 from perseus.dataset.preprocess.process import features_engineer, get_graphs, process_dataframe, aggregate_data, assign_event_ids
 from perseus.dataset.gnn_dataset_preparation import (
@@ -241,7 +241,7 @@ def get_data_loader(options: str):
     # with open("signals1.pkl", "rb") as file:
     #     train_signals = pickle.load(file)
     train_signals = get_train_scored_signals()
-    test_signals = get_scored_signals()
+    test_signals = get_test_scored_signals()
     validate_signals = get_valid_scored_signals()
 
     gs_ls = []

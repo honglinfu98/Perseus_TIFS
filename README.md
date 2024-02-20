@@ -11,8 +11,6 @@ Inspired by Perseus’s clever and strategic approach to challenges, this reposi
 ```bash
 python3 -m venv venv
 source venv/bin/activate
-pip3 install -r requirements.txt
-pip3 install -r dev-requirements.txt
 pip3 install -e .
 export $(cat .env | xargs)
 ```
@@ -30,7 +28,4 @@ export $(cat .env | xargs)
 
 ### For running 
 
-```bash
-python3 main.py
-```
 

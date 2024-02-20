@@ -1,9 +1,8 @@
 from os import path
 import pickle
-from perseus.dataset.extract.cloudburst_connection import (
-    get_masterminds,
-    get_train_masterminds,
-    get_scored_signals,
+from perseus.dataset.preprocess.train_test_validate import (
+
+    get_test_scored_signals,
     get_train_scored_signals,
 )
 from perseus.settings import PROJECT_ROOT
@@ -15,7 +14,7 @@ def create_label_mapping(n: int, train_or_test: str):
     if train_or_test == "test":
         # with open(path.join(PROJECT_ROOT, "data", "signals.pkl"), "rb") as file:
         #     data = pickle.load(file)
-        data = get_scored_signals()
+        data = get_test_scored_signals()
     elif train_or_test == "train":
         data = get_train_scored_signals()
 
