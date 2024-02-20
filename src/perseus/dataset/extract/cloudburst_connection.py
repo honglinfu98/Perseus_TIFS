@@ -103,7 +103,7 @@ def get_scored_signals(query: str = QUERY_SCORED_PUMPS):
     # conn.close()
 
     # result = signals[~signals["telegram_chat_id"].isna()]
-    with open(os.path.join(PROJECT_ROOT, "src","clotho","dataset","extract","download","test_signals.pkl"), "rb") as file:
+    with open(os.path.join(PROJECT_ROOT, "src","perseus","dataset","extract","download","test_signals.pkl"), "rb") as file:
         signals = pickle.load(file)
     result = signals[~signals["telegram_chat_id"].isna()]
 
@@ -123,7 +123,7 @@ def get_train_scored_signals(query: str = TRAIN_QUERY_SCORED_PUMPS):
 
     # conn.close()
 
-    with open(os.path.join(PROJECT_ROOT, "src","clotho","dataset","extract","download","train_signals.pkl"), "rb") as file:
+    with open(os.path.join(PROJECT_ROOT, "src","perseus","dataset","extract","download","train_signals.pkl"), "rb") as file:
         signals = pickle.load(file)      
     result = signals[~signals["telegram_chat_id"].isna()]
 
@@ -143,7 +143,7 @@ def get_valid_scored_signals(query: str = VALID_QUERY_SCORED_PUMPS):
 
     # conn.close()
 
-    with open(os.path.join(PROJECT_ROOT, "src","clotho","dataset","extract","download","validate_signals.pkl"), "rb") as file:
+    with open(os.path.join(PROJECT_ROOT, "src","perseus","dataset","extract","download","validate_signals.pkl"), "rb") as file:
         signals = pickle.load(file)       
     result = signals[~signals["telegram_chat_id"].isna()]
 

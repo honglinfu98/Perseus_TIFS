@@ -4,7 +4,7 @@ from perseus.settings import PROJECT_ROOT
 
 import pandas as pd
 
-with open(path.join(PROJECT_ROOT, "src","clotho","dataset","extract","download","all_scored.pkl"), "rb") as file:
+with open(path.join(PROJECT_ROOT, "src","perseus","dataset","extract","download","all_scored.pkl"), "rb") as file:
     df = pickle.load(file)        
 
 
@@ -28,11 +28,11 @@ validate_df = df[(df['source_posted_at'] > end_date)]
 
 
 
-with open(path.join(PROJECT_ROOT, "src","clotho","dataset","extract","download","train_signals.pkl"), "wb") as file:
+with open(path.join(PROJECT_ROOT, "src","perseus","dataset","extract","download","train_signals.pkl"), "wb") as file:
     pickle.dump(train_df,file)        
 
-with open(path.join(PROJECT_ROOT, "src","clotho","dataset","extract","download","test_signals.pkl"), "wb") as file:
+with open(path.join(PROJECT_ROOT, "src","perseus","dataset","extract","download","test_signals.pkl"), "wb") as file:
     pickle.dump(test_df,file)        
 
-with open(path.join(PROJECT_ROOT, "src","clotho","dataset","extract","download","validate_signals.pkl"), "wb") as file:
+with open(path.join(PROJECT_ROOT, "src","perseus","dataset","extract","download","validate_signals.pkl"), "wb") as file:
     pickle.dump(validate_df,file)        

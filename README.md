@@ -28,10 +28,6 @@ pip install -e .
 export $(cat .env | xargs)
 ```
 
-# Run the torch install
-
-Run the Jupyter notebook torch_install.ipynb to install torch dependencies
-
 ### For running 
 
 ```bash
