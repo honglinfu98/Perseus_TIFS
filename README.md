@@ -1,27 +1,8 @@
-<<<<<<< HEAD
-# Clotho
-
-Clone this repository
-
-```bash
-git clone https://github.com/Cloudburst-E/clotho.git
-```
-
-Navigate to the directory of the cloned repo
-
-```bash
-cd clotho
-```
-
-### Set up the repo
----
-=======
 # Perseus
 Inspired by Perseus’s clever and strategic approach to challenges, this repository meticulously analyzes information to expose the mastermind behind crypto market manipulation.
 
 
 ### Set up the repo
->>>>>>> origin/main
 
 #### Create a python virtual environment
 
@@ -29,116 +10,21 @@ Inspired by Perseus’s clever and strategic approach to challenges, this reposi
 
 ```bash
 python3 -m venv venv
-<<<<<<< HEAD
-=======
 source venv/bin/activate
 pip3 install -r requirements.txt
 pip3 install -r dev-requirements.txt
+pip3 install -e .
 export $(cat .env | xargs)
->>>>>>> origin/main
 ```
 
 - Windows
 
 ```bash
 python -m venv venv
-<<<<<<< HEAD
-```
-
-#### Activate the virtual environment
-
-- macOS
-
-```bash
-source venv/bin/activate
-```
-
-- Windows (in Bash, NOT Powershell)
-
-```bash
-source venv/Scripts/activate
-```
-
-#### Install the project in editable mode
-
-```bash
-pip install -e ".[dev]"
-```
-
----
-
-## Run scripts
-
-To run the profiling:
-Include GAIA config in the .env file,
-
-```bash
-export $(cat .env | xargs)
-```
-
-
-## Git Large File Storage (Git LFS)
-
-All files in [`data/`](data/) are stored with `lfs`.
-
-To initialize Git LFS:
-
-```bash
-git lfs install
-```
-
-```bash
-git lfs track data/**/*
-```
-
-To pull data files, use
-
-```bash
-git lfs pull
-```
-
-## Synchronize with the repo
-
-Always pull the latest code first
-
-```bash
-git pull
-```
-
-Make changes locally, save. And then add, commit and push
-
-```bash
-git add [file-to-add]
-git commit -m "update message"
-git push
-```
-
-# Best practice
-
-## Coding Style
-
-We follow [PEP8](https://www.python.org/dev/peps/pep-0008/) coding format.
-The most important rules above all:
-
-1. Keep code lines length below 80 characters. Maximum 120. Long code lines are NOT readable.
-1. We use snake_case to name function, variables. CamelCase for classes.
-1. We make our code as DRY (Don't repeat yourself) as possible.
-1. We give a description to classes, methods and functions.
-1. Variables should be self explaining and just right long:
-   - `implied_volatility` is preferred over `impl_v`
-   - `implied_volatility` is preferred over `implied_volatility_from_broker_name`
-
-## Do not
-
-1. Do not place .py files at root level (besides setup.py)!
-1. Do not upload big files > 100 MB.
-1. Do not upload log files.
-1. Do not declare constant variables in the MIDDLE of a function
-# clotho
-=======
 source venv/bin/activate
 pip install -r requirements.txt
 pip install -r dev-requirements.txt
+pip install -e .
 export $(cat .env | xargs)
 ```
 
@@ -152,4 +38,3 @@ Run the Jupyter notebook torch_install.ipynb to install torch dependencies
 python3 main.py
 ```
 
->>>>>>> origin/main

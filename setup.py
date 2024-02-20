@@ -17,7 +17,7 @@ with pathlib.Path("dev-requirements.txt").open() as dev_requirements_txt:
     ]
 
 setup(
-    name="clotho",
+    name="perseus",
     use_scm_version=True,
     packages=find_packages(where="src"),
     package_dir={
