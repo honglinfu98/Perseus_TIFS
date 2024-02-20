@@ -21,7 +21,17 @@ AND s.message_text NOT ILIKE '%time%'
 AND s.message_text NOT ILIKE '%closed%'
 AND LENGTH(s.message_text) >= 12
 AND s.commodity IS NOT NULL
+AND s.commodity != 'BNT'
+AND s.commodity != 'RAMP'
+AND s.commodity != 'SNM'
+AND s.commodity != 'SNT'
+AND s.commodity != 'SUPER'
+AND s.commodity != 'WPR'
+AND s.commodity != 'DREP'
+AND s.commodity != 'EPS'
+AND s.commodity != 'PIVX'
 AND p.pump_type = 'crowd'
 AND p.pump_score != 0
-AND s.source_posted_at >= '2022-10-01'
+AND s.source_posted_at >= '2022-10-01' -- Start date
+AND s.source_posted_at <= '2023-10-01' -- End date
 ORDER BY s.source_posted_at DESC;

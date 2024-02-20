@@ -181,6 +181,7 @@ def prepare_data(graphs, features, label_mapping):
         ].tolist()
         if nan_columns:
             print(f"NaN values detected in key: {key}, Columns: {nan_columns}")
+            continue
 
         node_attributes = torch.tensor(normalized_features.values, dtype=torch.float)
 
@@ -241,7 +242,8 @@ if __name__ == "__main__":
     # signals = get_scored_signals()
     # with open(path.join(PROJECT_ROOT, "data", "signals.pkl"), "rb") as file:
     #     signals = pickle.load(file)
-    signals = get_scored_signals()
+    # signals = get_scored_signals()
+    signals = get_train_scored_signals()
 
     processed_signals = process_dataframe(signals)
     ided_signals = assign_event_ids(processed_signals)
@@ -251,6 +253,6 @@ if __name__ == "__main__":
     f = graph_features(gs)
     market_features = features_engineer(processed_signals)
     c = combine_features(market_features, f)
-    label_mapping = create_label_mapping(3, "test")
+    label_mapping = create_label_mapping(3, "train")
     data = prepare_data(gs, c, label_mapping)
     loader = DataLoader(data, batch_size=1, shuffle=True)

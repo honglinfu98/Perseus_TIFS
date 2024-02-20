@@ -5,6 +5,7 @@ from clotho.dataset.extract.cloudburst_connection import (
     get_train_masterminds,
     get_scored_signals,
     get_train_scored_signals,
+    get_valid_scored_signals,
 )
 from clotho.settings import PROJECT_ROOT
 
@@ -13,11 +14,28 @@ from clotho.settings import PROJECT_ROOT
 def create_label_mapping(n: int, train_or_test: str):
     # signals = get_scored_signals()
     if train_or_test == "test":
-        with open(path.join(PROJECT_ROOT, "data", "signals.pkl"), "rb") as file:
-            data = pickle.load(file)
+        # with open(path.join(PROJECT_ROOT, "data", "signals.pkl"), "rb") as file:
+        #     data = pickle.load(file)
+        # with open(path.join(PROJECT_ROOT, "data", "signals2.pkl"), "rb") as file:
+        #     data = pickle.load(file)        
+        with open(path.join(PROJECT_ROOT, "src","clotho","dataset","extract","download","test_signals.pkl"), "rb") as file:
+            data = pickle.load(file)       
+        data = data[~data["telegram_chat_id"].isna()]
+
         # data = get_scored_signals()
     elif train_or_test == "train":
-        data = get_train_scored_signals()
+        # with open(path.join(PROJECT_ROOT, "data", "signals1.pkl"), "rb") as file:
+        #     data = pickle.load(file)
+        with open(path.join(PROJECT_ROOT, "src","clotho","dataset","extract","download","train_signals.pkl"), "rb") as file:
+            data = pickle.load(file)       
+        data = data[~data["telegram_chat_id"].isna()]
+    elif train_or_test == "validate":
+        # with open(path.join(PROJECT_ROOT, "data", "signals3.pkl"), "rb") as file:
+        #     data = pickle.load(file)
+
+        with open(path.join(PROJECT_ROOT, "src","clotho","dataset","extract","download","validate_signals.pkl"), "rb") as file:
+            data = pickle.load(file)    
+        data = get_valid_scored_signals()
 
     # Grouping by commodity and telegram_chat_id and counting the occurrences
     commodity_frequency = (

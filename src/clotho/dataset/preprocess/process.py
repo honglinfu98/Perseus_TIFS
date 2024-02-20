@@ -7,6 +7,17 @@ import pandas as pd
 import networkx as nx
 from clotho.dataset.extract.cloudburst_connection import get_scored_signals
 from clotho.dataset.preprocess.DANI import DANI
+from collections import defaultdict
+
+# Function to relabel edges based on new_to_id mapping
+def relabel_edges(d, mapping):
+    new_d = defaultdict(float)
+    for (src, dst), weight in d.items():
+        # Relabel src and dst using the mapping
+        new_src = mapping.get(src, src)  # Use original if not in mapping
+        new_dst = mapping.get(dst, dst)  # Use original if not in mapping
+        new_d[(new_src, new_dst)] = weight
+    return new_d
 
 
 def assign_event_ids(df: pd.DataFrame):
@@ -233,6 +244,15 @@ def get_graphs(cascade: dict, no_nodes: dict, id_mapping: dict):
             ensure_graph_learned[key], cascade[key]
         )
         graphs[key] = nx.relabel_nodes(graphs[key], id_mapping[key]["new_to_id"])
+
+        # Loop over each key in P_dict and apply the mapping
+    for key in P_dict:
+        if key in id_mapping:
+            # Extract new_to_id mapping for the current key
+            new_to_id = id_mapping[key]['new_to_id']
+            # Relabel edges in the current dictionary using the new_to_id mapping
+            P_dict[key] = relabel_edges(P_dict[key], new_to_id)
+
 
     return graphs, result, A, P_dict
 

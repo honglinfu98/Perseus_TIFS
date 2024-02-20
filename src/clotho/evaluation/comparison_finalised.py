@@ -13,9 +13,57 @@ from sklearn.metrics import (
     confusion_matrix,
 )
 import matplotlib.pyplot as plt
-from clotho.model.data_loader import get_data_loader
+# from clotho.model.data_loader import get_data_loader
+from clotho.model.magamaga import get_data_loader
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+# @torch.no_grad()
+# def compute_metrics(model, loader):
+#     model.eval()
+#     all_probs, all_labels = [], []
+#     for data in loader:
+#         data = data.to(device)
+#         out = model(data.x, data.edge_index)
+#         all_probs.append(out.cpu())
+#         all_labels.append(data.y.cpu())
+#     probs = torch.cat(all_probs, dim=0).sigmoid().numpy()
+#     labels = torch.cat(all_labels, dim=0).numpy()
+#     preds = probs.argmax(axis=1)
+
+#     # Converting labels for multi-class classification
+#     labels = labels.argmax(axis=1)
+
+#     # Calculating metrics
+#     accuracy = calculate_accuracy(labels, preds)
+#     precision = calculate_precision(labels, preds)
+#     recall = calculate_recall(labels, preds)
+#     f1 = calculate_f1_score(labels, preds)
+
+
+# TODO: make the comparison 3 or 2
+# TODO: https://pytorch-geometric.readthedocs.io/en/latest/tutorial/neighbor_loader.html?highlight=sampling
+# TODO: https://neo4j.com/blog/graph-algorithms-neo4j-betweenness-centrality/?utm_source=google&utm_medium=PaidSearch&utm_campaign=GDB&utm_content=APAC-X-Awareness-GDB-Text&utm_term=&gad_source=1&gclid=CjwKCAiA7t6sBhAiEiwAsaieYoEzQ8natFE0mCoqHrA2LhWq6050KWKz4wOIzGqxJ3d7zIIrcQTmZxoCC1IQAvD_BwE
+# TODO: (why we use the above sampling method, in degree and betweeness centrality)
+# TODO: experiment for time evaluation and accurary
+
+
+# TODO: no slicing window for average, just each epoch
+# TODO: validation, test; test not in validation and training.
+# TODO: Network comparison, frst three year and last years
+# TODO: Three dataset test, train, validate
+# TODO: write the paper by specifying how we label the data (see the review reply)
+
+# validation needs not to show
+
+# GAT
+# 邻居点的采样方法，为什么要这样采样，如何设计采样方式
+# 调参数，随机数
+# random seed 44
+
+# TODO: experiment with dani and without dani.
+# todo：more experiments the better, more comparison
 
 
 # GCN Implementation
@@ -69,7 +117,8 @@ class Net(torch.nn.Module):
         return x
 
 
-train_loader, test_loader = get_data_loader()
+# train_loader, test_loader = get_data_loader()
+train_loader, test_loader, c = get_data_loader("DDINA")
 
 
 def run_experiment(model, num_epochs=100):
@@ -140,29 +189,6 @@ def calculate_recall(labels, preds):
 
 def calculate_f1_score(labels, preds):
     return f1_score(labels, preds, average="macro", zero_division=0)
-
-
-# @torch.no_grad()
-# def compute_metrics(model, loader):
-#     model.eval()
-#     all_probs, all_labels = [], []
-#     for data in loader:
-#         data = data.to(device)
-#         out = model(data.x, data.edge_index)
-#         all_probs.append(out.cpu())
-#         all_labels.append(data.y.cpu())
-#     probs = torch.cat(all_probs, dim=0).sigmoid().numpy()
-#     labels = torch.cat(all_labels, dim=0).numpy()
-#     preds = probs.argmax(axis=1)
-
-#     # Converting labels for multi-class classification
-#     labels = labels.argmax(axis=1)
-
-#     # Calculating metrics
-#     accuracy = calculate_accuracy(labels, preds)
-#     precision = calculate_precision(labels, preds)
-#     recall = calculate_recall(labels, preds)
-#     f1 = calculate_f1_score(labels, preds)
 
 
 #     return accuracy, precision, recall, f1
