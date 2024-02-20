@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Clotho
 
 Clone this repository
@@ -14,6 +15,13 @@ cd clotho
 
 ### Set up the repo
 ---
+=======
+# Perseus
+Inspired by Perseus’s clever and strategic approach to challenges, this repository meticulously analyzes information to expose the mastermind behind crypto market manipulation.
+
+
+### Set up the repo
+>>>>>>> origin/main
 
 #### Create a python virtual environment
 
@@ -21,12 +29,20 @@ cd clotho
 
 ```bash
 python3 -m venv venv
+<<<<<<< HEAD
+=======
+source venv/bin/activate
+pip3 install -r requirements.txt
+pip3 install -r dev-requirements.txt
+export $(cat .env | xargs)
+>>>>>>> origin/main
 ```
 
 - Windows
 
 ```bash
 python -m venv venv
+<<<<<<< HEAD
 ```
 
 #### Activate the virtual environment
@@ -119,3 +135,21 @@ The most important rules above all:
 1. Do not upload log files.
 1. Do not declare constant variables in the MIDDLE of a function
 # clotho
+=======
+source venv/bin/activate
+pip install -r requirements.txt
+pip install -r dev-requirements.txt
+export $(cat .env | xargs)
+```
+
+# Run the torch install
+
+Run the Jupyter notebook torch_install.ipynb to install torch dependencies
+
+### For running 
+
+```bash
+python3 main.py
+```
+
+>>>>>>> origin/main
