@@ -5,7 +5,7 @@ from datetime import timedelta
 import json
 import pandas as pd
 import networkx as nx
-from perseus.dataset.preprocess.train_test_validate import get_test_scored_signals
+from perseus.dataset.preprocess.train_test_validate import get_test_scored_signals, get_train_scored_signals, get_valid_scored_signals
 from perseus.dataset.preprocess.DANI import DANI
 from collections import defaultdict
 
@@ -62,6 +62,7 @@ def assign_event_ids(df: pd.DataFrame):
 
 def process_dataframe(df: pd.DataFrame):
     # Parsing 'price_increase' and extracting the values
+    df = df[df["price_increase"] != "TRADE DATA NOT AVAILABLE"]
     df["parsed_price_increase"] = df["price_increase"].apply(json.loads)
     df["increase_percentage"] = df["parsed_price_increase"].apply(
         lambda x: x.get("price_increase", None)

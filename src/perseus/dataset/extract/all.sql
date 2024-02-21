@@ -31,6 +31,7 @@ AND s.commodity != 'BIFI'
 AND s.commodity != 'DREP'
 AND s.commodity != 'EPS'
 AND s.commodity != 'PIVX'
+AND s.commodity != 'DLT'
 AND p.pump_type = 'crowd'
 AND p.pump_score != 0
 ORDER BY s.source_posted_at DESC;
