@@ -334,7 +334,7 @@ for dataset in datasets:
         print("\n")
 
 # Plotting ROC Curves for a specific label across datasets and models
-label = 0  # Adjust this based on the label you're interested in
+label = 1  # Adjust this based on the label you're interested in
 plt.figure(figsize=(10, 6))
 for dataset in datasets:
     for model_name in models:

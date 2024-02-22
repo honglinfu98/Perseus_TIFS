@@ -3,7 +3,7 @@ import pickle
 from torch_geometric.loader import DataLoader
 from perseus.dataset.compare_paper_graph import combine_features, graph_features
 from perseus.dataset.preprocess.train_test_validate import get_test_scored_signals, get_train_scored_signals, get_valid_scored_signals
-from perseus.dataset.preprocess.groudtruth_labeling import create_label_mapping
+# from perseus.dataset.preprocess.groudtruth_labeling import create_label_mapping
 from perseus.dataset.preprocess.process import features_engineer, get_graphs, process_dataframe, aggregate_data, assign_event_ids
 from perseus.dataset.gnn_dataset_preparation import (
     prepare_data,
@@ -263,7 +263,7 @@ def get_data_loader(options: str):
         P_dicts_ls.append(P_dict)
 
     label_mapping_ls = []
-    label_mapping_ls.append(create_label_mapping(3, "train"))
+    label_mapping_ls.append(create_label_mapping(3, "train")) 
     label_mapping_ls.append(create_label_mapping(3, "test"))
     label_mapping_ls.append(create_label_mapping(3, "validate"))
 
