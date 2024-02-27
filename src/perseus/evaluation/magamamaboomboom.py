@@ -334,6 +334,10 @@ for dataset in datasets:
         print("\n")
 
 # Plotting ROC Curves for a specific label across datasets and models
+
+
+
+
 label = 1  # Adjust this based on the label you're interested in
 plt.figure(figsize=(10, 6))
 for dataset in datasets:
@@ -394,8 +398,7 @@ dataset_colors = {
     'DDM': 'red'
 }
 
-# Define the label you're interested in
-label = 1
+
 
 # Create a figure and a set of subplots
 fig, axes = plt.subplots(1, 3, figsize=(18, 6))

@@ -263,9 +263,9 @@ def get_data_loader(options: str):
         P_dicts_ls.append(P_dict)
 
     label_mapping_ls = []
-    label_mapping_ls.append(create_label_mapping(3, "train")) 
-    label_mapping_ls.append(create_label_mapping(3, "test"))
-    label_mapping_ls.append(create_label_mapping(3, "validate"))
+    label_mapping_ls.append(create_label_mapping(3, "train", features_ls[0])) 
+    label_mapping_ls.append(create_label_mapping(3, "test", features_ls[1]))
+    label_mapping_ls.append(create_label_mapping(3, "validate", features_ls[2]))
 
     if options == "DDINA":
         train_data = prepare_data(gs_ls[0], features_ls[0], label_mapping_ls[0])
@@ -301,7 +301,7 @@ def get_data_loader(options: str):
 
 
 if __name__ == "__main__":
-    # a,b,c = get_data_loader("DDINA")
-    # a,b,c = get_data_loader("COSS")
-    aa,bb,cc = get_data_loader("DDM")
+    a,b,c = get_data_loader("DDINA")
+    aa,bb,cc = get_data_loader("COSS")
+    aaa,bbb,ccc = get_data_loader("DDM")
 
