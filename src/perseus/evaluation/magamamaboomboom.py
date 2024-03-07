@@ -25,15 +25,9 @@ from sklearn.metrics import (
 )
 import matplotlib.pyplot as plt
 # from clotho.model.data_loader import get_data_loader
-from perseus.model.magamaga import get_data_loader
+from perseus.model.magamaga import get_data_loader, get_data_pickle
 
 
-
-
-
-
-# Assuming get_data_loader is correctly defined elsewhere
-# from your_custom_data_loader_file import get_data_loader
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -102,52 +96,7 @@ class GAT(torch.nn.Module):
         x = self.conv2(x, edge_index)
         return x
 
-# Define the run_experiment function here as you have in your original script.
 
-
-# def run_experiment(model,train_loader,test_loader, num_epochs=100):
-#     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-#     model = model.to(device)
-#     optimizer = torch.optim.Adam(model.parameters(), lr=0.00005)
-#     loss_op = torch.nn.BCEWithLogitsLoss()
-
-#     def train():
-#         for epoch in range(num_epochs):
-#             model.train()
-#             total_loss = 0
-#             for data in train_loader:
-#                 data = data.to(device)
-#                 optimizer.zero_grad()
-#                 output = model(data.x, data.edge_index)
-#                 if torch.isnan(output).any() or torch.isinf(output).any():
-#                     print("NaN or Inf in model output")
-#                     continue
-#                 loss = loss_op(output, data.y.float())
-#                 if torch.isnan(loss) or torch.isinf(loss):
-#                     print("NaN or Inf in loss")
-#                     continue
-#                 total_loss += loss.item() * data.num_graphs
-#                 loss.backward()
-#                 optimizer.step()
-#             print(
-#                 f"Epoch {epoch+1}/{num_epochs}, Loss: {total_loss / len(train_loader.dataset)}"
-#             )
-
-#     @torch.no_grad()
-#     def test(loader):
-#         model.eval()
-#         all_probs, all_labels = [], []
-#         for data in loader:
-#             data = data.to(device)
-#             out = model(data.x, data.edge_index)
-#             all_probs.append(out.cpu())
-#             all_labels.append(data.y.cpu())
-#         return all_probs, all_labels
-
-#     train()
-#     probs, labels = test(test_loader)
-#     probs = torch.cat(probs, dim=0).sigmoid().numpy()
-#     labels = torch.cat(labels, dim=0).numpy()
 def run_experiment(model, train_loader, test_loader, num_epochs=100):
     model = model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.00005)
@@ -283,7 +232,7 @@ hidden_channels = 16
 
 
 for dataset in datasets:
-    train_loader, test_loader, _ = get_data_loader(dataset)
+    train_loader, test_loader, _ = get_data_pickle(dataset)
     for model_name in models:
         if model_name == 'GAT':
             if dataset == 'DDINA':

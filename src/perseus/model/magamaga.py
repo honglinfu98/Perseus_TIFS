@@ -9,7 +9,7 @@ from perseus.dataset.gnn_dataset_preparation import (
     prepare_data,
 )
 
-from perseus.dataset.preprocess.groudtruth_labeling import create_label_mapping
+from perseus.dataset.preprocess.groudtruth_labeling import create_label_mapping, read_labeling_csv_back_to_dict
 from perseus.settings import PROJECT_ROOT
 from itertools import combinations
 from sklearn.metrics.pairwise import cosine_similarity
@@ -252,7 +252,7 @@ def get_data_loader(options: str):
     for i in [train_signals,test_signals,validate_signals]:
         processed_signals = process_dataframe(i)
         ided_signals = assign_event_ids(processed_signals)
-        cascade, no_nodes, id_mapping = aggregate_data(ided_signals)
+        cascade, no_nodes, id_mapping, cascade_labeling = aggregate_data(ided_signals)
         gs, results, As, P_dict = get_graphs(cascade, no_nodes, id_mapping)
         graph_feature = graph_features(gs)
         market_feature = features_engineer(processed_signals)
@@ -263,9 +263,15 @@ def get_data_loader(options: str):
         P_dicts_ls.append(P_dict)
 
     label_mapping_ls = []
-    label_mapping_ls.append(create_label_mapping(3, "train", features_ls[0])) 
-    label_mapping_ls.append(create_label_mapping(3, "test", features_ls[1]))
-    label_mapping_ls.append(create_label_mapping(3, "validate", features_ls[2]))
+    # label_mapping_ls.append(create_label_mapping(3, "train", features_ls[0])) 
+    # label_mapping_ls.append(create_label_mapping(3, "test", features_ls[1]))
+    # label_mapping_ls.append(create_label_mapping(3, "validate", features_ls[2]))
+
+    label_mapping_ls.append(read_labeling_csv_back_to_dict("train")) 
+    label_mapping_ls.append(read_labeling_csv_back_to_dict("test"))
+    label_mapping_ls.append(read_labeling_csv_back_to_dict("valid"))
+
+
 
     if options == "DDINA":
         train_data = prepare_data(gs_ls[0], features_ls[0], label_mapping_ls[0])
@@ -300,8 +306,118 @@ def get_data_loader(options: str):
 
 
 
-if __name__ == "__main__":
-    a,b,c = get_data_loader("DDINA")
-    aa,bb,cc = get_data_loader("COSS")
-    aaa,bbb,ccc = get_data_loader("DDM")
+def get_data_set(options: str):
+    # with open("signals2.pkl", "rb") as file:
+    #     test_signals = pickle.load(file)
+    # with open("signals3.pkl", "rb") as file:
+    #     validate_signals = pickle.load(file)
+    # with open("signals1.pkl", "rb") as file:
+    #     train_signals = pickle.load(file)
+    train_signals = get_train_scored_signals()
+    test_signals = get_test_scored_signals()
+    validate_signals = get_valid_scored_signals()
 
+    gs_ls = []
+    features_ls = []
+    market_features_ls = []
+    P_dicts_ls = []
+
+    for i in [train_signals,test_signals,validate_signals]:
+        processed_signals = process_dataframe(i)
+        ided_signals = assign_event_ids(processed_signals)
+        cascade, no_nodes, id_mapping, cascade_labeling = aggregate_data(ided_signals)
+        gs, results, As, P_dict = get_graphs(cascade, no_nodes, id_mapping)
+        graph_feature = graph_features(gs)
+        market_feature = features_engineer(processed_signals)
+        combine_feature = combine_features(market_feature, graph_feature)
+        gs_ls.append(gs)
+        features_ls.append(combine_feature)
+        market_features_ls.append(market_feature)
+        P_dicts_ls.append(P_dict)
+
+    label_mapping_ls = []
+    # label_mapping_ls.append(create_label_mapping(3, "train", features_ls[0])) 
+    # label_mapping_ls.append(create_label_mapping(3, "test", features_ls[1]))
+    # label_mapping_ls.append(create_label_mapping(3, "validate", features_ls[2]))
+
+    label_mapping_ls.append(read_labeling_csv_back_to_dict("train")) 
+    label_mapping_ls.append(read_labeling_csv_back_to_dict("test"))
+    label_mapping_ls.append(read_labeling_csv_back_to_dict("valid"))
+
+
+    if options == "DDINA":
+        train_data = prepare_data(gs_ls[0], features_ls[0], label_mapping_ls[0])
+        test_data = prepare_data(gs_ls[1], features_ls[1], label_mapping_ls[1])
+        validate_data = prepare_data(gs_ls[2], features_ls[2], label_mapping_ls[2])
+
+
+        # train_loader = DataLoader(train_data, batch_size=1, shuffle=True)
+        # test_loader = DataLoader(test_data, batch_size=1, shuffle=True)
+        # validate_loader = DataLoader(validate_data, batch_size=1, shuffle=True)
+    elif options == "COSS":
+        train_data = prepare_cos_data(gs_ls[0], market_features_ls[0], label_mapping_ls[0])
+        test_data = prepare_cos_data(gs_ls[1], market_features_ls[1], label_mapping_ls[1])
+        validate_data = prepare_cos_data(gs_ls[2], market_features_ls[2], label_mapping_ls[2])
+
+
+        # train_loader = DataLoader(train_data, batch_size=1, shuffle=True)
+        # test_loader = DataLoader(test_data, batch_size=1, shuffle=True)
+        # validate_loader = DataLoader(validate_data, batch_size=1, shuffle=True)
+    elif options == "DDM":
+        train_data = prepare_ddm_data(gs_ls[0], market_features_ls[0], label_mapping_ls[0], P_dicts_ls[0])
+        test_data = prepare_ddm_data(gs_ls[1], market_features_ls[1], label_mapping_ls[1], P_dicts_ls[1])
+        validate_data = prepare_ddm_data(gs_ls[2], market_features_ls[2], label_mapping_ls[2], P_dicts_ls[2])
+
+
+        # train_loader = DataLoader(train_data, batch_size=1, shuffle=True)
+        # test_loader = DataLoader(test_data, batch_size=1, shuffle=True)
+        # validate_loader = DataLoader(validate_data, batch_size=1, shuffle=True)
+
+
+    return train_data, test_data, validate_data
+
+
+def get_data_pickle(options: str):
+
+    if options == "DDINA":
+        with open(path.join(PROJECT_ROOT, "data", "DDINA_data.pkl"), "rb") as file:
+            data = pickle.load(file)
+        train_loader = DataLoader(data[0], batch_size=1, shuffle=True)
+        test_loader = DataLoader(data[1], batch_size=1, shuffle=True)
+        validate_loader = DataLoader(data[2], batch_size=1, shuffle=True)
+
+    elif options == "COSS":
+        with open(path.join(PROJECT_ROOT, "data", "COSS_data.pkl"), "rb") as file:
+            data = pickle.load(file)
+        train_loader = DataLoader(data[0], batch_size=1, shuffle=True)
+        test_loader = DataLoader(data[1], batch_size=1, shuffle=True)
+        validate_loader = DataLoader(data[2], batch_size=1, shuffle=True)
+
+    elif options == "DDM":
+        with open(path.join(PROJECT_ROOT, "data", "DDM_data.pkl"), "rb") as file:
+            data = pickle.load(file)
+        train_loader = DataLoader(data[0], batch_size=1, shuffle=True)
+        test_loader = DataLoader(data[1], batch_size=1, shuffle=True)
+        validate_loader = DataLoader(data[2], batch_size=1, shuffle=True)
+
+    return train_loader, test_loader, validate_loader
+
+
+if __name__ == "__main__":
+    # a,b,c = get_data_loader("DDINA")
+    # aa,bb,cc = get_data_loader("COSS")
+    # aaa,bbb,ccc = get_data_loader("DDM")
+    # save the data
+    # a = get_data_set("DDINA")
+    # b = get_data_set("COSS")
+    # c = get_data_set("DDM")
+    # with open(path.join(PROJECT_ROOT, "data", "DDINA_data.pkl"), "wb") as file:
+    #     pickle.dump(a, file)
+    # with open(path.join(PROJECT_ROOT, "data", "COSS_data.pkl"), "wb") as file:
+    #     pickle.dump(b, file)
+    # with open(path.join(PROJECT_ROOT, "data", "DDM_data.pkl"), "wb") as file:
+    #     pickle.dump(c, file)
+
+    dina = get_data_pickle("DDINA")
+    cos = get_data_pickle("COSS")
+    ddm = get_data_pickle("DDM")

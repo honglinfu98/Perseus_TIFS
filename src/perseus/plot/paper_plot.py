@@ -1,6 +1,6 @@
 import pandas as pd
 import plotly.express as px
-from perseus.dataset.extract.cloudburst_connection import get_scored_signals
+from perseus.dataset.preprocess.train_test_validate import get_test_scored_signals, get_train_scored_signals, get_valid_scored_signals
 from perseus.dataset.preprocess.process import (
     aggregate_data,
     assign_event_ids,
@@ -56,10 +56,10 @@ def plot_paper_with_plotly_alphabet_fixed(processed_signals: pd.DataFrame):
 
 
 if __name__ == "__main__":
-    signals = get_scored_signals()
+    signals = get_test_scored_signals()
     processed_signals = process_dataframe(signals)
     ided_signals = assign_event_ids(processed_signals)
-    cascade, no_nodes, id_mapping = aggregate_data(ided_signals)
+    cascade, no_nodes, id_mapping, labeling_oldid = aggregate_data(ided_signals)
     gs, results, As, P_dict = get_graphs(cascade, no_nodes, id_mapping)
     filtered_signals = processed_signals[
         processed_signals["commodity"].isin([key for key, value in gs.items()])

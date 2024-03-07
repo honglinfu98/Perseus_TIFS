@@ -20,6 +20,32 @@ def relabel_edges(d, mapping):
     return new_d
 
 
+# def relabel_cascade(cascade, id_mapping):
+#     updated_cascade = {}
+    
+#     for token, values in cascade.items():
+#         if token in id_mapping:
+#             mapping = id_mapping[token]['new_to_id']
+#             updated_cascade[token] = []
+            
+#             for value_dict in values:
+#                 updated_value_dict = {}
+#                 for key, value in value_dict.items():
+#                     # Update key if it's not 'T' and exists in the mapping
+#                     if key != 'T' and key in mapping:
+#                         new_key = mapping[key]
+#                         updated_value_dict[new_key] = value
+#                     else:
+#                         updated_value_dict[key] = value
+                
+#                 updated_cascade[token].append(updated_value_dict)
+#         else:
+#             # Raise an error if the token is not found in the mapping
+#             raise ValueError(f"No mapping found for token: {token}")
+            
+#     return updated_cascade
+
+
 def assign_event_ids(df: pd.DataFrame):
     # Initialize the event ID
     event_id = 0
@@ -60,9 +86,9 @@ def assign_event_ids(df: pd.DataFrame):
     return df
 
 
-def process_dataframe(df: pd.DataFrame):
+def process_dataframe(signals_df: pd.DataFrame):
     # Parsing 'price_increase' and extracting the values
-    df = df[df["price_increase"] != "TRADE DATA NOT AVAILABLE"]
+    df = signals_df[signals_df["price_increase"] != "TRADE DATA NOT AVAILABLE"]
     df["parsed_price_increase"] = df["price_increase"].apply(json.loads)
     df["increase_percentage"] = df["parsed_price_increase"].apply(
         lambda x: x.get("price_increase", None)
@@ -118,7 +144,17 @@ def aggregate_data(df: pd.DataFrame):
 
         # Use drop_duplicates to keep only the first appearing telegram_chat_id
         group = group.drop_duplicates(subset="telegram_chat_id", keep="first")
-        tuples = list(zip(group["telegram_chat_id"], delta_minutes))
+        tuples = list(zip(group["telegram_chat_id"], 
+                          delta_minutes, 
+                          group["increase_percentage"], 
+                          group["position"], 
+                          group["targets_achieved"], 
+                          group["total_targets"],
+                          group["duration_min"], 
+                          group["start_date"], 
+                          group["end_date"], 
+                          group["speed"],
+                          group["message_text"]))
 
         if len(tuples) >= 2:
             if commodity not in intermediate_results:
@@ -167,7 +203,7 @@ def aggregate_data(df: pd.DataFrame):
         for commodity, chat_ids in unique_chat_ids_per_commodity.items()
     }
 
-    return final_results, unique_counts, mappings
+    return final_results, unique_counts, mappings, intermediate_results
 
 
 def features_engineer(df: pd.DataFrame):
@@ -255,6 +291,8 @@ def get_graphs(cascade: dict, no_nodes: dict, id_mapping: dict):
             P_dict[key] = relabel_edges(P_dict[key], new_to_id)
 
 
+
+
     return graphs, result, A, P_dict
 
 
@@ -262,5 +300,5 @@ if __name__ == "__main__":
     signals = get_test_scored_signals()
     processed_signals = process_dataframe(signals)
     ided_signals = assign_event_ids(processed_signals)
-    cascade, no_nodes, id_mapping = aggregate_data(ided_signals)
+    cascade, no_nodes, id_mapping, cascade_labeling = aggregate_data(ided_signals)
     gs, results, As, P_dict = get_graphs(cascade, no_nodes, id_mapping)
