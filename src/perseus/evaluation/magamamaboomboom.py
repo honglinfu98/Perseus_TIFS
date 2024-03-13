@@ -25,7 +25,7 @@ from sklearn.metrics import (
 )
 import matplotlib.pyplot as plt
 # from clotho.model.data_loader import get_data_loader
-from perseus.model.magamaga import get_data_loader, get_data_pickle
+from perseus.model.magamaga import get_data_loader, get_data_pickle, split_data
 
 
 
@@ -232,7 +232,7 @@ hidden_channels = 16
 
 
 for dataset in datasets:
-    train_loader, test_loader, _ = get_data_pickle(dataset)
+    train_loader, test_loader, _ = split_data(dataset)
     for model_name in models:
         if model_name == 'GAT':
             if dataset == 'DDINA':

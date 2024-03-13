@@ -8,7 +8,7 @@ from perseus.dataset.preprocess.process import features_engineer, get_graphs, pr
 from perseus.dataset.gnn_dataset_preparation import (
     prepare_data,
 )
-
+from sklearn.model_selection import train_test_split
 from perseus.dataset.preprocess.groudtruth_labeling import create_label_mapping, read_labeling_csv_back_to_dict
 from perseus.settings import PROJECT_ROOT
 from itertools import combinations
@@ -20,6 +20,141 @@ from torch_geometric.utils import to_undirected, is_undirected
 import torch
 from torch_geometric.data import Data
 # from clotho.model.magamaga import get_data_loader
+
+def prepare_dataset(keys, gs, combine_feature, label_mapping, option, P_dict=None):
+    valid_keys = set(keys) & set(gs.keys()) & set(combine_feature.keys()) & set(label_mapping.keys())
+    if option == "DDM" and P_dict is not None:
+        valid_keys &= set(P_dict.keys())
+
+    filtered_gs = {k: gs[k] for k in valid_keys}
+    filtered_features = {k: combine_feature[k] for k in valid_keys}
+    filtered_labels = {k: label_mapping[k] for k in valid_keys}
+    filtered_P_dicts = {k: P_dict[k] for k in valid_keys} if option == "DDM" else {}
+
+    if option == "DDINA":
+        return prepare_data(filtered_gs, filtered_features, filtered_labels)
+    elif option == "COSS":
+        return prepare_cos_data(filtered_gs, filtered_features, filtered_labels)
+    elif option == "DDM":
+        return prepare_ddm_data(filtered_gs, filtered_features, filtered_labels, filtered_P_dicts)
+
+# def split_data(option: str):
+#     # Assuming placeholders for signal processing functions
+#     signals = get_test_scored_signals()  # Placeholder function
+#     processed_signals = process_dataframe(signals)  # Placeholder function
+#     ided_signals = assign_event_ids(processed_signals)  # Placeholder function
+#     cascade, no_nodes, id_mapping, cascade_labeling = aggregate_data(ided_signals)  # Placeholder function
+#     gs, results, As, P_dict = get_graphs(cascade, no_nodes, id_mapping)  # Placeholder function
+#     graph_feature = graph_features(gs)  # Placeholder function
+#     market_feature = features_engineer(processed_signals)  # Placeholder function
+#     combine_feature = combine_features(market_feature, graph_feature)  # Placeholder function
+#     label_mapping = read_labeling_csv_back_to_dict("test")  # Placeholder function
+
+#     keys = list(label_mapping.keys())
+#     train_keys, temp_test_keys = train_test_split(keys, test_size=0.3, random_state=42)
+#     test_keys, validate_keys = train_test_split(temp_test_keys, test_size=0.5, random_state=42)
+
+#     train_data = prepare_dataset(train_keys, gs, combine_feature, label_mapping, option, P_dict)
+#     test_data = prepare_dataset(test_keys, gs, combine_feature, label_mapping, option, P_dict)
+#     validate_data = prepare_dataset(validate_keys, gs, combine_feature, label_mapping, option, P_dict)
+
+#     train_loader = DataLoader(train_data, batch_size=1, shuffle=True)
+#     test_loader = DataLoader(test_data, batch_size=1, shuffle=True)
+#     validate_loader = DataLoader(validate_data, batch_size=1, shuffle=True)
+
+#     return train_loader, test_loader, validate_loader
+
+def filter_data_by_keys(data_list, keys):
+    """
+    Filters data in data_list to include only items with keys in 'keys'.
+    This is a placeholder function; its implementation depends on how the data
+    is structured.
+    """
+    # Assuming data_list contains dictionaries or similar structures
+    filtered_data = [{k: v for k, v in data_item.items() if k in keys} for data_item in data_list]
+    return filtered_data
+
+def split_data(options: str):
+    # Initial data loading and processing
+    train_signals = get_train_scored_signals()
+    test_signals = get_test_scored_signals()
+    validate_signals = get_valid_scored_signals()
+
+    datasets = [train_signals, test_signals, validate_signals]
+    gs_ls = []
+    features_ls = []
+    market_features_ls = []
+    P_dicts_ls = []
+    label_mapping_ls = []
+
+    for dataset in datasets:
+        processed_signals = process_dataframe(dataset)
+        ided_signals = assign_event_ids(processed_signals)
+        cascade, no_nodes, id_mapping, cascade_labeling = aggregate_data(ided_signals)
+        gs, results, As, P_dict = get_graphs(cascade, no_nodes, id_mapping)
+        graph_feature = graph_features(gs)
+        market_feature = features_engineer(processed_signals)
+        combine_feature = combine_features(market_feature, graph_feature)
+        gs_ls.append(gs)
+        features_ls.append(combine_feature)
+        market_features_ls.append(market_feature)
+        P_dicts_ls.append(P_dict)
+
+    label_mapping_ls = [
+        read_labeling_csv_back_to_dict("train"), 
+        read_labeling_csv_back_to_dict("test"),
+        read_labeling_csv_back_to_dict("valid")
+    ]
+
+    # Now, let's find the common keys and filter each dataset accordingly
+    # Assuming each item in the ls lists and label_mapping_ls is a dict or can be filtered by keys
+    for i in range(3):
+        common_keys = set(label_mapping_ls[i].keys())  # Assuming label_mapping_ls[i] is a dict with relevant keys
+
+        # Filter gs_ls, features_ls, market_features_ls, and P_dicts_ls based on common_keys
+        # This step is highly dependent on the structure of your data. You need to implement the filtering logic based on your actual data structure.
+        # The following are placeholders to illustrate the process:
+        gs_ls[i] = {key: gs_ls[i][key] for key in common_keys if key in gs_ls[i]}
+        features_ls[i] = {key: features_ls[i][key] for key in common_keys if key in features_ls[i]}
+        market_features_ls[i] = {key: market_features_ls[i][key] for key in common_keys if key in market_features_ls[i]}
+        P_dicts_ls[i] = {key: P_dicts_ls[i][key] for key in common_keys if key in P_dicts_ls[i]}
+
+
+
+
+    if options == "DDINA":
+        train_data = prepare_data(gs_ls[0], features_ls[0], label_mapping_ls[0])
+        test_data = prepare_data(gs_ls[1], features_ls[1], label_mapping_ls[1])
+        validate_data = prepare_data(gs_ls[2], features_ls[2], label_mapping_ls[2])
+
+
+        train_loader = DataLoader(train_data, batch_size=1, shuffle=True)
+        test_loader = DataLoader(test_data, batch_size=1, shuffle=True)
+        validate_loader = DataLoader(validate_data, batch_size=1, shuffle=True)
+    elif options == "COSS":
+        train_data = prepare_cos_data(gs_ls[0], market_features_ls[0], label_mapping_ls[0])
+        test_data = prepare_cos_data(gs_ls[1], market_features_ls[1], label_mapping_ls[1])
+        validate_data = prepare_cos_data(gs_ls[2], market_features_ls[2], label_mapping_ls[2])
+
+
+        train_loader = DataLoader(train_data, batch_size=1, shuffle=True)
+        test_loader = DataLoader(test_data, batch_size=1, shuffle=True)
+        validate_loader = DataLoader(validate_data, batch_size=1, shuffle=True)
+    elif options == "DDM":
+        train_data = prepare_ddm_data(gs_ls[0], market_features_ls[0], label_mapping_ls[0], P_dicts_ls[0])
+        test_data = prepare_ddm_data(gs_ls[1], market_features_ls[1], label_mapping_ls[1], P_dicts_ls[1])
+        validate_data = prepare_ddm_data(gs_ls[2], market_features_ls[2], label_mapping_ls[2], P_dicts_ls[2])
+
+
+        train_loader = DataLoader(train_data, batch_size=1, shuffle=True)
+        test_loader = DataLoader(test_data, batch_size=1, shuffle=True)
+        validate_loader = DataLoader(validate_data, batch_size=1, shuffle=True)
+
+
+
+    return train_loader, test_loader, validate_loader
+
+
 
 
 def prepare_ddm_data(graphs, features, label_mapping, P_dict):
@@ -418,6 +553,6 @@ if __name__ == "__main__":
     # with open(path.join(PROJECT_ROOT, "data", "DDM_data.pkl"), "wb") as file:
     #     pickle.dump(c, file)
 
-    dina = get_data_pickle("DDINA")
-    cos = get_data_pickle("COSS")
-    ddm = get_data_pickle("DDM")
+    dina = split_data("DDINA")
+    cos = split_data("COSS")
+    ddm = split_data("DDM")

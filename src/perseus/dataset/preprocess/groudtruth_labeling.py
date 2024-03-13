@@ -184,7 +184,7 @@ def export_csv_for_labeling():
 def read_labeling_csv_back_to_dict(train_test_valid: str):
     # Read the edited CSV file
     if train_test_valid == "train":
-        train_edited_df = pd.read_csv(path.join(PROJECT_ROOT, "data", "train_labeling.csv"))
+        train_edited_df = pd.read_csv(path.join(PROJECT_ROOT, "data", "train_labeling_meeting.csv"))
 
         edited_train_label_mapping = {}
         for _, row in train_edited_df.iterrows():
@@ -195,7 +195,7 @@ def read_labeling_csv_back_to_dict(train_test_valid: str):
         return edited_train_label_mapping
 
     elif train_test_valid == "test":
-        test_edited_df = pd.read_csv(path.join(PROJECT_ROOT, "data", "test_labeling.csv"))
+        test_edited_df = pd.read_csv(path.join(PROJECT_ROOT, "data", "test_labeling_0308.csv"))
     
 
         edited_test_label_mapping = {}
@@ -208,7 +208,7 @@ def read_labeling_csv_back_to_dict(train_test_valid: str):
 
 
     elif train_test_valid == "valid":
-        valid_edited_df = pd.read_csv(path.join(PROJECT_ROOT, "data", "valid_labeling.csv"))
+        valid_edited_df = pd.read_csv(path.join(PROJECT_ROOT, "data", "valid_labeling_0311.csv"))
             
 
         edited_valie_label_mapping = {}
@@ -224,11 +224,14 @@ def read_labeling_csv_back_to_dict(train_test_valid: str):
 
     
 if __name__ == "__main__":
-    train_signals = get_train_scored_signals()
-    test_signals = get_test_scored_signals()
-    validate_signals = get_valid_scored_signals()
+    # train_signals = get_train_scored_signals()
+    # test_signals = get_test_scored_signals()
+    # validate_signals = get_valid_scored_signals()
 
-    export_csv_for_labeling()
+    # export_csv_for_labeling()
+    a = read_labeling_csv_back_to_dict("train")
+    b = read_labeling_csv_back_to_dict("test")
+    c = read_labeling_csv_back_to_dict("valid")
 
 
 

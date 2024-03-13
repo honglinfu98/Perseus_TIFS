@@ -50,7 +50,7 @@ def draw_graph_with_communities(gs, key, communities_dict):
 if __name__ == "__main__":
 
 
-    signals = get_train_scored_signals()
+    signals = get_test_scored_signals()
     processed_signals = process_dataframe(signals)
     ided_signals = assign_event_ids(processed_signals)
     cascade, no_nodes, id_mapping, cascade_labeling = aggregate_data(ided_signals)
