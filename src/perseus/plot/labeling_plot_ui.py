@@ -50,7 +50,7 @@ def draw_graph_with_communities(gs, key, communities_dict):
 if __name__ == "__main__":
 
 
-    signals = get_test_scored_signals()
+    signals = get_train_scored_signals()
     processed_signals = process_dataframe(signals)
     ided_signals = assign_event_ids(processed_signals)
     cascade, no_nodes, id_mapping, cascade_labeling = aggregate_data(ided_signals)
@@ -59,6 +59,6 @@ if __name__ == "__main__":
     market_feature = features_engineer(processed_signals)
     combine_feature = combine_features(market_feature, graph_feature)
     communities_dict = community_detection_weighted(P_dict)
-    draw_graph_with_communities(gs, "BTC", communities_dict)
+    draw_graph_with_communities(gs, "POWR", communities_dict)
 
 

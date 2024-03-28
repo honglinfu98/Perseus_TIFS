@@ -26,10 +26,30 @@ from sklearn.metrics import (
 import matplotlib.pyplot as plt
 # from clotho.model.data_loader import get_data_loader
 from perseus.model.magamaga import get_data_loader, get_data_pickle, split_data
+  
+
+import random
+
+# Set a seed value
+seed = 190
+
+# Python's `random` module
+random.seed(seed)
+
+# NumPy
+np.random.seed(seed)
+
+# PyTorch
+torch.manual_seed(seed)
+
+
 
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+
 
 # Define your model classes (GCNNet, GraphSAGENet, Net for GAT, etc.) here as you have in your original script.
 # GCN Implementation
@@ -60,11 +80,10 @@ class GraphSAGENet(torch.nn.Module):
         return x
 
 
+
 class Net(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, num_features = 4, num_classes = 2):
         super().__init__()
-        num_features = 4
-        num_classes = 3
         self.conv1 = GATConv(num_features, 8, heads=2)
         self.lin1 = torch.nn.Linear(num_features, 2 * 8)
         self.conv2 = GATConv(2 * 8, 8, heads=2)
@@ -83,18 +102,21 @@ class Net(torch.nn.Module):
         return x
 
 
-class GAT(torch.nn.Module):
-    def __init__(self, num_features, hidden_channels, num_classes):
-        super(GAT, self).__init__()
-        self.conv1 = GATConv(num_features, hidden_channels)
-        self.conv2 = GATConv(hidden_channels, num_classes)
 
-    def forward(self, x, edge_index, edge_weight=None):
-        x = self.conv1(x, edge_index)
-        x = F.relu(x)
-        x = F.dropout(x, training=self.training)
-        x = self.conv2(x, edge_index)
-        return x
+
+
+# class GAT(torch.nn.Module):
+#     def __init__(self, num_features, hidden_channels, num_classes):
+#         super(GAT, self).__init__()
+#         self.conv1 = GATConv(num_features, hidden_channels)
+#         self.conv2 = GATConv(hidden_channels, num_classes)
+
+#     def forward(self, x, edge_index, edge_weight=None):
+#         x = self.conv1(x, edge_index)
+#         x = F.relu(x)
+#         x = F.dropout(x, training=self.training)
+#         x = self.conv2(x, edge_index)
+#         return x
 
 
 def run_experiment(model, train_loader, test_loader, num_epochs=100):
@@ -226,20 +248,20 @@ models = ['GAT', 'GCN', 'GraphSAGE']
 
 # Run experiments for each model
 num_features = 2  # Set this according to your dataset
-num_classes = 3  # Set this according to your dataset
+num_classes = 2  # Set this according to your dataset
 hidden_channels = 16
 
 
 
 for dataset in datasets:
-    train_loader, test_loader, _ = split_data(dataset)
+    train_loader, test_loader, _ = get_data_pickle(dataset)
     for model_name in models:
         if model_name == 'GAT':
             if dataset == 'DDINA':
-                model = Net()
+                num_features = 4
             else:
                 num_features = 2
-                model = GAT(num_features, hidden_channels, num_classes)
+            model =  Net(num_features,num_classes)
         elif model_name == 'GCN':
             if dataset == 'DDINA':
                 num_features = 4
@@ -314,23 +336,131 @@ plt.show()
 
 
 
-# Unit computation time for different embedding for the same model 
-graphSAGE_train_times = {dataset: results[dataset]['GraphSAGE']['train_times'] for dataset in datasets}
+# # Unit computation time for different embedding for the same model 
+# graphSAGE_train_times = {dataset: results[dataset]['GraphSAGE']['train_times'] for dataset in datasets}
 
-# Flatten the dictionary to prepare for DataFrame creation
-time_data = [(dataset, time) for dataset, times in graphSAGE_train_times.items() for time in times]
-df_times = pd.DataFrame(time_data, columns=['Dataset', 'Time'])
+# # Flatten the dictionary to prepare for DataFrame creation
+# time_data = [(dataset, time) for dataset, times in graphSAGE_train_times.items() for time in times]
+# df_times = pd.DataFrame(time_data, columns=['Dataset', 'Time'])
 
-# Plotting the distribution of training times
-plt.figure(figsize=(10, 6))
-sns.boxplot(data=df_times, x='Dataset', y='Time')
-# sns.stripplot(data=df_times, x='Dataset', y='Time', color='black', alpha=0.5)
+# # Plotting the distribution of training times
+# plt.figure(figsize=(10, 6))
+# sns.boxplot(data=df_times, x='Dataset', y='Time')
+# # sns.stripplot(data=df_times, x='Dataset', y='Time', color='black', alpha=0.5)
 
-plt.title('Distribution of Training Times for GraphSAGE Across Embedding Methods')
-plt.ylabel('Time per Epoch (seconds)')
-plt.xlabel('Dataset')
+# plt.title('Distribution of Training Times for GraphSAGE Across Embedding Methods')
+# plt.ylabel('Time per Epoch (seconds)')
+# plt.xlabel('Dataset')
+
+# # Unit computation time for different embedding for the same model
+# GCN_train_times = {dataset: results[dataset]['GCN']['train_times'] for dataset in datasets}
+
+# # Flatten the dictionary and calculate CDF for each dataset
+# cdf_data = {}
+# for dataset, times in GCN_train_times.items():
+#     sorted_times = np.sort(times)
+#     cdf = np.arange(1, len(sorted_times) + 1) / len(sorted_times)
+#     cdf_data[dataset] = (sorted_times, cdf)
+
+# # Plotting the CDF
+# plt.figure(figsize=(10, 6))
+
+# for dataset, (times, cdf) in cdf_data.items():
+#     plt.step(times, cdf, label=f'{dataset} CDF')
+
+# plt.xscale('log')  # Set x-axis to logarithmic scale
+# plt.xlabel('Time per Epoch (seconds)')
+# plt.ylabel('CDF')
+# plt.title('Cumulative Distribution Function of Training Times per Unit Batch')
+# plt.legend()
+# plt.grid(True)
+# plt.show()
 
 
+
+
+# # Unit computation time for different embedding for the same model
+# GAT_train_times = {dataset: results[dataset]['GAT']['train_times'] for dataset in datasets}
+
+# # Flatten the dictionary and calculate CDF for each dataset
+# cdf_data = {}
+# for dataset, times in GAT_train_times.items():
+#     sorted_times = np.sort(times)
+#     cdf = np.arange(1, len(sorted_times) + 1) / len(sorted_times)
+#     cdf_data[dataset] = (sorted_times, cdf)
+
+# # Plotting the CDF
+# plt.figure(figsize=(10, 6))
+
+# for dataset, (times, cdf) in cdf_data.items():
+#     plt.step(times, cdf, label=f'{dataset} CDF')
+
+# plt.xscale('log')  # Set x-axis to logarithmic scale
+# plt.xlabel('Time per Epoch (seconds)')
+# plt.ylabel('CDF')
+# plt.title('Cumulative Distribution Function of Training Times per Unit Batch')
+# plt.legend()
+# plt.grid(True)
+# plt.show()
+
+
+
+# # Unit computation time for different embedding for the same model
+# graphSAGE_train_times = {dataset: results[dataset]['GraphSAGE']['train_times'] for dataset in datasets}
+
+# # Flatten the dictionary and calculate CDF for each dataset
+# cdf_data = {}
+# for dataset, times in graphSAGE_train_times.items():
+#     sorted_times = np.sort(times)
+#     cdf = np.arange(1, len(sorted_times) + 1) / len(sorted_times)
+#     cdf_data[dataset] = (sorted_times, cdf)
+
+# # Plotting the CDF
+# plt.figure(figsize=(10, 6))
+
+# for dataset, (times, cdf) in cdf_data.items():
+#     plt.step(times, cdf, label=f'{dataset} CDF')
+
+# plt.xscale('log')  # Set x-axis to logarithmic scale
+# plt.xlabel('Time per Epoch (seconds)')
+# plt.ylabel('CDF')
+# plt.title('Cumulative Distribution Function of Training Times per Unit Batch')
+# plt.legend()
+# plt.grid(True)
+# plt.show()
+
+
+
+# Plotting CDFs side by side for GCN, GAT, and GraphSAGE
+fig, axs = plt.subplots(1, 3, figsize=(18, 6))
+
+# Function to plot CDF
+def plot_cdf(data, ax, title):
+    for dataset, times in data.items():
+        sorted_times = np.sort(times)
+        cdf = np.arange(1, len(sorted_times) + 1) / len(sorted_times)
+        ax.step(sorted_times, cdf, label=f'{dataset} CDF')
+    ax.set_xscale('log')
+    ax.set_xlabel('Time per Epoch (seconds)')
+    ax.set_ylabel('CDF')
+    ax.set_title(title)
+    ax.legend()
+    ax.grid(True)
+
+# Preparing data for GCN
+GCN_train_times = {dataset: results[dataset]['GCN']['train_times'] for dataset in datasets}
+plot_cdf(GCN_train_times, axs[0], 'GCN Training Times')
+
+# Preparing data for GAT
+GAT_train_times = {dataset: results[dataset]['GAT']['train_times'] for dataset in datasets}
+plot_cdf(GAT_train_times, axs[1], 'GAT Training Times')
+
+# Preparing data for GraphSAGE
+GraphSAGE_train_times = {dataset: results[dataset]['GraphSAGE']['train_times'] for dataset in datasets}
+plot_cdf(GraphSAGE_train_times, axs[2], 'GraphSAGE Training Times')
+
+plt.tight_layout()
+plt.show()
 
 
 
@@ -369,6 +499,37 @@ plt.show()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Table for precision, accuracy, f1, recall
 # Initialize an empty list to store your data
 data = []
@@ -401,3 +562,5 @@ highlighted_df = filtered_df.style.highlight_max(subset=['accuracy', 'f1', 'prec
 
 # Display the DataFrame with highlighted maximum values
 highlighted_df
+
+

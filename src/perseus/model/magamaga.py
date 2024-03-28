@@ -213,7 +213,7 @@ def prepare_ddm_data(graphs, features, label_mapping, P_dict):
         edge_index = torch.tensor(edge_index_list, dtype=torch.long).t().contiguous()
         edge_weight = torch.tensor(edge_weight_list, dtype=torch.float)
         # Populate the lists
-        num_labels = 3
+        num_labels = 2
         # # Prepare labels
         # labels = [
         #     label_mapping[key].get(node_id, 0)
@@ -330,7 +330,7 @@ def prepare_cos_data(graphs, features, label_mapping):
         edge_index = torch.tensor(edge_index_list, dtype=torch.long).t().contiguous()
         edge_weight = torch.tensor(edge_weight_list, dtype=torch.float)
         # Populate the lists
-        num_labels = 3
+        num_labels = 2
 
         labels = []
         for node_id in features_buffer["telegram_chat_id"]:
@@ -517,23 +517,18 @@ def get_data_pickle(options: str):
     if options == "DDINA":
         with open(path.join(PROJECT_ROOT, "data", "DDINA_data.pkl"), "rb") as file:
             data = pickle.load(file)
-        train_loader = DataLoader(data[0], batch_size=1, shuffle=True)
-        test_loader = DataLoader(data[1], batch_size=1, shuffle=True)
-        validate_loader = DataLoader(data[2], batch_size=1, shuffle=True)
 
     elif options == "COSS":
         with open(path.join(PROJECT_ROOT, "data", "COSS_data.pkl"), "rb") as file:
             data = pickle.load(file)
-        train_loader = DataLoader(data[0], batch_size=1, shuffle=True)
-        test_loader = DataLoader(data[1], batch_size=1, shuffle=True)
-        validate_loader = DataLoader(data[2], batch_size=1, shuffle=True)
 
     elif options == "DDM":
         with open(path.join(PROJECT_ROOT, "data", "DDM_data.pkl"), "rb") as file:
             data = pickle.load(file)
-        train_loader = DataLoader(data[0], batch_size=1, shuffle=True)
-        test_loader = DataLoader(data[1], batch_size=1, shuffle=True)
-        validate_loader = DataLoader(data[2], batch_size=1, shuffle=True)
+
+    train_loader = data[0]
+    test_loader = data[1]
+    validate_loader = data[2]
 
     return train_loader, test_loader, validate_loader
 
@@ -543,9 +538,9 @@ if __name__ == "__main__":
     # aa,bb,cc = get_data_loader("COSS")
     # aaa,bbb,ccc = get_data_loader("DDM")
     # save the data
-    # a = get_data_set("DDINA")
-    # b = get_data_set("COSS")
-    # c = get_data_set("DDM")
+    a = split_data("DDINA")
+    b = split_data("COSS")
+    c = split_data("DDM")
     # with open(path.join(PROJECT_ROOT, "data", "DDINA_data.pkl"), "wb") as file:
     #     pickle.dump(a, file)
     # with open(path.join(PROJECT_ROOT, "data", "COSS_data.pkl"), "wb") as file:
@@ -553,6 +548,6 @@ if __name__ == "__main__":
     # with open(path.join(PROJECT_ROOT, "data", "DDM_data.pkl"), "wb") as file:
     #     pickle.dump(c, file)
 
-    dina = split_data("DDINA")
-    cos = split_data("COSS")
-    ddm = split_data("DDM")
+    # dina = split_data("DDINA")
+    # cos = split_data("COSS")
+    # ddm = split_data("DDM")

@@ -1,4 +1,6 @@
+from os import path
 import time
+import pickle
 import pandas as pd 
 import numpy as np
 import torch
@@ -6,7 +8,7 @@ import torch.nn.functional as F
 from torch.nn import ModuleList, Linear, ReLU, Dropout
 from torch_geometric.nn import GCNConv, SAGEConv, GATConv
 
-from perseus.model.magamaga import get_data_pickle
+from perseus.model.magamaga import get_data_pickle, split_data
 from sklearn.metrics import (
     roc_curve,
     auc,
@@ -16,6 +18,10 @@ from sklearn.metrics import (
     accuracy_score,
     confusion_matrix,
 )
+import matplotlib.pyplot as plt
+
+from perseus.settings import PROJECT_ROOT
+from sklearn.metrics import auc
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -80,28 +86,7 @@ class Net(torch.nn.Module):
         x = self.conv_last(x, edge_index) + self.lin_last(x)
         return x
 
-# Modified GAT with variable layers
-class GAT(torch.nn.Module):
-    def __init__(self, num_features, hidden_channels, num_classes, num_layers=2):
-        super(GAT, self).__init__()
-        self.initial_conv = GATConv(num_features, hidden_channels, heads=2)
-        self.final_conv = GATConv(hidden_channels * 2, num_classes, heads=1, concat=False)
 
-        self.middle_convs = ModuleList()
-        for _ in range(num_layers - 2):
-            self.middle_convs.append(GATConv(hidden_channels * 2, hidden_channels, heads=2))
-        
-        self.dropout = Dropout(0.5)
-
-    def forward(self, x, edge_index, edge_weight=None):
-        x = F.relu(self.initial_conv(x, edge_index))
-        x = self.dropout(x)
-        for conv in self.middle_convs:
-            x = F.relu(conv(x, edge_index))
-            x = self.dropout(x)
-        x = self.final_conv(x, edge_index)
-        return x
-    
 
 
 # Updated Metrics Calculation Functions
@@ -174,12 +159,13 @@ def compute_metrics(model, loader):
 
     
 datasets = ['DDINA', 'COSS', 'DDM']
-models = ['GAT', 'GCNNet', 'GraphSAGENet']  # Ensure these match your class names exactly
+models = ['Net', 'GCNNet', 'GraphSAGENet']  # Ensure these match your class names exactly
 
 def run_experiments():
-    learning_rates = [1e-4, 5e-4, 1e-3]
-    hidden_channels_list = [16, 32, 64]
-    num_layers_options = [2, 3, 4]
+    learning_rates = [1e-5, 5e-5, 1e-4, 5e-4]
+    hidden_channels_list = [8, 16, 32, 64]
+    num_layers_options = [2, 3, 4, 5]
+
     results = []
 
     for dataset_name in datasets:
@@ -189,9 +175,9 @@ def run_experiments():
         for model_name in models:
             # Dynamic setting of num_features and num_classes based on dataset
             if dataset_name == 'DDINA':
-                num_features, num_classes = 4, 3
+                num_features, num_classes = 4, 2
             else:
-                num_features, num_classes = 2, 3
+                num_features, num_classes = 2, 2
 
             for lr in learning_rates:
                 for hidden_channels in hidden_channels_list:
@@ -200,7 +186,7 @@ def run_experiments():
                         model_class = globals()[model_name]
                         model = model_class(num_features, hidden_channels, num_classes, num_layers=num_layers).to(device)
                         optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-                        model, fpr, tpr, thresholds, train_times = run_experiment(model, train_loader, test_loader, optimizer, num_epochs=3)
+                        model, fpr, tpr, thresholds, train_times = run_experiment(model, train_loader, test_loader, optimizer, num_epochs=100)
                         metrics = compute_metrics(model, test_loader)
                         # Store results for this configuration
                         config_key = f"{model_name}_lr{lr}_h{hidden_channels}_layers{num_layers}"
@@ -215,7 +201,7 @@ def run_experiments():
 
     return results
 
-def run_experiment(model, train_loader, test_loader, optimizer, num_epochs=3):
+def run_experiment(model, train_loader, test_loader, optimizer, num_epochs=100):
     model = model.to(device)
     loss_op = torch.nn.BCEWithLogitsLoss()
     train_times = []
@@ -263,18 +249,92 @@ def run_experiment(model, train_loader, test_loader, optimizer, num_epochs=3):
 
 
 
-results = run_experiments()
+# Function to create ROC plots for a single dataset
+def create_roc_plots_for_dataset(dataset_results, dataset_name):
+    # Create separate figures for each model
+    for model in models:
+        fig, axes = plt.subplots(len(learning_rates), len(hidden_channels_list), figsize=(20, 15), sharex=True, sharey=True)
+        fig.suptitle(f'ROC Curves for {dataset_name} - {model}')
 
-# # Convert results to DataFrame for easier analysis
-# all_results = []
-# for dataset, configs in results.items():
-#     for config, res in configs.items():
-#         res['config'] = config
-#         res['dataset'] = dataset
-#         all_results.append(res)
 
-# results_df = pd.DataFrame(all_results)
-# print(results_df)
+        for i, lr in enumerate(learning_rates):
+            for j, h in enumerate(hidden_channels_list):
+                for layers in num_layers_options:
+                    model_name = f'{model}_lr{lr}_h{h}_layers{layers}'
+                    if model_name in dataset_results:
+                        # Only plot for label 1
+                        if 1 in dataset_results[model_name]['fpr'] and 1 in dataset_results[model_name]['tpr']:
+                            fpr = dataset_results[model_name]['fpr'][1]
+                            tpr = dataset_results[model_name]['tpr'][1]
+                            axes[i, j].plot(fpr, tpr, label=f'Layers {layers}')
+                            axes[i, j].set_title(f'LR={lr}, Hidden={h}')
+        
+        # Add legends, labels, and adjust layout for each model's figure
+        for ax in axes.flat:
+            ax.label_outer()  # Hide x labels and tick labels for top plots and y ticks for right plots.
+            ax.set_xlabel('False Positive Rate')
+            ax.set_ylabel('True Positive Rate')
+            ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        
+        plt.subplots_adjust(hspace=0.3, wspace=0.3, right=0.8)
+        plt.show()
 
-# # Optionally, save the results to a CSV file
-# results_df.to_csv("hyperparameter_tuning_results.csv", index=False)
+
+
+# Function to calculate AUC for each model configuration
+def calculate_auc_for_models(dataset_results):
+    auc_results = {}
+    for model in models:
+        for lr in learning_rates:
+            for h in hidden_channels_list:
+                for layers in num_layers_options:
+                    model_name = f'{model}_lr{lr}_h{h}_layers{layers}'
+                    if model_name in dataset_results:
+                        if 1 in dataset_results[model_name]['fpr'] and 1 in dataset_results[model_name]['tpr']:
+                            fpr = dataset_results[model_name]['fpr'][1]
+                            tpr = dataset_results[model_name]['tpr'][1]
+                            auc_score = auc(fpr, tpr)
+                            auc_results[model_name] = auc_score
+    return auc_results
+
+# Function to print sorted AUC results
+def print_sorted_auc_results(dataset_name, auc_results):
+    print(f"Sorted AUC Results for {dataset_name}:")
+    sorted_auc = sorted(auc_results.items(), key=lambda item: item[1], reverse=True)
+    for model_name, auc_score in sorted_auc:
+        print(f"{model_name}: {auc_score:.4f}")
+
+
+if __name__ == "__main__":
+
+    # results = run_experiments()
+
+    # # # save the results in pickle 
+    # with open(path.join(PROJECT_ROOT, "data","parameter_results.pkl"), "wb") as file:
+    #     pickle.dump(results, file)       
+
+
+    # Load results from pickle file (assuming the file path is correct and PROJECT_ROOT is defined)
+    with open(path.join(PROJECT_ROOT, "data", "parameter_results.pkl"), "rb") as file:
+        results = pickle.load(file)
+
+    datasets_dict = {
+        'DDINA': results[0],
+        'COSS': results[1],
+        'DDM': results[2],
+    }
+
+    learning_rates = [1e-5, 5e-5, 1e-4, 5e-4]
+    hidden_channels_list = [8, 16, 32, 64]
+    num_layers_options = [2, 3, 4, 5]
+    models = ['Net', 'GCNNet', 'GraphSAGENet']
+
+    for dataset_name, dataset_results in datasets_dict.items():
+        create_roc_plots_for_dataset(dataset_results, dataset_name)
+
+        
+    # Calculate and print AUC for each dataset
+    for dataset_name, dataset_results in datasets_dict.items():
+        auc_results = calculate_auc_for_models(dataset_results)
+        print_sorted_auc_results(dataset_name, auc_results)
+        print("\n")

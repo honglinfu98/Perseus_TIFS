@@ -201,7 +201,7 @@ def prepare_data(graphs, features, label_mapping):
             edge_index.append([source, target])
         edge_index = torch.tensor(edge_index, dtype=torch.long).t().contiguous()
 
-        num_labels = 3
+        num_labels = 2
 
         # # Prepare labels
         # labels = [
