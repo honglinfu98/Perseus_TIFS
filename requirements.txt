@@ -4,7 +4,7 @@ torch-geometric
 pygod
 scipy>=1.6.0
 python-coinmarketcap
-coverage==7.2.7
+coverage==7.5.1
 ipykernel==6.29.4
 langdetect==1.0.9
 matplotlib==3.7.1
