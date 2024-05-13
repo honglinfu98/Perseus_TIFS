@@ -5,7 +5,7 @@ pygod
 scipy>=1.6.0
 python-coinmarketcap
 coverage==7.2.7
-ipykernel==6.22.0
+ipykernel==6.29.4
 langdetect==1.0.9
 matplotlib==3.7.1
 matplotlib-inline==0.1.6
