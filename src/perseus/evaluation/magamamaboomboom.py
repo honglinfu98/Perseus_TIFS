@@ -1,17 +1,17 @@
 import time
 import torch
 import torch.nn.functional as F
-import numpy as np
 import pandas as pd
 from torch_geometric.nn import GATConv, GCNConv, SAGEConv
-from sklearn.metrics import roc_curve
+from sklearn.metrics import roc_curve, balanced_accuracy_score
+
 import matplotlib.pyplot as plt
 import seaborn as sns
+from perseus.settings import PROJECT_ROOT
 
 
 from os import path
 import torch
-import numpy as np
 import torch.nn.functional as F
 from torch_geometric.nn import GATConv, GCNConv, SAGEConv
 from sklearn.metrics import (
@@ -23,15 +23,16 @@ from sklearn.metrics import (
     accuracy_score,
     confusion_matrix,
 )
-import matplotlib.pyplot as plt
 # from clotho.model.data_loader import get_data_loader
-from perseus.model.magamaga import get_data_loader, get_data_pickle, split_data
-  
+from perseus.model.magamaga import get_data_pickle, split_data, get_train_test_validate_data, get_train_test_validate_data_pickle
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+import numpy as np
 
 import random
 
 # Set a seed value
-seed = 190
+seed = 724
 
 # Python's `random` module
 random.seed(seed)
@@ -207,6 +208,8 @@ def compute_metrics(model, loader):
     precision = calculate_precision(labels, preds)
     recall = calculate_recall(labels, preds)
     f1 = calculate_f1_score(labels, preds)
+    balanced_acc = balanced_accuracy_score(labels, preds)  # Calculate balanced accuracy
+
 
     # Additional Metrics
     cm = confusion_matrix(labels, preds)
@@ -230,6 +233,7 @@ def compute_metrics(model, loader):
         "precision": precision,
         "recall": recall,
         "f1": f1,
+        "balanced_accuracy_score": balanced_acc,
         "specificity": specificity,
         "prevalence": prevalence,
         "detection_rate": detection_rate,
@@ -249,12 +253,27 @@ models = ['GAT', 'GCN', 'GraphSAGE']
 # Run experiments for each model
 num_features = 2  # Set this according to your dataset
 num_classes = 2  # Set this according to your dataset
-hidden_channels = 16
+hidden_channels = 8
+
+
+# Comparison across different embedding for the same model
+# Assuming 'results' contains your ROC curve data
+models = ['GCN', 'GAT', 'GraphSAGE']
+dataset_colors = {
+    'DDINA': 'blue',
+    'COSS': 'green',
+    'DDM': 'red'
+}
+
+
+
+# Non time dimension related experiments
+
 
 
 
 for dataset in datasets:
-    train_loader, test_loader, _ = get_data_pickle(dataset)
+    train_loader, test_loader, _ = split_data(dataset)
     for model_name in models:
         if model_name == 'GAT':
             if dataset == 'DDINA':
@@ -289,12 +308,6 @@ for dataset in datasets:
 
 
 
-
-
-
-
-
-
 # Example of accessing and printing metrics
 for dataset in datasets:
     for model_name in models:
@@ -324,122 +337,24 @@ plt.show()
 
 
 
+# # Function to plot CDF
+# def plot_cdf(data, ax, title):
+#     for dataset, times in data.items():
+#         sorted_times = np.sort(times)
+#         cdf = np.arange(1, len(sorted_times) + 1) / len(sorted_times)
+#         ax.step(sorted_times, cdf, label=f'{dataset} CDF')
+#     ax.set_xscale('log')
+#     ax.set_xlabel('Time per Epoch (seconds)')
+#     ax.set_ylabel('CDF')
+#     ax.set_title(title)
+#     ax.legend()
+#     ax.grid(True)
 
-
-
-
-
-
-
-
-
-
-
-
-# # Unit computation time for different embedding for the same model 
-# graphSAGE_train_times = {dataset: results[dataset]['GraphSAGE']['train_times'] for dataset in datasets}
-
-# # Flatten the dictionary to prepare for DataFrame creation
-# time_data = [(dataset, time) for dataset, times in graphSAGE_train_times.items() for time in times]
-# df_times = pd.DataFrame(time_data, columns=['Dataset', 'Time'])
-
-# # Plotting the distribution of training times
-# plt.figure(figsize=(10, 6))
-# sns.boxplot(data=df_times, x='Dataset', y='Time')
-# # sns.stripplot(data=df_times, x='Dataset', y='Time', color='black', alpha=0.5)
-
-# plt.title('Distribution of Training Times for GraphSAGE Across Embedding Methods')
-# plt.ylabel('Time per Epoch (seconds)')
-# plt.xlabel('Dataset')
-
-# # Unit computation time for different embedding for the same model
-# GCN_train_times = {dataset: results[dataset]['GCN']['train_times'] for dataset in datasets}
-
-# # Flatten the dictionary and calculate CDF for each dataset
-# cdf_data = {}
-# for dataset, times in GCN_train_times.items():
-#     sorted_times = np.sort(times)
-#     cdf = np.arange(1, len(sorted_times) + 1) / len(sorted_times)
-#     cdf_data[dataset] = (sorted_times, cdf)
-
-# # Plotting the CDF
-# plt.figure(figsize=(10, 6))
-
-# for dataset, (times, cdf) in cdf_data.items():
-#     plt.step(times, cdf, label=f'{dataset} CDF')
-
-# plt.xscale('log')  # Set x-axis to logarithmic scale
-# plt.xlabel('Time per Epoch (seconds)')
-# plt.ylabel('CDF')
-# plt.title('Cumulative Distribution Function of Training Times per Unit Batch')
-# plt.legend()
-# plt.grid(True)
-# plt.show()
-
-
-
-
-# # Unit computation time for different embedding for the same model
-# GAT_train_times = {dataset: results[dataset]['GAT']['train_times'] for dataset in datasets}
-
-# # Flatten the dictionary and calculate CDF for each dataset
-# cdf_data = {}
-# for dataset, times in GAT_train_times.items():
-#     sorted_times = np.sort(times)
-#     cdf = np.arange(1, len(sorted_times) + 1) / len(sorted_times)
-#     cdf_data[dataset] = (sorted_times, cdf)
-
-# # Plotting the CDF
-# plt.figure(figsize=(10, 6))
-
-# for dataset, (times, cdf) in cdf_data.items():
-#     plt.step(times, cdf, label=f'{dataset} CDF')
-
-# plt.xscale('log')  # Set x-axis to logarithmic scale
-# plt.xlabel('Time per Epoch (seconds)')
-# plt.ylabel('CDF')
-# plt.title('Cumulative Distribution Function of Training Times per Unit Batch')
-# plt.legend()
-# plt.grid(True)
-# plt.show()
-
-
-
-# # Unit computation time for different embedding for the same model
-# graphSAGE_train_times = {dataset: results[dataset]['GraphSAGE']['train_times'] for dataset in datasets}
-
-# # Flatten the dictionary and calculate CDF for each dataset
-# cdf_data = {}
-# for dataset, times in graphSAGE_train_times.items():
-#     sorted_times = np.sort(times)
-#     cdf = np.arange(1, len(sorted_times) + 1) / len(sorted_times)
-#     cdf_data[dataset] = (sorted_times, cdf)
-
-# # Plotting the CDF
-# plt.figure(figsize=(10, 6))
-
-# for dataset, (times, cdf) in cdf_data.items():
-#     plt.step(times, cdf, label=f'{dataset} CDF')
-
-# plt.xscale('log')  # Set x-axis to logarithmic scale
-# plt.xlabel('Time per Epoch (seconds)')
-# plt.ylabel('CDF')
-# plt.title('Cumulative Distribution Function of Training Times per Unit Batch')
-# plt.legend()
-# plt.grid(True)
-# plt.show()
-
-
-
-# Plotting CDFs side by side for GCN, GAT, and GraphSAGE
-fig, axs = plt.subplots(1, 3, figsize=(18, 6))
-
-# Function to plot CDF
-def plot_cdf(data, ax, title):
+def plot_cdf(data, ax, title, colors):
     for dataset, times in data.items():
         sorted_times = np.sort(times)
         cdf = np.arange(1, len(sorted_times) + 1) / len(sorted_times)
-        ax.step(sorted_times, cdf, label=f'{dataset} CDF')
+        ax.step(sorted_times, cdf, label=f'{dataset} CDF', color=colors[dataset])  # Use the colors dictionary for consistent colors
     ax.set_xscale('log')
     ax.set_xlabel('Time per Epoch (seconds)')
     ax.set_ylabel('CDF')
@@ -447,17 +362,20 @@ def plot_cdf(data, ax, title):
     ax.legend()
     ax.grid(True)
 
+# Example usage with your plots for GCN, GAT, and GraphSAGE
+fig, axs = plt.subplots(1, 3, figsize=(18, 6))
+
 # Preparing data for GCN
 GCN_train_times = {dataset: results[dataset]['GCN']['train_times'] for dataset in datasets}
-plot_cdf(GCN_train_times, axs[0], 'GCN Training Times')
+plot_cdf(GCN_train_times, axs[0], 'GCN Training Times', dataset_colors)
 
 # Preparing data for GAT
 GAT_train_times = {dataset: results[dataset]['GAT']['train_times'] for dataset in datasets}
-plot_cdf(GAT_train_times, axs[1], 'GAT Training Times')
+plot_cdf(GAT_train_times, axs[1], 'GAT Training Times', dataset_colors)
 
 # Preparing data for GraphSAGE
 GraphSAGE_train_times = {dataset: results[dataset]['GraphSAGE']['train_times'] for dataset in datasets}
-plot_cdf(GraphSAGE_train_times, axs[2], 'GraphSAGE Training Times')
+plot_cdf(GraphSAGE_train_times, axs[2], 'GraphSAGE Training Times', dataset_colors)
 
 plt.tight_layout()
 plt.show()
@@ -465,17 +383,6 @@ plt.show()
 
 
 
-
-
-# Comparison across different embedding for the same model
-# Assuming 'results' contains your ROC curve data
-datasets = ['DDINA', 'COSS', 'DDM']
-models = ['GCN', 'GAT', 'GraphSAGE']
-dataset_colors = {
-    'DDINA': 'blue',
-    'COSS': 'green',
-    'DDM': 'red'
-}
 
 
 
@@ -495,38 +402,6 @@ for i, model_name in enumerate(models):
 
 plt.tight_layout()
 plt.show()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -562,5 +437,399 @@ highlighted_df = filtered_df.style.highlight_max(subset=['accuracy', 'f1', 'prec
 
 # Display the DataFrame with highlighted maximum values
 highlighted_df
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Time dimension related experiments
+
+
+
+results1 = {
+    'DDINA': {},
+    'COSS': {},
+    'DDM': {}
+}
+
+
+
+
+for dataset in datasets:
+    train_loader, test_loader, _ = get_train_test_validate_data(dataset)
+    for model_name in models:
+        if model_name == 'GAT':
+            if dataset == 'DDINA':
+                num_features = 4
+            else:
+                num_features = 2
+            model =  Net(num_features,num_classes)
+        elif model_name == 'GCN':
+            if dataset == 'DDINA':
+                num_features = 4
+            else:
+                num_features = 2
+            model = GCNNet(num_features, hidden_channels, num_classes)
+        elif model_name == 'GraphSAGE':
+            if dataset == 'DDINA':
+                num_features = 4
+            else:
+                num_features = 2
+            model = GraphSAGENet(num_features, hidden_channels, num_classes)
+        
+        print(f"Running {model_name} Experiment on {dataset}")
+        _, fpr, tpr, _, train_times = run_experiment(model, train_loader, test_loader, num_epochs=100)
+        metrics = compute_metrics(model, test_loader)
+        # Store results along with training times
+        results1[dataset][model_name] = {
+            'metrics': metrics,
+            'fpr': fpr,
+            'tpr': tpr,
+            'train_times': train_times  # Storing the training times
+        }
+
+
+
+
+# Example of accessing and printing metrics
+for dataset in datasets:
+    for model_name in models:
+        metrics = results1[dataset][model_name]['metrics']
+        print(f"{model_name} Model Metrics on {dataset}:")
+        for metric_name, metric_value in metrics.items():
+            print(f"{metric_name}: {metric_value}")
+        print("\n")
+
+# Plotting ROC Curves for a specific label across datasets and models
+
+
+
+
+label = 1  # Adjust this based on the label you're interested in
+plt.figure(figsize=(10, 6))
+for dataset in datasets:
+    for model_name in models:
+        fpr = results1[dataset][model_name]['fpr'][label]
+        tpr = results1[dataset][model_name]['tpr'][label]
+        plt.plot(fpr, tpr, label=f"{model_name} on {dataset}")
+plt.xlabel("False Positive Rate")
+plt.ylabel("True Positive Rate")
+plt.title("ROC Curves Comparison Across Datasets and Models")
+plt.legend()
+plt.show()
+
+
+
+def plot_cdf(data, ax, title, colors):
+    for dataset, times in data.items():
+        sorted_times = np.sort(times)
+        cdf = np.arange(1, len(sorted_times) + 1) / len(sorted_times)
+        ax.step(sorted_times, cdf, label=f'{dataset} CDF', color=colors[dataset])  # Use the colors dictionary for consistent colors
+    ax.set_xscale('log')
+    ax.set_xlabel('Time per Epoch (seconds)')
+    ax.set_ylabel('CDF')
+    ax.set_title(title)
+    ax.legend()
+    ax.grid(True)
+
+
+# Example usage with your plots for GCN, GAT, and GraphSAGE
+fig, axs = plt.subplots(1, 3, figsize=(18, 6))
+
+# Preparing data for GCN
+GCN_train_times = {dataset: results1[dataset]['GCN']['train_times'] for dataset in datasets}
+plot_cdf(GCN_train_times, axs[0], 'GCN Training Times', dataset_colors)
+
+# Preparing data for GAT
+GAT_train_times = {dataset: results1[dataset]['GAT']['train_times'] for dataset in datasets}
+plot_cdf(GAT_train_times, axs[1], 'GAT Training Times', dataset_colors)
+
+# Preparing data for GraphSAGE
+GraphSAGE_train_times = {dataset: results1[dataset]['GraphSAGE']['train_times'] for dataset in datasets}
+plot_cdf(GraphSAGE_train_times, axs[2], 'GraphSAGE Training Times', dataset_colors)
+
+plt.tight_layout()
+plt.show()
+
+
+
+
+# Comparison across different embedding for the same model
+# Assuming 'results' contains your ROC curve data
+datasets = ['DDINA', 'COSS', 'DDM']
+models = ['GCN', 'GAT', 'GraphSAGE']
+dataset_colors = {
+    'DDINA': 'blue',
+    'COSS': 'green',
+    'DDM': 'red'
+}
+
+
+
+# Create a figure and a set of subplots
+fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+
+# Loop through each model and plot its ROC curve on a different subplot
+for i, model_name in enumerate(models):
+    for dataset in datasets:
+        fpr = results1[dataset][model_name]['fpr'][label]
+        tpr = results1[dataset][model_name]['tpr'][label]
+        axes[i].plot(fpr, tpr, label=f"{dataset}", color=dataset_colors[dataset])
+    axes[i].set_title(f"ROC Curve of {model_name}")
+    axes[i].set_xlabel("False Positive Rate")
+    axes[i].set_ylabel("True Positive Rate")
+    axes[i].legend(title="Dataset")
+
+plt.tight_layout()
+plt.show()
+
+
+
+
+# Table for precision, accuracy, f1, recall
+# Initialize an empty list to store your data
+data = []
+metrics_columns = sorted(results1[datasets[0]][models[0]]['metrics'].keys())
+
+# Loop through each dataset and model to gather metrics
+for dataset in datasets:
+    for model_name in models:
+        # Check if the dataset and model_name keys exist in the results dictionary
+        if dataset in results1 and model_name in results1[dataset]:
+            # Retrieve the stored metrics for the current dataset and model
+            metrics = results1[dataset][model_name]['metrics']
+            # Append a new record including the dataset, model, and all metrics
+            data.append([dataset, model_name] + [metrics[metric] for metric in sorted(metrics)])
+        else:
+            # Handle the missing dataset/model combination by appending NaNs or placeholders
+            data.append([dataset, model_name] + [None for _ in sorted(metrics_columns)])
+
+# Assuming 'metrics_columns' is predefined or you define it based on your known metrics
+columns = ['Dataset', 'Model'] + metrics_columns
+df = pd.DataFrame(data, columns=columns)
+
+# Assuming 'df' is your original DataFrame
+
+# Step 1: Keep only the specified columns
+filtered_df = df[['Dataset', 'Model', 'accuracy', 'f1', 'precision', 'recall']]
+
+# Step 2: Apply the .style.highlight_max() method
+highlighted_df1 = filtered_df.style.highlight_max(subset=['accuracy', 'f1', 'precision', 'recall'], color='yellow', axis=0)
+
+# Display the DataFrame with highlighted maximum values
+highlighted_df1
+
+
+
+# import matplotlib.pyplot as plt
+
+label = 1  # Adjust this based on the label you're interested in
+
+# Set up the figure and subplots
+plt.figure(figsize=(10, 12))  # Increase the height to accommodate two plots vertically
+
+# First subplot
+plt.subplot(2, 1, 1)  # 2 rows, 1 column, 1st subplot
+for dataset in datasets:
+    for model_name in models:
+        fpr = results[dataset][model_name]['fpr'][label]
+        tpr = results[dataset][model_name]['tpr'][label]
+        plt.plot(fpr, tpr, label=f"{model_name} on {dataset}")
+plt.xlabel("False Positive Rate")
+plt.ylabel("True Positive Rate")
+plt.title("ROC Curves Comparison Across Datasets and Models (Results)")
+plt.legend()
+
+# Second subplot
+plt.subplot(2, 1, 2)  # 2 rows, 1 column, 2nd subplot
+for dataset in datasets:
+    for model_name in models:
+        fpr = results1[dataset][model_name]['fpr'][label]
+        tpr = results1[dataset][model_name]['tpr'][label]
+        plt.plot(fpr, tpr, label=f"{model_name} on {dataset}")
+plt.xlabel("False Positive Rate")
+plt.ylabel("True Positive Rate")
+plt.title("ROC Curves Comparison Across Datasets and Models (Results1)")
+plt.legend()
+
+plt.tight_layout()  # Adjust layout to prevent overlap
+plt.show()
+
+
+
+
+# Extract FPR and TPR for a specific model and task
+fpr = results['DDINA']['GAT']['fpr'][1]
+tpr = results['DDINA']['GAT']['tpr'][1]
+
+# # Calculate AUC
+# auc = metrics.auc(fpr, tpr)
+# print(f"AUC: {auc}")
+
+
+
+
+def plot_cdf(data, ax, title, colors):
+    label_map = {
+        'DDINA': 'Directed DANI',
+        'COSS': 'Cosine Similarity',
+        'DDM': 'Weighted DANI'
+    }
+    for dataset, times in data.items():
+        sorted_times = np.sort(times)
+        cdf = np.arange(1, len(sorted_times) + 1) / len(sorted_times)
+        dataset_label = label_map.get(dataset, dataset)  # Use mapped label if exists, otherwise use dataset name
+
+        ax.step(sorted_times, cdf, label=f'{dataset_label}', color=colors[dataset])
+    
+    ax.set_xscale('log')
+
+    # Calculate the data range to determine tick settings
+    data_min, data_max = np.min([times for dataset, times in data.items() for times in times]), \
+                         np.max([times for dataset, times in data.items() for times in times])
+
+    # Adjust the number of ticks based on the data range
+    if data_max / data_min > 1000:
+        numticks = 3
+    else:
+        numticks = 5
+
+    # Set major locator and formatter for the log scale
+    ax.xaxis.set_major_locator(ticker.LogLocator(base=10.0, subs='all', numticks=numticks))
+    ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, pos: f'{x:.3f}' if x < 1 else f'{int(x)}'))
+
+    # Set tick parameters and rotate x-ticks for better readability
+    ax.tick_params(axis='x', which='major', labelrotation=45)
+    
+    ax.set_xlabel('Time per Epoch (seconds)')
+    ax.set_ylabel('CDF')
+    ax.set_title(title)
+    ax.legend()
+
+
+
+def create_plots(fontsize_title, fontsize_labels, fontsize_legend, fontsize_ticks):
+    # Create the main figure with desired size
+    fig = plt.figure(figsize=(36, 15))
+
+    # Create subfigures for each of the sections (a to d)
+    subfigs = fig.subfigures(2, 2, wspace=0.07, hspace=0.07)
+
+    # Helper function to set the styles
+    def set_style(ax, show_title=True, show_xlabel=True, show_ylabel=True):
+        if show_title:
+            ax.set_title(ax.get_title(), fontsize=fontsize_title)
+        else:
+            ax.set_title('')
+        if show_xlabel:
+            ax.set_xlabel(ax.get_xlabel(), fontsize=fontsize_labels)
+        else:
+            ax.set_xlabel('')
+        if show_ylabel:
+            ax.set_ylabel(ax.get_ylabel(), fontsize=fontsize_labels)
+        else:
+            ax.set_ylabel('')
+        ax.tick_params(axis='both', which='major', labelsize=fontsize_ticks)
+        if ax.get_legend():
+            ax.legend(title=ax.get_legend().get_title().get_text(), fontsize=fontsize_legend, title_fontsize=fontsize_legend)
+
+    # Configure each subfigure
+    # Subfigure a (top left)
+    axs_a = subfigs[0, 0].subplots(1, 3)
+    GCN_train_times = {dataset: results[dataset]['GCN']['train_times'] for dataset in datasets}
+    GAT_train_times = {dataset: results[dataset]['GAT']['train_times'] for dataset in datasets}
+    GraphSAGE_train_times = {dataset: results[dataset]['GraphSAGE']['train_times'] for dataset in datasets}
+
+    plot_cdf(GCN_train_times, axs_a[0], 'GCN', dataset_colors)
+    plot_cdf(GAT_train_times, axs_a[1], 'GAT', dataset_colors)
+    plot_cdf(GraphSAGE_train_times, axs_a[2], 'GraphSAGE', dataset_colors)
+
+
+    set_style(axs_a[0], show_title=True, show_xlabel=False, show_ylabel=True)  # Only leftmost y-label
+    for ax in axs_a[1:]:
+        set_style(ax, show_title=True, show_xlabel=False, show_ylabel=False)  # No y-label
+
+    # Subfigure c (top right) - Adjusted to use all models
+    axs_c = subfigs[0, 1].subplots(1, len(models))  # Ensure the subplot layout matches the number of models
+    for i, model_name in enumerate(models):
+        print(model_name)
+
+        plot_fpr_tpr(results, model_name, axs_c[i], datasets, label, dataset_colors,
+                     title=f"{model_name}", xlabel="False Positive Rate", ylabel="True Positive Rate")
+        set_style(axs_c[i], show_title=True, show_xlabel=False, show_ylabel=(i == 0))
+
+
+    # Subfigure b (bottom left)
+    axs_b = subfigs[1, 0].subplots(1, 3)
+    GCN_train_times = {dataset: results1[dataset]['GCN']['train_times'] for dataset in datasets}
+    GAT_train_times = {dataset: results1[dataset]['GAT']['train_times'] for dataset in datasets}
+    GraphSAGE_train_times = {dataset: results1[dataset]['GraphSAGE']['train_times'] for dataset in datasets}
+
+    plot_cdf(GCN_train_times, axs_b[0], 'GCN', dataset_colors)
+    plot_cdf(GAT_train_times, axs_b[1], 'GAT', dataset_colors)
+    plot_cdf(GraphSAGE_train_times, axs_b[2], 'GraphSAGE', dataset_colors)
+
+
+    set_style(axs_b[0], show_title=False, show_xlabel=True, show_ylabel=True)  # Only leftmost y-label
+    for ax in axs_b[1:]:
+        set_style(ax, show_title=False, show_xlabel=True, show_ylabel=False)  # No y-label
+
+    # Subfigure d (bottom right) - Adjusted to use all models
+    axs_d = subfigs[1, 1].subplots(1, len(models))  # Ensure the subplot layout matches the number of models
+    for i, model_name in enumerate(models):
+        print(model_name)
+        plot_fpr_tpr(results1, model_name, axs_d[i], datasets, label, dataset_colors,
+                     title=f"{model_name}", xlabel="False Positive Rate", ylabel="True Positive Rate")
+        set_style(axs_d[i], show_title=False, show_xlabel=True, show_ylabel=(i == 0))
+
+    # Display the figure
+    # plt.tight_layout()  # Adjust layout
+
+    plt.savefig(path.join(PROJECT_ROOT, "data", 'comparisons.pdf'))
+    plt.show()
+
+def plot_fpr_tpr(results, model_name, ax, datasets, label, dataset_colors, title, xlabel, ylabel):
+    # Label mapping dictionary
+    label_map = {
+        'DDINA': 'Directed DANI',
+        'COSS': 'Cosine Similarity',
+        'DDM': 'Weighted DANI'
+    }
+    
+    for dataset in datasets:
+        fpr = results[dataset][model_name]['fpr'][label]
+        tpr = results[dataset][model_name]['tpr'][label]
+        
+        # Use mapped label if exists, otherwise use dataset name
+        dataset_label = label_map.get(dataset, dataset)
+        
+        ax.plot(fpr, tpr, label=f"{dataset_label}", color=dataset_colors[dataset])
+        
+    ax.set_title(title)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.legend()
+
+
+# Example usage:
+create_plots(fontsize_title=30, fontsize_labels=25, fontsize_legend=20, fontsize_ticks=20)
+
 
 

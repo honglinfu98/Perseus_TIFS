@@ -53,8 +53,6 @@ def get_index(cascade):
 
 
 def DANI(N, cascades):
-    # K = int(N * (N - 1) * 0.5 * H)
-
     P = np.zeros([N, N])
 
     for cascade_dict in cascades:

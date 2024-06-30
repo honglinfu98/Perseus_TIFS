@@ -203,16 +203,6 @@ def prepare_data(graphs, features, label_mapping):
 
         num_labels = 2
 
-        # # Prepare labels
-        # labels = [
-        #     label_mapping[key].get(node_id, 0)
-        #     for node_id in features_buffer["telegram_chat_id"]
-        # ]
-        # labels = torch.tensor(labels, dtype=torch.long)
-
-        # # Create a Data object
-        # data = Data(x=node_attributes, edge_index=edge_index, y=labels)
-
         # Prepare labels
         labels = []
         for node_id in features_buffer["telegram_chat_id"]:
@@ -229,9 +219,28 @@ def prepare_data(graphs, features, label_mapping):
 
         # Convert list of labels to a tensor
         labels_tensor = torch.tensor(labels, dtype=torch.float)
-
         # Create a Data object
         data = Data(x=node_attributes, edge_index=edge_index, y=labels_tensor)
+
+        # # Prepare labels
+        # labels = []
+        # for node_id in features_buffer["telegram_chat_id"]:
+        #     node_label = label_mapping[key].get(node_id, 0)  # Get the label value
+        #     if not isinstance(node_label, int):
+        #         node_label = 0  # Default to 0 if label is not an integer
+
+        #     # Append the label directly since we do not use one-hot encoding
+        #     labels.append(node_label)
+
+        # # Convert list of labels to a tensor
+        # labels_tensor = torch.tensor(labels, dtype=torch.float)
+        # labels_tensor = labels_tensor.squeeze()
+        # print(labels_tensor)
+
+
+        # # Create a Data object
+        # data = Data(x=node_attributes, edge_index=edge_index, y=labels_tensor)
+
 
         prepared_data.append(data)
 

@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from torch.nn import ModuleList, Linear, ReLU, Dropout
 from torch_geometric.nn import GCNConv, SAGEConv, GATConv
 
-from perseus.model.magamaga import get_data_pickle, split_data
+from perseus.model.magamaga import get_data_pickle, split_data, get_train_test_validate_data_pickle
 from sklearn.metrics import (
     roc_curve,
     auc,
@@ -161,15 +161,18 @@ def compute_metrics(model, loader):
 datasets = ['DDINA', 'COSS', 'DDM']
 models = ['Net', 'GCNNet', 'GraphSAGENet']  # Ensure these match your class names exactly
 
-def run_experiments():
-    learning_rates = [1e-5, 5e-5, 1e-4, 5e-4]
-    hidden_channels_list = [8, 16, 32, 64]
-    num_layers_options = [2, 3, 4, 5]
+def run_experiments(options: str):
+    learning_rates = [1e-4]
+    hidden_channels_list = [8]
+    num_layers_options = [2]
 
     results = []
 
     for dataset_name in datasets:
-        train_loader, test_loader, _ = get_data_pickle(dataset_name)
+        if options == 'temporal':
+            train_loader, test_loader, _ = get_data_pickle(dataset_name)
+        elif options == 'nontemporal':
+            train_loader, test_loader, _ = get_train_test_validate_data_pickle(dataset_name)
         dataset_results = {}  # Dictionary for storing results per dataset
 
         for model_name in models:
@@ -322,89 +325,81 @@ def convert_to_df(auc_results):
 
 
 if __name__ == "__main__":
+
+    results = run_experiments("temporal")
+
+    results_nontemporal = run_experiments("nontemporal")
+
+    # # # save the results in pickle 
+    # with open(path.join(PROJECT_ROOT, "data","parameter_results.pkl"), "wb") as file:
+    #     pickle.dump(results, file)       
+
+
+    # # Load results from pickle file (assuming the file path is correct and PROJECT_ROOT is defined)
+    # with open(path.join(PROJECT_ROOT, "data", "parameter_results.pkl"), "rb") as file:
+    #     results = pickle.load(file)
+
+    # datasets_dict = {
+    #     'DDINA': results[0],
+    #     'COSS': results[1],
+    #     'DDM': results[2],
+    # }
+
+    # learning_rates = [1e-5, 5e-5, 1e-4, 5e-4]
+    # hidden_channels_list = [8, 16, 32, 64]
+    # num_layers_options = [2, 3, 4, 5] 
+    # models = ['Net', 'GCNNet', 'GraphSAGENet']
+
+    # for dataset_name, dataset_results in datasets_dict.items():
+    #     create_roc_plots_for_dataset(dataset_results, dataset_name)
+
+
+    # auc_results_ls = []
     
-    with open(path.join(PROJECT_ROOT, "data", "parameter_results.pkl"), "rb") as file:
-        results = pickle.load(file)
-
-    title_fontsize = 25
-    label_fontsize = 25
-    tick_fontsize = 20
-
-    datasets_dict = {
-        'DDINA': results[0],
-        'COSS': results[1],
-        'DDM': results[2],
-    }
-
-    learning_rates = [1e-5, 5e-5, 1e-4, 5e-4]
-    hidden_channels_list = [8, 16, 32, 64]
-    num_layers_options = [2, 3, 4, 5] 
-    models = ['Net', 'GCNNet', 'GraphSAGENet']
-
-    auc_results_ls = []
-
-    # Calculate and print AUC for each dataset
-    for dataset_name, dataset_results in datasets_dict.items():
-        auc_results = calculate_auc_for_models(dataset_results)
-        print_sorted_auc_results(dataset_name, auc_results)
-        auc_results_ls.append(auc_results)
-        print("\n")
-
-    # Convert each AUC results dictionary to DataFrame
-    dfs = [convert_to_df(auc_results) for auc_results in auc_results_ls]
-
-    # Calculate global min and max AUC scores
-    global_min_auc = min(df['AUC Score'].min() for df in dfs)
-    global_max_auc = max(df['AUC Score'].max() for df in dfs)
-
-    # Define your custom titles here
-    titles = ["Directed DANI", "Cosine Similarity", "Weighted DANI"]
-
-    # Mapping for renaming models
-    model_mapping = {
-        'Net': 'GAT',
-        'GCNNet': 'GCN',
-        'GraphSAGENet': 'GraphSAGE'
-    }
-
-    highlight_coords = {
-        'Model': 'GAT',
-        'Learning Rate': 0.001,
-        'Hidden Channels': 8,
-        'Layers': 2
-    }
-
-    # Plotting each dataset separately and saving the plots
-    for i, (df, title) in enumerate(zip(dfs, titles)):
-        df['Model'] = df['Model'].map(model_mapping)
-        df['Model'] = pd.Categorical(df['Model'], categories=['GCN', 'GraphSAGE', 'GAT'], ordered=True)
-        pivot_table = df.pivot_table(index=['Model', 'Learning Rate'], columns=['Hidden Channels', 'Layers'], values='AUC Score')
-        formatted_columns = [f'({hidden}, {layer})' for hidden, layer in pivot_table.columns]
-        pivot_table.columns = formatted_columns
         
-        fig, ax = plt.subplots(figsize=(10, 8))
-        sns.heatmap(pivot_table, annot=False, fmt=".2f", cmap="YlGnBu", vmin=global_min_auc, vmax=global_max_auc, ax=ax)
-        
-        ax.set_title(f'AUC Scores {title}', fontsize=title_fontsize)
-        ax.set_ylabel('Model - Learning Rate', fontsize=label_fontsize)
-        ax.set_xlabel('Hidden Channels - Layers', fontsize=label_fontsize)
-        ax.tick_params(axis='both', which='major', labelsize=tick_fontsize)
-        ax.set_xticklabels(ax.get_xticklabels(), rotation=45)  # Adjust the angle as needed
-        
+    # # Calculate and print AUC for each dataset
+    # for dataset_name, dataset_results in datasets_dict.items():
+    #     auc_results = calculate_auc_for_models(dataset_results)
+    #     print_sorted_auc_results(dataset_name, auc_results)
+    #     auc_results_ls.append(auc_results)
+    #     print("\n")
 
 
-        # Highlight the first column and the second last row for "Directed DANI"
-        if title == "Directed DANI":
-            num_rows = pivot_table.shape[0]
-            row = num_rows - 2  # Second last row
-            col = 0  # First column
-            # Add a cross
-            ax.plot([col, col + 1], [row, row + 1], color='red', lw=3)
-            ax.plot([col, col + 1], [row + 1, row], color='red', lw=3)
-        
-        # Save each plot separately
-        plt.tight_layout()
-        plt.savefig(os.path.join(PROJECT_ROOT, "data", f'auc_scores_{title.replace(" ", "_").lower()}.pdf'))
-        plt.close(fig)
+    
+    # # Convert each AUC results dictionary to DataFrame
+    # dfs = [convert_to_df(auc_results) for auc_results in auc_results_ls]
 
-    print("Plots saved successfully.")
+    # # Calculate global min and max AUC scores
+    # global_min_auc = min(df['AUC Score'].min() for df in dfs)
+    # global_max_auc = max(df['AUC Score'].max() for df in dfs)
+
+    # fig, axs = plt.subplots(1, 3, figsize=(30, 8))  # 1 row, 3 columns
+
+    # # Define your custom titles here
+    # titles = ["Directed DANI", "Cosine Similarity", "Weighted DANI"]
+
+    # for i, df in enumerate(dfs):
+    #     pivot_table = df.pivot_table(index=['Model', 'Learning Rate'], columns=['Hidden Channels', 'Layers'], values='AUC Score')
+        
+    #     # Format the column names to ("number", "number")
+    #     formatted_columns = [f'({hidden}, {layer})' for hidden, layer in pivot_table.columns]
+    #     pivot_table.columns = formatted_columns
+        
+    #     sns.heatmap(pivot_table, annot=True, fmt=".2f", cmap="YlGnBu", vmin=global_min_auc, vmax=global_max_auc, ax=axs[i])
+        
+    #     # Set the custom title for each subplot
+    #     axs[i].set_title(f'AUC Scores {titles[i]}')
+        
+    #     axs[i].set_ylabel('Model - Learning Rate')
+    #     axs[i].set_xlabel('Hidden Channels - Layers')
+        
+    #     # Rotate x-axis labels
+    #     axs[i].set_xticklabels(axs[i].get_xticklabels(), rotation=45)  # Adjust the angle as needed
+
+    # plt.tight_layout()
+
+    # # Save the figure to a PDF file
+    # plt.savefig(path.join(PROJECT_ROOT, "data", 'auc_scores.pdf'))
+
+    # # Now display the plot
+    # plt.show()
