@@ -2,26 +2,42 @@ import networkx as nx
 import numpy as np
 from scipy import stats
 from os import path
-import pickle 
+import pickle
 from torch_geometric.loader import DataLoader
 from perseus.dataset.compare_paper_graph import combine_features, graph_features
-from perseus.dataset.preprocess.train_test_validate import get_test_scored_signals, get_train_scored_signals, get_valid_scored_signals
+from perseus.dataset.preprocess.train_test_validate import (
+    get_test_scored_signals,
+    get_train_scored_signals,
+    get_valid_scored_signals,
+)
+
 # from perseus.dataset.preprocess.groudtruth_labeling import create_label_mapping
-from perseus.dataset.preprocess.process import features_engineer, get_graphs, process_dataframe, aggregate_data, assign_event_ids
+from perseus.dataset.preprocess.process import (
+    features_engineer,
+    get_graphs,
+    process_dataframe,
+    aggregate_data,
+    assign_event_ids,
+)
 from perseus.dataset.gnn_dataset_preparation import (
     prepare_data,
 )
 from sklearn.model_selection import train_test_split
-from perseus.dataset.preprocess.groudtruth_labeling import create_label_mapping, read_labeling_csv_back_to_dict
+from perseus.dataset.preprocess.groudtruth_labeling import (
+    create_label_mapping,
+    read_labeling_csv_back_to_dict,
+)
 from perseus.settings import PROJECT_ROOT
 from itertools import combinations
 from sklearn.metrics.pairwise import cosine_similarity
+
 # from itertools import combinations
 # from sklearn.metrics.pairwise import cosine_similarity
 
 from torch_geometric.utils import to_undirected, is_undirected
 import torch
 from torch_geometric.data import Data
+
 # from clotho.model.magamaga import get_data_loader
 
 from os import path
@@ -66,7 +82,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.stats import ttest_ind
 from os import path
-
 
 
 def calculate_effsize_efficiency(G, ego):
@@ -116,51 +131,6 @@ def in_ego_graph(G, node, radius=1):
     return in_ego
 
 
-# def aggregate_and_compare(gs_ls, label_mapping_ls):
-#     # Initialize containers for each centrality measure by group
-#     group_0_degrees, group_1_degrees = [], []
-#     group_0_betweenness, group_1_betweenness = [], []
-#     group_0_closeness, group_1_closeness = [], []
-#     group_0_eigenvector, group_1_eigenvector = [], []
-#     group_0_pagerank, group_1_pagerank = [], []
-
-#     # Iterate over each network and its corresponding labels
-#     for key, graph in gs_ls.items():
-#         # Calculate centrality measures
-#         degree_centrality = nx.degree_centrality(graph)
-#         betweenness_centrality = nx.betweenness_centrality(graph)
-#         closeness_centrality = nx.closeness_centrality(graph)
-#         # eigenvector_centrality = nx.eigenvector_centrality(graph, max_iter=1000)
-#         pagerank = nx.pagerank(graph)
-
-#         labels = label_mapping_ls.get(key, {})
-
-#         # Aggregate centrality measures by group
-#         for node, group in labels.items():
-#             if group == 0:
-#                 group_0_degrees.append(degree_centrality.get(node, 0))
-#                 group_0_betweenness.append(betweenness_centrality.get(node, 0))
-#                 group_0_closeness.append(closeness_centrality.get(node, 0))
-#                 # group_0_eigenvector.append(eigenvector_centrality.get(node, 0))
-#                 group_0_pagerank.append(pagerank.get(node, 0))
-#             elif group == 1:
-#                 group_1_degrees.append(degree_centrality.get(node, 0))
-#                 group_1_betweenness.append(betweenness_centrality.get(node, 0))
-#                 group_1_closeness.append(closeness_centrality.get(node, 0))
-#                 # group_1_eigenvector.append(eigenvector_centrality.get(node, 0))
-#                 group_1_pagerank.append(pagerank.get(node, 0))
-
-#     # Perform T-tests on the aggregated data for each centrality measure
-#     results = {}
-#     results['degree'] = stats.ttest_ind(group_0_degrees, group_1_degrees, equal_var=False)
-#     results['betweenness'] = stats.ttest_ind(group_0_betweenness, group_1_betweenness, equal_var=False)
-#     results['closeness'] = stats.ttest_ind(group_0_closeness, group_1_closeness, equal_var=False)
-#     # results['eigenvector'] = stats.ttest_ind(group_0_eigenvector, group_1_eigenvector, equal_var=False)
-#     results['pagerank'] = stats.ttest_ind(group_0_pagerank, group_1_pagerank, equal_var=False)
-
-#     return results
-# from scipy import stats
-
 def aggregate_and_compare_combined(gs_ls, label_mapping_ls):
     # Initialize containers for centrality measures and additional features by group
     metrics_by_group = {
@@ -191,9 +161,15 @@ def aggregate_and_compare_combined(gs_ls, label_mapping_ls):
             group = labels.get(node)
             if group is not None:
                 # Aggregate centrality measures
-                metrics_by_group["degree_centrality"][group].append(degree_centrality.get(node, 0))
-                metrics_by_group["betweenness_centrality"][group].append(betweenness_centrality.get(node, 0))
-                metrics_by_group["closeness_centrality"][group].append(closeness_centrality.get(node, 0))
+                metrics_by_group["degree_centrality"][group].append(
+                    degree_centrality.get(node, 0)
+                )
+                metrics_by_group["betweenness_centrality"][group].append(
+                    betweenness_centrality.get(node, 0)
+                )
+                metrics_by_group["closeness_centrality"][group].append(
+                    closeness_centrality.get(node, 0)
+                )
                 metrics_by_group["pagerank"][group].append(pagerank.get(node, 0))
 
                 # Calculate and aggregate additional graph features
@@ -216,7 +192,9 @@ def aggregate_and_compare_combined(gs_ls, label_mapping_ls):
     # Perform T-tests on the aggregated data for each metric
     ttest_results = {}
     for metric, groups in metrics_by_group.items():
-        ttest_results[metric] = stats.ttest_ind(groups[0], groups[1], equal_var=False, nan_policy='omit')
+        ttest_results[metric] = stats.ttest_ind(
+            groups[0], groups[1], equal_var=False, nan_policy="omit"
+        )
 
     return ttest_results
 
@@ -226,105 +204,42 @@ def process_signals_and_get_components(signal_function):
     signals = signal_function()  # Get signals using the provided function
     processed_signals = process_dataframe(signals)  # Process signals
     ided_signals = assign_event_ids(processed_signals)  # Assign event IDs
-    cascade, no_nodes, id_mapping, cascade_labeling = aggregate_data(ided_signals)  # Aggregate data
+    cascade, no_nodes, id_mapping, cascade_labeling = aggregate_data(
+        ided_signals
+    )  # Aggregate data
     gs, results, As, P_dict = get_graphs(cascade, no_nodes, id_mapping)  # Get graphs
     graph_feature = graph_features(gs)  # Get graph features
     market_feature = features_engineer(processed_signals)  # Engineer market features
-    combine_feature = combine_features(market_feature, graph_feature)  # Combine features
-    label_mapping = read_labeling_csv_back_to_dict("test")  # Read label mapping (adjust as needed)
+    combine_feature = combine_features(
+        market_feature, graph_feature
+    )  # Combine features
+    label_mapping = read_labeling_csv_back_to_dict(
+        "test"
+    )  # Read label mapping (adjust as needed)
     return gs, label_mapping
-
 
 
 # Define a function to assign significance levels
 def assign_significance(p):
     if p < 0.001:
-        return '***'
+        return "***"
     elif p < 0.01:
-        return '**'
+        return "**"
     elif p < 0.05:
-        return '*'
+        return "*"
     else:
-        return ''
-    
+        return ""
 
 
-# def plot_distribution(gs_ls, label_mapping_ls, font_size=10, title_size=12, legend_size=10, tick_label_size=10, output_dir='plots'):
-#     metrics_by_group = {
-#         "degree_centrality": [[], []],
-#         "betweenness_centrality": [[], []],
-#         "Closeness Centrality": [[], []],
-#         "pagerank": [[], []],
-#         "In Ratio": [[], []],
-#         "Out Ratio": [[], []],
-#         "out_nodes": [[], []],
-#         "eff_size": [[], []],
-#         "Efficiency": [[], []],
-#         "density": [[], []],
-#         "clustering_coeff": [[], []],
-#     }
-
-#     for key, graph in gs_ls.items():
-#         labels = label_mapping_ls.get(key, {})
-#         degree_centrality = nx.degree_centrality(graph)
-#         betweenness_centrality = nx.betweenness_centrality(graph)
-#         closeness_centrality = nx.closeness_centrality(graph)
-#         pagerank = nx.pagerank(graph)
-
-#         for node in graph.nodes():
-#             group = labels.get(node)
-#             if group is not None:
-#                 metrics_by_group["degree_centrality"][group].append(degree_centrality.get(node, 0))
-#                 metrics_by_group["betweenness_centrality"][group].append(betweenness_centrality.get(node, 0))
-#                 metrics_by_group["Closeness Centrality"][group].append(closeness_centrality.get(node, 0))
-#                 metrics_by_group["pagerank"][group].append(pagerank.get(node, 0))
-#                 # Assuming additional code for calculating metrics here
-#                 # Calculate and aggregate additional graph features
-#                 # Assume in_ego_graph and out_ego_graph are defined elsewhere
-#                 in_ego = in_ego_graph(graph, node)
-#                 out_ego = out_ego_graph(graph, node)
-#                 in_ratio = len(in_ego.nodes) / len(graph.nodes)
-#                 out_ratio = len(out_ego.nodes) / len(graph.nodes)
-#                 eff_size, efficiency = calculate_effsize_efficiency(graph, node)  # Assume defined elsewhere
-#                 density = nx.density(out_ego)
-#                 clustering_coeff = nx.clustering(graph, node)
-
-#                 metrics_by_group["In Ratio"][group].append(in_ratio)
-#                 metrics_by_group["Out Ratio"][group].append(out_ratio)
-#                 metrics_by_group["out_nodes"][group].append(len(out_ego.nodes))
-#                 metrics_by_group["eff_size"][group].append(eff_size)
-#                 metrics_by_group["Efficiency"][group].append(efficiency)
-#                 metrics_by_group["density"][group].append(density)
-#                 metrics_by_group["clustering_coeff"][group].append(clustering_coeff)
-
-
-#     metrics_to_plot = ["Closeness Centrality", "In Ratio", "Out Ratio", "Efficiency"]
-#     if not os.path.exists(output_dir):
-#         os.makedirs(output_dir)
-
-#     # Applying custom text sizes using matplotlib settings
-#     plt.rc('font', size=font_size)
-#     plt.rc('axes', titlesize=title_size)
-#     plt.rc('axes', labelsize=font_size)
-#     plt.rc('xtick', labelsize=tick_label_size)
-#     plt.rc('ytick', labelsize=tick_label_size)
-#     plt.rc('legend', fontsize=legend_size)
-
-#     for metric in metrics_to_plot:
-#         plt.figure(figsize=(5, 4))
-#         sns.kdeplot(metrics_by_group[metric][0], label='Mastermind')
-#         sns.kdeplot(metrics_by_group[metric][1], label='Peer')
-#         plt.title(f'PDF of {metric}')
-#         plt.xlabel(metric)
-#         plt.ylabel('Density')
-#         plt.legend(loc='upper right')
-#         plt.tight_layout()
-#         plt.savefig(path.join(PROJECT_ROOT, "data", f'distribution_{metric}.pdf'))
-#         plt.close()
-
-#     return metrics_by_group
-
-def plot_distribution(gs_ls, label_mapping_ls, font_size=10, title_size=12, legend_size=10, tick_label_size=10, output_dir='plots'):
+def plot_distribution(
+    gs_ls,
+    label_mapping_ls,
+    font_size=10,
+    title_size=12,
+    legend_size=10,
+    tick_label_size=10,
+    output_dir="plots",
+):
     metrics_by_group = {
         "degree_centrality": [[], []],
         "betweenness_centrality": [[], []],
@@ -339,8 +254,6 @@ def plot_distribution(gs_ls, label_mapping_ls, font_size=10, title_size=12, lege
         "clustering_coeff": [[], []],
     }
 
-
-
     for key, graph in gs_ls.items():
         labels = label_mapping_ls.get(key, {})
         degree_centrality = nx.degree_centrality(graph)
@@ -351,9 +264,15 @@ def plot_distribution(gs_ls, label_mapping_ls, font_size=10, title_size=12, lege
         for node in graph.nodes():
             group = labels.get(node)
             if group is not None:
-                metrics_by_group["degree_centrality"][group].append(degree_centrality.get(node, 0))
-                metrics_by_group["betweenness_centrality"][group].append(betweenness_centrality.get(node, 0))
-                metrics_by_group["Closeness Centrality"][group].append(closeness_centrality.get(node, 0))
+                metrics_by_group["degree_centrality"][group].append(
+                    degree_centrality.get(node, 0)
+                )
+                metrics_by_group["betweenness_centrality"][group].append(
+                    betweenness_centrality.get(node, 0)
+                )
+                metrics_by_group["Closeness Centrality"][group].append(
+                    closeness_centrality.get(node, 0)
+                )
                 metrics_by_group["pagerank"][group].append(pagerank.get(node, 0))
 
                 # Calculate and aggregate additional graph features
@@ -362,7 +281,9 @@ def plot_distribution(gs_ls, label_mapping_ls, font_size=10, title_size=12, lege
                 out_ego = out_ego_graph(graph, node)
                 in_ratio = len(in_ego.nodes) / len(graph.nodes)
                 out_ratio = len(out_ego.nodes) / len(graph.nodes)
-                eff_size, efficiency = calculate_effsize_efficiency(graph, node)  # Assume defined elsewhere
+                eff_size, efficiency = calculate_effsize_efficiency(
+                    graph, node
+                )  # Assume defined elsewhere
                 density = nx.density(out_ego)
                 clustering_coeff = nx.clustering(graph, node)
 
@@ -377,150 +298,76 @@ def plot_distribution(gs_ls, label_mapping_ls, font_size=10, title_size=12, lege
     metrics_to_plot = ["Closeness Centrality", "In Ratio", "Out Ratio", "Efficiency"]
 
     # Set global settings
-    plt.rc('font', size=font_size)
-    plt.rc('axes', titlesize=title_size, labelsize=font_size)
-    plt.rc('xtick', labelsize=tick_label_size)
-    plt.rc('ytick', labelsize=tick_label_size)
-    plt.rc('legend', fontsize=legend_size)
+    plt.rc("font", size=font_size)
+    plt.rc("axes", titlesize=title_size, labelsize=font_size)
+    plt.rc("xtick", labelsize=tick_label_size)
+    plt.rc("ytick", labelsize=tick_label_size)
+    plt.rc("legend", fontsize=legend_size)
 
     for metric in metrics_to_plot:
         fig, ax = plt.subplots(figsize=(5, 4))  # Explicitly creating a figure with axes
-        sns.kdeplot(metrics_by_group[metric][0], ax=ax, label='Mastermind')
-        sns.kdeplot(metrics_by_group[metric][1], ax=ax, label='Non-mastermind')
+        sns.kdeplot(metrics_by_group[metric][0], ax=ax, label="Mastermind")
+        sns.kdeplot(metrics_by_group[metric][1], ax=ax, label="Non-mastermind")
         ax.set_title(metric)
-        ax.set_ylabel('Density')
-        ax.legend(loc='upper right')
+        ax.set_ylabel("Density")
+        ax.legend(loc="upper right")
         plt.tight_layout()  # Adjust layout
-        plt.savefig(path.join(output_dir, f'distribution_{metric}.pdf'))
+        plt.savefig(path.join(output_dir, f"distribution_{metric}.pdf"))
         plt.close(fig)  # Close the figure to free memory
 
     return metrics_by_group
 
 
-# def plot_distribution(gs_ls, label_mapping_ls, font_size=10, title_size=12, legend_size=10, tick_label_size=10):
-#     metrics_by_group = {
-#         "degree_centrality": [[], []],
-#         "betweenness_centrality": [[], []],
-#         "Closeness Centrality": [[], []],
-#         "pagerank": [[], []],
-#         "In Ratio": [[], []],
-#         "Out Ratio": [[], []],
-#         "out_nodes": [[], []],
-#         "eff_size": [[], []],
-#         "Efficiency": [[], []],
-#         "density": [[], []],
-#         "clustering_coeff": [[], []],
-#     }
-
-#     for key, graph in gs_ls.items():
-#         labels = label_mapping_ls.get(key, {})
-#         degree_centrality = nx.degree_centrality(graph)
-#         betweenness_centrality = nx.betweenness_centrality(graph)
-#         closeness_centrality = nx.closeness_centrality(graph)
-#         pagerank = nx.pagerank(graph)
-
-#         for node in graph.nodes():
-#             group = labels.get(node)
-#             if group is not None:
-#                 metrics_by_group["degree_centrality"][group].append(degree_centrality.get(node, 0))
-#                 metrics_by_group["betweenness_centrality"][group].append(betweenness_centrality.get(node, 0))
-#                 metrics_by_group["Closeness Centrality"][group].append(closeness_centrality.get(node, 0))
-#                 metrics_by_group["pagerank"][group].append(pagerank.get(node, 0))
-
-#                 # Calculate and aggregate additional graph features
-#                 # Assume in_ego_graph and out_ego_graph are defined elsewhere
-#                 in_ego = in_ego_graph(graph, node)
-#                 out_ego = out_ego_graph(graph, node)
-#                 in_ratio = len(in_ego.nodes) / len(graph.nodes)
-#                 out_ratio = len(out_ego.nodes) / len(graph.nodes)
-#                 eff_size, efficiency = calculate_effsize_efficiency(graph, node)  # Assume defined elsewhere
-#                 density = nx.density(out_ego)
-#                 clustering_coeff = nx.clustering(graph, node)
-
-#                 metrics_by_group["In Ratio"][group].append(in_ratio)
-#                 metrics_by_group["Out Ratio"][group].append(out_ratio)
-#                 metrics_by_group["out_nodes"][group].append(len(out_ego.nodes))
-#                 metrics_by_group["eff_size"][group].append(eff_size)
-#                 metrics_by_group["Efficiency"][group].append(efficiency)
-#                 metrics_by_group["density"][group].append(density)
-#                 metrics_by_group["clustering_coeff"][group].append(clustering_coeff)
-
-#     ttest_results = {}
-#     metrics_to_plot = ["Closeness Centrality", "In Ratio", "Out Ratio", "Efficiency"]
-#     fig, axes = plt.subplots(nrows=1, ncols=4, figsize=(20, 5))
-
-#     # Applying custom text sizes using matplotlib settings
-#     plt.rc('font', size=font_size)  # controls default text sizes
-#     plt.rc('axes', titlesize=title_size)  # fontsize of the axes title
-#     plt.rc('axes', labelsize=font_size)  # fontsize of the x and y labels
-#     plt.rc('xtick', labelsize=tick_label_size)  # fontsize of the tick labels
-#     plt.rc('ytick', labelsize=tick_label_size)  # fontsize of the tick labels
-#     plt.rc('legend', fontsize=legend_size)  # legend fontsize
-
-#     for i, metric in enumerate(metrics_to_plot):
-#         ttest_results[metric] = stats.ttest_ind(
-#             metrics_by_group[metric][0],
-#             metrics_by_group[metric][1],
-#             equal_var=False,
-#             nan_policy='omit'
-#         )
-#         sns.kdeplot(metrics_by_group[metric][0], ax=axes[i], label=f'Mastermind')
-#         sns.kdeplot(metrics_by_group[metric][1], ax=axes[i], label=f'Peer')
-#         axes[i].set_title(f'PDF of {metric}')
-#         axes[i].set_xlabel(metric)
-#         axes[i].set_ylabel('Density')
-#         axes[i].legend(loc='upper right')  # Setting the location of the legend to upper right
-
-
-#     plt.tight_layout()
-#     plt.savefig(path.join(PROJECT_ROOT, "data", 'distributions.pdf'))
-#     plt.show()
-
-#     return 
-
-
-
-
-
 # Main execution block
 if __name__ == "__main__":
     # Process each dataset
-    gs_train, label_mapping_train = process_signals_and_get_components(get_train_scored_signals)
-    gs_valid, label_mapping_valid = process_signals_and_get_components(get_valid_scored_signals)
-    gs_test, label_mapping_test = process_signals_and_get_components(get_test_scored_signals)
+    gs_train, label_mapping_train = process_signals_and_get_components(
+        get_train_scored_signals
+    )
+    gs_valid, label_mapping_valid = process_signals_and_get_components(
+        get_valid_scored_signals
+    )
+    gs_test, label_mapping_test = process_signals_and_get_components(
+        get_test_scored_signals
+    )
 
     # Combine all graphs and label mappings
     all_gs = {**gs_train, **gs_valid, **gs_test}
-    all_label_mappings = {**label_mapping_train, **label_mapping_valid, **label_mapping_test}
+    all_label_mappings = {
+        **label_mapping_train,
+        **label_mapping_valid,
+        **label_mapping_test,
+    }
 
     # Running the pooled analysis
     results = aggregate_and_compare_combined(all_gs, all_label_mappings)
     plot_distribution(all_gs, all_label_mappings, 25, 25, 17, 25)
 
-
     # Transform the t-test results into a format suitable for DataFrame construction
     data = {
-        'Metric': [],
-        'Statistic': [],
-        'P-value': [],
-        'Degrees of Freedom': [],
-        'Significance': []  # New column for significance marks
+        "Metric": [],
+        "Statistic": [],
+        "P-value": [],
+        "Degrees of Freedom": [],
+        "Significance": [],  # New column for significance marks
     }
 
     for metric, result in results.items():
-        data['Metric'].append(metric)
-        data['Statistic'].append(result.statistic)
-        data['P-value'].append(f"{result.pvalue:.3g}")  # Format p-value for readability
+        data["Metric"].append(metric)
+        data["Statistic"].append(result.statistic)
+        data["P-value"].append(f"{result.pvalue:.3g}")  # Format p-value for readability
         # Include degrees of freedom if available
-        data['Degrees of Freedom'].append(getattr(result, 'df', None))  # Use getattr for compatibility
+        data["Degrees of Freedom"].append(
+            getattr(result, "df", None)
+        )  # Use getattr for compatibility
         # Assign significance level
-        data['Significance'].append(assign_significance(result.pvalue))
+        data["Significance"].append(assign_significance(result.pvalue))
 
     # Create a DataFrame
     df_results = pd.DataFrame(data)
 
     # Optionally, set the Metric column as the index for better presentation
-    df_results.set_index('Metric', inplace=True)
+    df_results.set_index("Metric", inplace=True)
 
     # Show or return the DataFrame
     print(df_results)

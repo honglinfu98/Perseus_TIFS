@@ -1,13 +1,19 @@
 """
 This script is used to process the scored signals and create summary for the data
 """
+
 from datetime import timedelta
 import json
 import pandas as pd
 import networkx as nx
-from perseus.dataset.preprocess.train_test_validate import get_test_scored_signals, get_train_scored_signals, get_valid_scored_signals
+from perseus.dataset.preprocess.train_test_validate import (
+    get_test_scored_signals,
+    get_train_scored_signals,
+    get_valid_scored_signals,
+)
 from perseus.dataset.preprocess.DANI import DANI
 from collections import defaultdict
+
 
 # Function to relabel edges based on new_to_id mapping
 def relabel_edges(d, mapping):
@@ -18,32 +24,6 @@ def relabel_edges(d, mapping):
         new_dst = mapping.get(dst, dst)  # Use original if not in mapping
         new_d[(new_src, new_dst)] = weight
     return new_d
-
-
-# def relabel_cascade(cascade, id_mapping):
-#     updated_cascade = {}
-    
-#     for token, values in cascade.items():
-#         if token in id_mapping:
-#             mapping = id_mapping[token]['new_to_id']
-#             updated_cascade[token] = []
-            
-#             for value_dict in values:
-#                 updated_value_dict = {}
-#                 for key, value in value_dict.items():
-#                     # Update key if it's not 'T' and exists in the mapping
-#                     if key != 'T' and key in mapping:
-#                         new_key = mapping[key]
-#                         updated_value_dict[new_key] = value
-#                     else:
-#                         updated_value_dict[key] = value
-                
-#                 updated_cascade[token].append(updated_value_dict)
-#         else:
-#             # Raise an error if the token is not found in the mapping
-#             raise ValueError(f"No mapping found for token: {token}")
-            
-#     return updated_cascade
 
 
 def assign_event_ids(df: pd.DataFrame):
@@ -144,17 +124,21 @@ def aggregate_data(df: pd.DataFrame):
 
         # Use drop_duplicates to keep only the first appearing telegram_chat_id
         group = group.drop_duplicates(subset="telegram_chat_id", keep="first")
-        tuples = list(zip(group["telegram_chat_id"], 
-                          delta_minutes, 
-                          group["increase_percentage"], 
-                          group["position"], 
-                          group["targets_achieved"], 
-                          group["total_targets"],
-                          group["duration_min"], 
-                          group["start_date"], 
-                          group["end_date"], 
-                          group["speed"],
-                          group["message_text"]))
+        tuples = list(
+            zip(
+                group["telegram_chat_id"],
+                delta_minutes,
+                group["increase_percentage"],
+                group["position"],
+                group["targets_achieved"],
+                group["total_targets"],
+                group["duration_min"],
+                group["start_date"],
+                group["end_date"],
+                group["speed"],
+                group["message_text"],
+            )
+        )
 
         if len(tuples) >= 2:
             if commodity not in intermediate_results:
@@ -286,12 +270,9 @@ def get_graphs(cascade: dict, no_nodes: dict, id_mapping: dict):
     for key in P_dict:
         if key in id_mapping:
             # Extract new_to_id mapping for the current key
-            new_to_id = id_mapping[key]['new_to_id']
+            new_to_id = id_mapping[key]["new_to_id"]
             # Relabel edges in the current dictionary using the new_to_id mapping
             P_dict[key] = relabel_edges(P_dict[key], new_to_id)
-
-
-
 
     return graphs, result, A, P_dict
 
