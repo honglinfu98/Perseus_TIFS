@@ -1,14 +1,18 @@
 from os import path
 import pickle
+import random
+import pandas as pd
+import networkx as nx
+import torch
+from sklearn.metrics.pairwise import cosine_similarity
 from torch_geometric.loader import DataLoader
-from perseus.dataset.compare_paper_graph import combine_features, graph_features
+from torch_geometric.utils import to_undirected
+from torch_geometric.data import Data
 from perseus.dataset.preprocess.train_test_validate import (
     get_test_scored_signals,
     get_train_scored_signals,
     get_valid_scored_signals,
 )
-
-# from perseus.dataset.preprocess.groudtruth_labeling import create_label_mapping
 from perseus.dataset.preprocess.process import (
     features_engineer,
     get_graphs,
@@ -16,74 +20,216 @@ from perseus.dataset.preprocess.process import (
     aggregate_data,
     assign_event_ids,
 )
-from perseus.dataset.gnn_dataset_preparation import (
-    prepare_data,
-)
-from sklearn.model_selection import train_test_split
 from perseus.dataset.preprocess.groudtruth_labeling import (
-    create_label_mapping,
     read_labeling_csv_back_to_dict,
 )
 from perseus.settings import PROJECT_ROOT
-from sklearn.metrics.pairwise import cosine_similarity
-
-# from itertools import combinations
-# from sklearn.metrics.pairwise import cosine_similarity
-
-from torch_geometric.utils import to_undirected, is_undirected
-import torch
-from torch_geometric.data import Data
-
-# from clotho.model.magamaga import get_data_loader
-import torch
-from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np
-from torch_geometric.utils import to_undirected
-import random
 
 
-# def prepare_dataset(keys, gs, combine_feature, label_mapping, option, P_dict=None):
-#     valid_keys = set(keys) & set(gs.keys()) & set(combine_feature.keys()) & set(label_mapping.keys())
-#     if option == "DDM" and P_dict is not None:
-#         valid_keys &= set(P_dict.keys())
+def calculate_effsize_efficiency(G, ego):
+    # Get the ego network
+    ego_net = nx.ego_graph(G, ego, undirected=False)
 
-#     filtered_gs = {k: gs[k] for k in valid_keys}
-#     filtered_features = {k: combine_feature[k] for k in valid_keys}
-#     filtered_labels = {k: label_mapping[k] for k in valid_keys}
-#     filtered_P_dicts = {k: P_dict[k] for k in valid_keys} if option == "DDM" else {}
+    # Get alters in the ego network (excluding ego)
+    alters = set(ego_net.nodes()) - {ego}
+    num_alters = len(alters)
+    avg_degree = 0  # Default to 0
+    if num_alters > 0:
+        avg_degree = (
+            sum(
+                ego_net.degree(n) - (1 if ego_net.has_edge(n, ego) else 0)
+                for n in alters
+            )
+            / num_alters
+        )
 
-#     if option == "DDINA":
-#         return prepare_data(filtered_gs, filtered_features, filtered_labels)
-#     elif option == "COSS":
-#         return prepare_cos_data(filtered_gs, filtered_features, filtered_labels)
-#     elif option == "DDM":
-#         return prepare_ddm_data(filtered_gs, filtered_features, filtered_labels, filtered_P_dicts)
+    # Calculate effective size
+    eff_size = num_alters - avg_degree
 
-# def split_data(option: str):
-#     # Assuming placeholders for signal processing functions
-#     signals = get_test_scored_signals()  # Placeholder function
-#     processed_signals = process_dataframe(signals)  # Placeholder function
-#     ided_signals = assign_event_ids(processed_signals)  # Placeholder function
-#     cascade, no_nodes, id_mapping, cascade_labeling = aggregate_data(ided_signals)  # Placeholder function
-#     gs, results, As, P_dict = get_graphs(cascade, no_nodes, id_mapping)  # Placeholder function
-#     graph_feature = graph_features(gs)  # Placeholder function
-#     market_feature = features_engineer(processed_signals)  # Placeholder function
-#     combine_feature = combine_features(market_feature, graph_feature)  # Placeholder function
-#     label_mapping = read_labeling_csv_back_to_dict("test")  # Placeholder function
+    # Calculate efficiency
+    efficiency = eff_size / num_alters if num_alters > 0 else 0
 
-#     keys = list(label_mapping.keys())
-#     train_keys, temp_test_keys = train_test_split(keys, test_size=0.3, random_state=42)
-#     test_keys, validate_keys = train_test_split(temp_test_keys, test_size=0.5, random_state=42)
+    return eff_size, efficiency
 
-#     train_data = prepare_dataset(train_keys, gs, combine_feature, label_mapping, option, P_dict)
-#     test_data = prepare_dataset(test_keys, gs, combine_feature, label_mapping, option, P_dict)
-#     validate_data = prepare_dataset(validate_keys, gs, combine_feature, label_mapping, option, P_dict)
 
-#     train_loader = DataLoader(train_data, batch_size=1, shuffle=True)
-#     test_loader = DataLoader(test_data, batch_size=1, shuffle=True)
-#     validate_loader = DataLoader(validate_data, batch_size=1, shuffle=True)
+def out_ego_graph(G, node, radius=1):
+    """
+    Extract the out-ego network of a specified node in a directed graph.
+    """
+    # Extract the out-ego network
+    out_ego = nx.ego_graph(G, node, radius=radius)
+    return out_ego
 
-#     return train_loader, test_loader, validate_loader
+
+def in_ego_graph(G, node, radius=1):
+    """
+    Extract the in-ego network of a specified node in a directed graph.
+    """
+    # Reverse the graph
+    G_reverse = G.reverse(copy=True)
+    # Extract the in-ego network
+    in_ego = nx.ego_graph(G_reverse, node, radius=radius)
+    return in_ego
+
+
+def graph_features(gs):
+    dfs = {}
+
+    # Looping through each key in the scores dictionary
+    for key in gs.keys():
+        # Creating lists to store node_ids, in-ego ratios, and out-ego ratios
+        node_ids = []
+        in_ratios = []
+        out_ratios = []
+        out_nodes = []
+        eff_sizes = []
+        efficiencies = []
+        density = []
+        clustering_coeffs = []
+
+        for i in gs[key].nodes():
+            node_id = i
+            node_ids.append(node_id)
+
+            # Calculating the in-ego ratio
+            inn = len(in_ego_graph(gs[key], node_id).nodes) / len(gs[key])
+            in_ratios.append(inn)
+
+            # Calculating the out-ego ratio
+            outt = len(out_ego_graph(gs[key], node_id).nodes) / len(gs[key])
+            out_ratios.append(outt)
+
+            out_nodes.append(len(out_ego_graph(gs[key], node_id).nodes))
+
+            # Calculate the density of the ego network
+            den = nx.density(out_ego_graph(gs[key], node_id))
+            density.append(den)
+
+            eff_size, efficiency = calculate_effsize_efficiency(gs[key], node_id)
+            eff_sizes.append(eff_size)
+            efficiencies.append(efficiency)
+            # Calculate clustering coefficient for the node
+            clustering_coeff = nx.clustering(gs[key], node_id)
+            clustering_coeffs.append(clustering_coeff)
+
+        # Creating a DataFrame for each key and storing it in the dfs dictionary
+        dfs[key] = pd.DataFrame(
+            {
+                "telegram_chat_id": node_ids,
+                "in_ratio": in_ratios,
+                "out_ratio": out_ratios,
+                "out_nodes": out_nodes,
+                "eff_size": eff_sizes,
+                "efficiency": efficiencies,
+                "density": density,
+                "clustering_coeff": clustering_coeffs,
+            }
+        )
+
+    return dfs
+
+
+def combine_features(market_features, graph_features):
+    combined_data = {}
+
+    for key in market_features.keys():
+        # Check if the key exists in dfs and 'telegram_chat_id' exists in both DataFrames
+        if (
+            key in graph_features
+            and "telegram_chat_id" in market_features[key].columns
+            and "telegram_chat_id" in graph_features[key].columns
+        ):
+            # Perform an inner join on 'telegram_chat_id'
+            combined_df = pd.merge(
+                market_features[key],
+                graph_features[key],
+                on="telegram_chat_id",
+                how="inner",
+            )
+        else:
+            # If key is not in dfs or 'telegram_chat_id' is missing in either DataFrame, use an empty DataFrame
+            combined_df = pd.DataFrame()
+
+        combined_data[key] = combined_df
+
+    return combined_data
+
+
+def prepare_data(graphs, features, label_mapping):
+    prepared_data = []
+    for key, graph in graphs.items():
+        # Extract features for nodes present in the graph
+        features_buffer = features[key]
+        features_buffer = features_buffer[
+            features_buffer["telegram_chat_id"].isin(graph.nodes)
+        ]
+
+        # Specify feature columns and normalize them
+        feature_columns = [
+            "average_increase_percentage",
+            "number_of_signals",
+            # "average_speed",
+            # "sum_targets_achieved",
+            # "rating",
+            "in_ratio",
+            "out_ratio",
+            # "eff_size",
+            # "efficiency",
+        ]
+        features_to_normalize = features_buffer[feature_columns]
+        normalized_features = (
+            features_to_normalize - features_to_normalize.mean()
+        ) / features_to_normalize.std()
+
+        nan_columns = normalized_features.columns[
+            normalized_features.isnull().any()
+        ].tolist()
+        if nan_columns:
+            print(f"NaN values detected in key: {key}, Columns: {nan_columns}")
+            continue
+
+        node_attributes = torch.tensor(normalized_features.values, dtype=torch.float)
+
+        # Map node IDs to indices
+        id_to_index = {
+            telegram_chat_id: index
+            for index, telegram_chat_id in enumerate(
+                features_buffer["telegram_chat_id"]
+            )
+        }
+
+        # Create edge index
+        edge_index = []
+        for source_node, target_node in graph.edges():
+            source = id_to_index[source_node]
+            target = id_to_index[target_node]
+            edge_index.append([source, target])
+        edge_index = torch.tensor(edge_index, dtype=torch.long).t().contiguous()
+
+        num_labels = 2
+
+        # Prepare labels
+        labels = []
+        for node_id in features_buffer["telegram_chat_id"]:
+            node_labels = label_mapping[key].get(node_id, 0)
+            if not isinstance(node_labels, list):
+                node_labels = [node_labels]  # Convert to list for consistency
+
+            # Convert to one-hot encoded format
+            label_vector = [0] * num_labels
+            for label in node_labels:
+                if label < num_labels:
+                    label_vector[label] = 1
+            labels.append(label_vector)
+
+        # Convert list of labels to a tensor
+        labels_tensor = torch.tensor(labels, dtype=torch.float)
+        # Create a Data object
+        data = Data(x=node_attributes, edge_index=edge_index, y=labels_tensor)
+
+        prepared_data.append(data)
+
+    return prepared_data
 
 
 def filter_data_by_keys(data_list, keys):
@@ -500,408 +646,6 @@ def prepare_cos_data(graphs, features, label_mapping):
     return prepared_data
 
 
-# def prepare_cos_data(graphs, features, label_mapping):
-#     prepared_data = []
-#     for key, graph in graphs.items():
-#         # Extract features for nodes present in the graph
-#         features_buffer = features[key]
-#         features_buffer = features_buffer[
-#             features_buffer["telegram_chat_id"].isin(graph.nodes)
-#         ]
-#         # Specify feature columns and normalize them
-#         feature_columns = [
-#             "average_increase_percentage",
-#             "number_of_signals",
-#             # "average_speed",
-#             # "sum_targets_achieved",
-#             # "rating",
-#             # "in_ratio",
-#             # "out_ratio",
-#             # "eff_size",
-#             # "efficiency",
-#         ]
-#         features_to_process = features_buffer[feature_columns]
-#         normalized_features = (
-#             features_to_process - features_to_process.mean()
-#         ) / features_to_process.std()
-#         nan_columns = normalized_features.columns[
-#             normalized_features.isnull().any()
-#         ].tolist()
-#         if nan_columns:
-#             print(f"NaN values detected in key: {key}, Columns: {nan_columns}")
-#             continue
-
-#         node_attributes = torch.tensor(normalized_features.values, dtype=torch.float)
-#         # Map node IDs to indices
-#         id_to_index = {
-#             telegram_chat_id: index
-#             for index, telegram_chat_id in enumerate(
-#                 features_buffer["telegram_chat_id"]
-#             )
-#         }
-#         # Initialize lists for edge index and weights
-#         edge_index_list = []
-#         edge_weight_list = []
-#         features_df = features_buffer.set_index("telegram_chat_id")
-#         # c = features_df
-#         features_df = features_df[feature_columns].dropna()
-#         # cc = features_df
-#         # features_df = features_df.dropna(inplace=True)
-#         # ccc = features_df
-#         # Calculate cosine similarity for each pair of rows
-#         print(key)
-#         similarities = {}
-#         for chat_id_1, chat_id_2 in combinations(features_df.index, 2):
-#             fi = features_df.loc[chat_id_1].values.reshape(1, -1)
-#             fj = features_df.loc[chat_id_2].values.reshape(1, -1)
-#             similarity = cosine_similarity(fi, fj)[0][0]
-#             similarities[(chat_id_1, chat_id_2)] = similarity
-#         # Populate edge index and weights
-#         for (source_node, target_node), weight in similarities.items():
-#             source = id_to_index.get(source_node)
-#             target = id_to_index.get(target_node)
-#             if (
-#                 source is not None and target is not None
-#             ):  # Ensure both nodes are in the id_to_index mapping
-#                 edge_index_list.append([source, target])
-#                 edge_weight_list.append(weight)
-#         # Convert lists to PyTorch tensors
-#         edge_index = torch.tensor(edge_index_list, dtype=torch.long).t().contiguous()
-#         edge_weight = torch.tensor(edge_weight_list, dtype=torch.float)
-#         # Populate the lists
-#         num_labels = 2
-
-#         labels = []
-#         for node_id in features_buffer["telegram_chat_id"]:
-#             node_labels = label_mapping[key].get(node_id, 0)
-#             if not isinstance(node_labels, list):
-#                 node_labels = [node_labels]  # Convert to list for consistency
-#             # Convert to one-hot encoded format
-#             label_vector = [0] * num_labels
-#             for label in node_labels:
-#                 if label < num_labels:
-#                     label_vector[label] = 1
-#             labels.append(label_vector)
-#         # Convert list of labels to a tensor
-#         labels_tensor = torch.tensor(labels, dtype=torch.float)
-#         # Create a Data object
-#         data = Data(
-#             x=node_attributes,
-#             edge_index=edge_index,
-#             edge_weight=edge_weight,
-#             y=labels_tensor,
-#         )
-
-#         undirect_edge_index = to_undirected(data.edge_index, num_nodes=data.x.size(0))
-
-#         # Create a Data object
-#         data = Data(
-#             x=node_attributes,
-#             edge_index=undirect_edge_index,
-#             edge_weight=edge_weight,
-#             y=labels_tensor,
-#         )
-
-#         prepared_data.append(data)
-
-#     return prepared_data
-
-
-# def prepare_cos_data(graphs, features, label_mapping):
-#     prepared_data = []
-#     for key, graph in graphs.items():
-#         features_buffer = features[key]
-#         features_buffer = features_buffer[features_buffer["telegram_chat_id"].isin(graph.nodes)]
-
-#         # Include all relevant feature columns
-#         feature_columns = [
-#             "average_increase_percentage",
-#             "number_of_signals",
-#             # "average_speed",
-#             # "sum_targets_achieved",
-#             # "rating",
-#             # "in_ratio",
-#             # "out_ratio",
-#             # "eff_size",
-#             # "efficiency",
-#         ]
-#         features_to_process = features_buffer[feature_columns]
-#         # Handle missing values before normalization (example: fill with mean or remove)
-#         features_to_process.fillna(features_to_process.mean(), inplace=True)
-
-#         # Normalize features
-#         normalized_features = (features_to_process - features_to_process.mean()) / features_to_process.std()
-
-#         # Setup tensors for node attributes
-#         node_attributes = torch.tensor(normalized_features.values, dtype=torch.float)
-#         id_to_index = {id: idx for idx, id in enumerate(features_buffer["telegram_chat_id"])}
-
-#         # Initialize edge structures
-#         edge_index_list = []
-#         edge_weight_list = []
-
-#         # Compute cosine similarities and construct graph edges
-#         for (id1, id2) in combinations(normalized_features.index, 2):
-#             similarity = cosine_similarity(
-#                 normalized_features.loc[[id1]].values,
-#                 normalized_features.loc[[id2]].values
-#             )[0][0]
-#             if id1 in id_to_index and id2 in id_to_index:
-#                 edge_index_list.append([id_to_index[id1], id_to_index[id2]])
-#                 edge_weight_list.append(similarity)
-
-#         # Convert to PyTorch tensors
-#         edge_index = torch.tensor(edge_index_list, dtype=torch.long).t().contiguous()
-#         edge_weight = torch.tensor(edge_weight_list, dtype=torch.float)
-
-#         # Process labels as previously described
-#         # (Assuming the rest of your label processing code is correct and omitted here for brevity)
-#         # Populate the lists
-#         num_labels = 2
-
-#         labels = []
-#         for node_id in features_buffer["telegram_chat_id"]:
-#             node_labels = label_mapping[key].get(node_id, 0)
-#             if not isinstance(node_labels, list):
-#                 node_labels = [node_labels]  # Convert to list for consistency
-#             # Convert to one-hot encoded format
-#             label_vector = [0] * num_labels
-#             for label in node_labels:
-#                 if label < num_labels:
-#                     label_vector[label] = 1
-#             labels.append(label_vector)
-#         # Convert list of labels to a tensor
-#         labels_tensor = torch.tensor(labels, dtype=torch.float)
-#         # Construct the data object
-#         data = Data(x=node_attributes, edge_index=edge_index, edge_weight=edge_weight, y=labels_tensor)
-#         undirect_edge_index = to_undirected(data.edge_index, num_nodes=data.x.size(0))
-#         data = Data(x=node_attributes, edge_index=undirect_edge_index, edge_weight=edge_weight, y=labels_tensor)
-
-#         prepared_data.append(data)
-
-# #     return prepared_data
-
-
-# def prepare_cos_data(graphs, features, label_mapping):
-#     prepared_data = []
-#     for key, graph in graphs.items():
-#         features_buffer = features[key]
-#         features_buffer = features_buffer[features_buffer["telegram_chat_id"].isin(graph.nodes)]
-
-#         # Specify feature columns
-#         feature_columns = [
-#             "average_increase_percentage",
-#             "number_of_signals",
-#             # Uncomment or add other features as necessary
-#         ]
-#         features_to_process = features_buffer[feature_columns]
-
-#         # Handle missing values before normalization (example: fill with mean or remove)
-#         features_to_process.fillna(features_to_process.mean(), inplace=True)
-
-#         # Normalize features
-#         normalized_features = (features_to_process - features_to_process.mean()) / features_to_process.std()
-
-#         # Handling missing values by filling with the mean (or any other method deemed appropriate)
-#         normalized_features = normalized_features.fillna(normalized_features.mean())
-
-#         node_attributes = torch.tensor(normalized_features.values, dtype=torch.float)
-#         id_to_index = {id_: i for i, id_ in enumerate(features_buffer["telegram_chat_id"])}
-
-#         edge_index_list = []
-#         edge_weight_list = []
-
-#         # Calculate cosine similarity
-#         features_df = normalized_features
-#         indices = features_df.index
-
-#         for i, chat_id_1 in enumerate(indices):
-#             for chat_id_2 in indices[i+1:]:  # This avoids recalculating for pairs already computed
-#                 fi = features_df.loc[chat_id_1].values.reshape(1, -1)
-#                 fj = features_df.loc[chat_id_2].values.reshape(1, -1)
-#                 similarity = cosine_similarity(fi, fj)[0][0]
-#                 source = id_to_index[chat_id_1]
-#                 target = id_to_index[chat_id_2]
-
-#                 edge_index_list.append([source, target])
-#                 edge_weight_list.append(similarity)
-
-#         # Convert lists to PyTorch tensors
-#         edge_index = torch.tensor(edge_index_list, dtype=torch.long).t().contiguous()
-#         edge_weight = torch.tensor(edge_weight_list, dtype=torch.float)
-
-#         # Create and handle labels similarly
-#         num_labels = 2
-#         labels = []
-#         for node_id in features_buffer["telegram_chat_id"]:
-#             node_labels = label_mapping[key].get(node_id, [0])
-#             label_vector = [0] * num_labels
-#             for label in node_labels:
-#                 if label < num_labels:
-#                     label_vector[label] = 1
-#             labels.append(label_vector)
-
-#         labels_tensor = torch.tensor(labels, dtype=torch.float)
-
-#         # Create the Data object
-#         data = Data(x=node_attributes, edge_index=edge_index, edge_weight=edge_weight, y=labels_tensor)
-
-#         # Add undirected edges if necessary
-#         data.edge_index = to_undirected(data.edge_index, num_nodes=data.x.size(0))
-
-#         prepared_data.append(data)
-
-#     return prepared_data
-
-
-# def prepare_cos_data(graphs, features, label_mapping):
-#     prepared_data = []
-#     for key, graph in graphs.items():
-#         features_buffer = features[key]
-#         features_buffer = features_buffer[features_buffer["telegram_chat_id"].isin(graph.nodes)]
-
-#         # Specify feature columns
-#         feature_columns = [
-#             "average_increase_percentage",
-#             "number_of_signals",
-#             # Uncomment or add other features as necessary
-#         ]
-#         features_to_process = features_buffer[feature_columns]
-#         normalized_features = (
-#             features_to_process - features_to_process.mean()
-#         ) / features_to_process.std()
-#         nan_columns = normalized_features.columns[
-#             normalized_features.isnull().any()
-#         ].tolist()
-#         if nan_columns:
-#             print(f"NaN values detected in key: {key}, Columns: {nan_columns}")
-#             continue
-
-#         node_attributes = torch.tensor(normalized_features.values, dtype=torch.float)
-#         # Map node IDs to indices
-#         id_to_index = {
-#             telegram_chat_id: index
-#             for index, telegram_chat_id in enumerate(
-#                 features_buffer["telegram_chat_id"]
-#             )
-#         }
-#         edge_index_list = []
-#         edge_weight_list = []
-
-#         # Calculate cosine similarity
-#         features_df = normalized_features
-#         indices = features_df.index
-
-#         for i, chat_id_1 in enumerate(indices):
-#             for chat_id_2 in indices[i+1:]:  # This avoids recalculating for pairs already computed
-#                 fi = features_df.loc[chat_id_1].values.reshape(1, -1)
-#                 fj = features_df.loc[chat_id_2].values.reshape(1, -1)
-#                 similarity = cosine_similarity(fi, fj)[0][0]
-#                 source = id_to_index[chat_id_1]
-#                 target = id_to_index[chat_id_2]
-
-#                 edge_index_list.append([source, target])
-#                 edge_weight_list.append(similarity)
-
-#         # Convert lists to PyTorch tensors
-#         edge_index = torch.tensor(edge_index_list, dtype=torch.long).t().contiguous()
-#         edge_weight = torch.tensor(edge_weight_list, dtype=torch.float)
-
-#         # Create and handle labels similarly
-#         num_labels = 2
-#         labels = []
-#         for node_id in features_buffer["telegram_chat_id"]:
-#             node_labels = label_mapping[key].get(node_id, [0])
-#             label_vector = [0] * num_labels
-#             for label in node_labels:
-#                 if label < num_labels:
-#                     label_vector[label] = 1
-#             labels.append(label_vector)
-
-#         labels_tensor = torch.tensor(labels, dtype=torch.float)
-
-#         # Create the Data object
-#         data = Data(x=node_attributes, edge_index=edge_index, edge_weight=edge_weight, y=labels_tensor)
-
-#         # Add undirected edges if necessary
-#         from torch_geometric.utils import to_undirected
-#         data.edge_index = to_undirected(data.edge_index, num_nodes=data.x.size(0))
-
-#         prepared_data.append(data)
-
-#     return prepared_data
-
-# def get_data_loader(options: str):
-#     # with open("signals2.pkl", "rb") as file:
-#     #     test_signals = pickle.load(file)
-#     # with open("signals3.pkl", "rb") as file:
-#     #     validate_signals = pickle.load(file)
-#     # with open("signals1.pkl", "rb") as file:
-#     #     train_signals = pickle.load(file)
-#     train_signals = get_train_scored_signals()
-#     test_signals = get_test_scored_signals()
-#     validate_signals = get_valid_scored_signals()
-
-#     gs_ls = []
-#     features_ls = []
-#     market_features_ls = []
-#     P_dicts_ls = []
-
-#     for i in [train_signals,test_signals,validate_signals]:
-#         processed_signals = process_dataframe(i)
-#         ided_signals = assign_event_ids(processed_signals)
-#         cascade, no_nodes, id_mapping, cascade_labeling = aggregate_data(ided_signals)
-#         gs, results, As, P_dict = get_graphs(cascade, no_nodes, id_mapping)
-#         graph_feature = graph_features(gs)
-#         market_feature = features_engineer(processed_signals)
-#         combine_feature = combine_features(market_feature, graph_feature)
-#         gs_ls.append(gs)
-#         features_ls.append(combine_feature)
-#         market_features_ls.append(market_feature)
-#         P_dicts_ls.append(P_dict)
-
-#     label_mapping_ls = []
-#     # label_mapping_ls.append(create_label_mapping(3, "train", features_ls[0]))
-#     # label_mapping_ls.append(create_label_mapping(3, "test", features_ls[1]))
-#     # label_mapping_ls.append(create_label_mapping(3, "validate", features_ls[2]))
-
-#     label_mapping_ls.append(read_labeling_csv_back_to_dict("train"))
-#     label_mapping_ls.append(read_labeling_csv_back_to_dict("test"))
-#     label_mapping_ls.append(read_labeling_csv_back_to_dict("valid"))
-
-
-#     if options == "DDINA":
-#         train_data = prepare_data(gs_ls[0], features_ls[0], label_mapping_ls[0])
-#         test_data = prepare_data(gs_ls[1], features_ls[1], label_mapping_ls[1])
-#         validate_data = prepare_data(gs_ls[2], features_ls[2], label_mapping_ls[2])
-
-
-#         train_loader = DataLoader(train_data, batch_size=1, shuffle=True)
-#         test_loader = DataLoader(test_data, batch_size=1, shuffle=True)
-#         validate_loader = DataLoader(validate_data, batch_size=1, shuffle=True)
-#     elif options == "COSS":
-#         train_data = prepare_cos_data(gs_ls[0], market_features_ls[0], label_mapping_ls[0])
-#         test_data = prepare_cos_data(gs_ls[1], market_features_ls[1], label_mapping_ls[1])
-#         validate_data = prepare_cos_data(gs_ls[2], market_features_ls[2], label_mapping_ls[2])
-
-
-#         train_loader = DataLoader(train_data, batch_size=1, shuffle=True)
-#         test_loader = DataLoader(test_data, batch_size=1, shuffle=True)
-#         validate_loader = DataLoader(validate_data, batch_size=1, shuffle=True)
-#     elif options == "DDM":
-#         train_data = prepare_ddm_data(gs_ls[0], market_features_ls[0], label_mapping_ls[0], P_dicts_ls[0])
-#         test_data = prepare_ddm_data(gs_ls[1], market_features_ls[1], label_mapping_ls[1], P_dicts_ls[1])
-#         validate_data = prepare_ddm_data(gs_ls[2], market_features_ls[2], label_mapping_ls[2], P_dicts_ls[2])
-
-
-#         train_loader = DataLoader(train_data, batch_size=1, shuffle=True)
-#         test_loader = DataLoader(test_data, batch_size=1, shuffle=True)
-#         validate_loader = DataLoader(validate_data, batch_size=1, shuffle=True)
-
-
-#     return train_loader, test_loader, validate_loader
-
-
 def get_data_set(options: str):
     # with open("signals2.pkl", "rb") as file:
     #     test_signals = pickle.load(file)
@@ -1067,52 +811,6 @@ def get_train_test_validate_data(options: str):
     # validate_loader = DataLoader(validate_data, batch_size=1, shuffle=True)
 
     return train_loader, test_loader, validate_loader
-
-    # a = split_data("DDINA")
-    # b = split_data("COSS")
-    # c = split_data("DDM")
-
-
-# def get_all_range_data(options: str):
-
-
-#     if options == "DDINA":
-#         with open(path.join(PROJECT_ROOT, "data", "DDINA_data.pkl"), "rb") as file:
-#             data = pickle.load(file)
-
-#     elif options == "COSS":
-#         with open(path.join(PROJECT_ROOT, "data", "COSS_data.pkl"), "rb") as file:
-#             data = pickle.load(file)
-
-#     elif options == "DDM":
-#         with open(path.join(PROJECT_ROOT, "data", "DDM_data.pkl"), "rb") as file:
-#             data = pickle.load(file)
-
-#     # # Assuming 'data' is your list of Data objects
-#     # data = [Data(x=[13, 4], edge_index=[2, 23], y=[13, 2]),
-#     #         Data(x=[6, 4], edge_index=[2, 9], y=[6, 2]),
-#     #         # Add the rest of your Data objects here
-#     #     ]
-
-#     dataset = data[0] + data[1] + data[2]
-
-#     # Shuffle the dataset to ensure it's randomly ordered
-#     random.shuffle(dataset)
-
-#     # Calculate the size of each set
-#     total_size = len(dataset)
-#     train_size = int(0.7 * total_size)
-#     val_size = int(0.15 * total_size)
-#     test_size = total_size - (train_size + val_size)
-
-#     # Split the data
-#     train_data = dataset[:train_size]
-#     val_data = dataset[train_size:(train_size + val_size)]
-#     test_data = dataset[(train_size + val_size):]
-
-#     # Now, 'train_data', 'val_data', and 'test_data' are your split datasets
-
-#     return train_data, test_data, val_data
 
 
 if __name__ == "__main__":

@@ -4,6 +4,8 @@ This script is used to process the scored signals and create summary for the dat
 
 from datetime import timedelta
 import json
+from collections import defaultdict
+
 import pandas as pd
 import networkx as nx
 from perseus.dataset.preprocess.train_test_validate import (
@@ -12,7 +14,6 @@ from perseus.dataset.preprocess.train_test_validate import (
     get_valid_scored_signals,
 )
 from perseus.dataset.preprocess.DANI import DANI
-from collections import defaultdict
 
 
 # Function to relabel edges based on new_to_id mapping
