@@ -15,7 +15,7 @@ from perseus.dataset.preprocess.train_test_validate import (
     get_train_scored_signals,
     get_valid_scored_signals,
 )
-from perseus.dataset.compare_paper_graph import combine_features, graph_features
+from perseus.model.magamaga import combine_features, graph_features
 from perseus.settings import PROJECT_ROOT
 
 

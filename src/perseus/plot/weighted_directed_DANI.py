@@ -6,8 +6,6 @@ from perseus.model.magamaga import split_data_noloader
 from perseus.settings import PROJECT_ROOT
 
 aaa, _, _ = split_data_noloader("COSS")
-
-
 a, b, c = split_data_noloader("DDM")
 aa, bb, cc = split_data_noloader("DDINA")
 

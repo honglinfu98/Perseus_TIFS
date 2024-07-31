@@ -7,7 +7,7 @@ from perseus.dataset.preprocess.process import (
     aggregate_data,
     get_graphs,
 )
-from perseus.dataset.extract.cloudburst_connection import get_scored_signals
+from perseus.dataset.preprocess.train_test_validate import get_test_scored_signals
 
 
 def btw_cen_vs_avg_return_by_node(processed_signals: pd.DataFrame, graphs: dict):
@@ -236,10 +236,10 @@ def in_out_cen_vs_avg_return_by_node(processed_signals: pd.DataFrame, graphs: di
 
 
 if __name__ == "__main__":
-    signals = get_scored_signals()
+    signals = get_test_scored_signals()
     processed_signals = process_dataframe(signals)
     ided_signals = assign_event_ids(processed_signals)
-    cascade, no_nodes, id_mapping = aggregate_data(ided_signals)
+    cascade, no_nodes, id_mapping, _ = aggregate_data(ided_signals)
     gs, results, As, P_dict = get_graphs(cascade, no_nodes, id_mapping)
     btw_cen_vs_avg_return_by_node(ided_signals, gs)
     in_out_cen_vs_avg_return_by_node(processed_signals, gs)

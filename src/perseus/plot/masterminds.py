@@ -1,10 +1,9 @@
 from os import path
+from collections import Counter
+import matplotlib.pyplot as plt
 from perseus.dataset.preprocess.groudtruth_labeling import (
     read_labeling_csv_back_to_dict,
 )
-import matplotlib.pyplot as plt
-from collections import Counter
-
 from perseus.settings import PROJECT_ROOT
 
 
@@ -30,6 +29,7 @@ def plot_histogram(
     legend_size=10,
     tick_label_size=10,
 ):
+
     freqs_a, freq_vals_a = process_data(data_a)
     freqs_b, freq_vals_b = process_data(data_b)
     freqs_c, freq_vals_c = process_data(data_c)
@@ -48,8 +48,8 @@ def plot_histogram(
     values_b = [freq_vals_b_dict.get(freq, 0) for freq in all_freqs]
     values_c = [freq_vals_c_dict.get(freq, 0) for freq in all_freqs]
 
-    plt.figure(figsize=(12, 8))
-    plt.bar(
+    fig, ax = plt.subplots(figsize=(12, 8))
+    ax.bar(
         positions_a,
         values_a,
         color="skyblue",
@@ -57,15 +57,15 @@ def plot_histogram(
         label="April 13, 2018, to January 9, 2024",
         align="center",
     )
-    plt.bar(
+    ax.bar(
         positions_b,
         values_b,
         color="salmon",
         width=0.25,
-        label="January 10, 2024 to February 4, 2024",
+        label="January 10, 2024, to February 4, 2024",
         align="center",
     )
-    plt.bar(
+    ax.bar(
         positions_c,
         values_c,
         color="lightgreen",
@@ -74,13 +74,14 @@ def plot_histogram(
         align="center",
     )
 
-    plt.xlabel("Number of Masterminds", fontsize=font_size)
-    plt.ylabel("Number of Cryptocurrencies", fontsize=font_size)
-    # plt.title('Number of Masterminds in Cryptocurrencies Crowd Pumps Across Three Periods', fontsize=title_size)
-    plt.xticks(range(len(all_freqs)), all_freqs, fontsize=tick_label_size)
-    plt.yticks(fontsize=tick_label_size)
-    plt.legend(fontsize=legend_size)
+    ax.set_xlabel("Frequency", fontsize=font_size)
+    ax.set_ylabel("Values", fontsize=font_size)
+    ax.set_xticks(range(len(all_freqs)))
+    ax.set_xticklabels(all_freqs, fontsize=tick_label_size)
+    ax.tick_params(axis="y", labelsize=tick_label_size)
+    ax.legend(fontsize=legend_size)
 
+    plt.tight_layout()
     plt.savefig(path.join(PROJECT_ROOT, "data", "no_masterminds.pdf"))
     plt.show()
 

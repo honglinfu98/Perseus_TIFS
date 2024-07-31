@@ -1,7 +1,6 @@
 from os import path
 import pickle
-
-from perseus.dataset.compare_paper_graph import combine_features, graph_features
+from perseus.model.magamaga import combine_features, graph_features
 from perseus.dataset.preprocess.process import (
     aggregate_data,
     assign_event_ids,

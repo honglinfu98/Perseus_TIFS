@@ -1,10 +1,9 @@
-import networkx as nx
-import numpy as np
-from scipy import stats
 from os import path
-import pickle
-from torch_geometric.loader import DataLoader
-from perseus.dataset.compare_paper_graph import combine_features, graph_features
+import pandas as pd
+import networkx as nx
+from scipy import stats
+import seaborn as sns
+from perseus.model.magamaga import combine_features, graph_features
 from perseus.dataset.preprocess.train_test_validate import (
     get_test_scored_signals,
     get_train_scored_signals,
@@ -19,69 +18,16 @@ from perseus.dataset.preprocess.process import (
     aggregate_data,
     assign_event_ids,
 )
-from perseus.dataset.gnn_dataset_preparation import (
-    prepare_data,
-)
-from sklearn.model_selection import train_test_split
+
 from perseus.dataset.preprocess.groudtruth_labeling import (
     create_label_mapping,
     read_labeling_csv_back_to_dict,
 )
-from perseus.settings import PROJECT_ROOT
-from itertools import combinations
-from sklearn.metrics.pairwise import cosine_similarity
 
-# from itertools import combinations
-# from sklearn.metrics.pairwise import cosine_similarity
-
-from torch_geometric.utils import to_undirected, is_undirected
-import torch
-from torch_geometric.data import Data
-
-# from clotho.model.magamaga import get_data_loader
-
-from os import path
-import pickle
-import pandas as pd
-import networkx as nx
-import torch
-from torch_geometric.data import Data
-from torch_geometric.loader import DataLoader
 from perseus.dataset.preprocess.train_test_validate import (
     get_test_scored_signals,
     get_train_scored_signals,
 )
-from perseus.settings import PROJECT_ROOT
-from perseus.dataset.preprocess.process import (
-    aggregate_data,
-    assign_event_ids,
-    process_dataframe,
-    features_engineer,
-    get_graphs,
-)
-from perseus.dataset.preprocess.groudtruth_labeling import create_label_mapping
-from itertools import combinations
-from sklearn.metrics.pairwise import cosine_similarity
-
-
-import matplotlib.pyplot as plt
-import seaborn as sns
-import networkx as nx
-from scipy import stats
-
-
-import matplotlib.pyplot as plt
-import networkx as nx
-import seaborn as sns
-from scipy import stats
-from os import path
-
-import os
-import networkx as nx
-import matplotlib.pyplot as plt
-import seaborn as sns
-from scipy.stats import ttest_ind
-from os import path
 
 
 def calculate_effsize_efficiency(G, ego):

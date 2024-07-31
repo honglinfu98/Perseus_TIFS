@@ -18,8 +18,6 @@ from sklearn.metrics import (
     accuracy_score,
     confusion_matrix,
 )
-
-# from clotho.model.data_loader import get_data_loader
 from perseus.model.magamaga import (
     get_data_pickle,
     split_data,
@@ -602,11 +600,6 @@ plt.tight_layout()  # Adjust layout to prevent overlap
 plt.show()
 
 
-# Extract FPR and TPR for a specific model and task
-fpr = results["DDINA"]["GAT"]["fpr"][1]
-tpr = results["DDINA"]["GAT"]["tpr"][1]
-
-
 def get_global_min_max(results, results1, method):
     all_times = []
     for res in [results, results1]:
@@ -631,21 +624,25 @@ def plot_cdf(data, ax, title, colors, global_min, global_max):
         cdf = np.arange(1, len(sorted_times) + 1) / len(sorted_times)
         dataset_label = label_map.get(dataset, dataset)
 
-        ax.step(sorted_times, cdf, label=f"{dataset_label}", color=colors[dataset])
+        sns.lineplot(
+            x=sorted_times,
+            y=cdf,
+            ax=ax,
+            label=f"{dataset_label}",
+            color=colors[dataset],
+            drawstyle="steps-post",
+        )
 
     ax.set_xscale("log")
-    ax.set_xlim(
-        global_min, global_max
-    )  # Set consistent x-limits based on global min and max
+    ax.set_xlim(global_min, global_max)
 
-    # Set consistent number of ticks across plots
     if global_max / global_min > 1000:
         numticks = 3
     else:
         numticks = 5
 
     ax.xaxis.set_major_locator(
-        ticker.LogLocator(base=10.0, subs="all", numticks=numticks)
+        ticker.LogLocator(base=10.0, subs="auto", numticks=numticks)
     )
     ax.xaxis.set_major_formatter(
         ticker.FuncFormatter(lambda x, pos: f"{x:.3f}" if x < 1 else f"{int(x)}")
@@ -659,14 +656,34 @@ def plot_cdf(data, ax, title, colors, global_min, global_max):
     ax.legend()
 
 
-def create_plots(fontsize_title, fontsize_labels, fontsize_legend, fontsize_ticks):
-    # Create the main figure with desired size
-    fig = plt.figure(figsize=(36, 15))
+def plot_fpr_tpr(
+    results, model_name, ax, datasets, label, dataset_colors, title, xlabel, ylabel
+):
+    label_map = {
+        "DDINA": "Directed DANI",
+        "COSS": "Cosine Similarity",
+        "DDM": "Weighted DANI",
+    }
 
-    # Create subfigures for each of the sections (a to d)
-    subfigs = fig.subfigures(2, 2, wspace=0.07, hspace=0.07)
+    for dataset in datasets:
+        fpr = results[dataset][model_name]["fpr"][label]
+        tpr = results[dataset][model_name]["tpr"][label]
 
-    # Helper function to set the styles
+        dataset_label = label_map.get(dataset, dataset)
+
+        sns.lineplot(
+            x=fpr, y=tpr, ax=ax, label=f"{dataset_label}", color=dataset_colors[dataset]
+        )
+
+    ax.set_title(title)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.legend()
+
+
+def save_individual_subfigures(
+    fontsize_title, fontsize_labels, fontsize_legend, fontsize_ticks
+):
     def set_style(ax, show_title=True, show_xlabel=True, show_ylabel=True):
         if show_title:
             ax.set_title(ax.get_title(), fontsize=fontsize_title)
@@ -688,9 +705,9 @@ def create_plots(fontsize_title, fontsize_labels, fontsize_legend, fontsize_tick
                 title_fontsize=fontsize_legend,
             )
 
-    # Configure each subfigure
-    # Subfigure a (top left)
-    axs_a = subfigs[0, 0].subplots(1, 3)
+    square_size = 12
+
+    fig_a, axs_a = plt.subplots(1, 3, figsize=(square_size * 3, square_size))
     for j, method in enumerate(["GCN", "GAT", "GraphSAGE"]):
         method_train_times = {
             dataset: results[dataset][method]["train_times"] for dataset in datasets
@@ -702,22 +719,34 @@ def create_plots(fontsize_title, fontsize_labels, fontsize_legend, fontsize_tick
             dataset_colors,
             *global_min_max[method],
         )
-
-    set_style(
-        axs_a[0], show_title=True, show_xlabel=False, show_ylabel=True
-    )  # Only leftmost y-label
+    set_style(axs_a[0], show_title=True, show_xlabel=False, show_ylabel=True)
     for ax in axs_a[1:]:
-        set_style(
-            ax, show_title=True, show_xlabel=False, show_ylabel=False
-        )  # No y-label
+        set_style(ax, show_title=True, show_xlabel=False, show_ylabel=False)
+    plt.savefig(path.join(PROJECT_ROOT, "data", "subfigure_a.pdf"))
+    plt.close(fig_a)
 
-    # Subfigure c (top right) - Adjusted to use all models
-    axs_c = subfigs[0, 1].subplots(
-        1, len(models)
-    )  # Ensure the subplot layout matches the number of models
+    fig_b, axs_b = plt.subplots(1, 3, figsize=(square_size * 3, square_size))
+    for j, method in enumerate(["GCN", "GAT", "GraphSAGE"]):
+        method_train_times = {
+            dataset: results1[dataset][method]["train_times"] for dataset in datasets
+        }
+        plot_cdf(
+            method_train_times,
+            axs_b[j],
+            method,
+            dataset_colors,
+            *global_min_max[method],
+        )
+    set_style(axs_b[0], show_title=False, show_xlabel=True, show_ylabel=True)
+    for ax in axs_b[1:]:
+        set_style(ax, show_title=False, show_xlabel=True, show_ylabel=False)
+    plt.savefig(path.join(PROJECT_ROOT, "data", "subfigure_b.pdf"))
+    plt.close(fig_b)
+
+    fig_c, axs_c = plt.subplots(
+        1, len(models), figsize=(square_size * len(models), square_size)
+    )
     for i, model_name in enumerate(models):
-        print(model_name)
-
         plot_fpr_tpr(
             results,
             model_name,
@@ -730,35 +759,13 @@ def create_plots(fontsize_title, fontsize_labels, fontsize_legend, fontsize_tick
             ylabel="True Positive Rate",
         )
         set_style(axs_c[i], show_title=True, show_xlabel=False, show_ylabel=(i == 0))
+    plt.savefig(path.join(PROJECT_ROOT, "data", "subfigure_c.pdf"))
+    plt.close(fig_c)
 
-    # Subfigure b (bottom left)
-    axs_b = subfigs[1, 0].subplots(1, 3)
-    for j, method in enumerate(["GCN", "GAT", "GraphSAGE"]):
-        method_train_times = {
-            dataset: results1[dataset][method]["train_times"] for dataset in datasets
-        }
-        plot_cdf(
-            method_train_times,
-            axs_b[j],
-            method,
-            dataset_colors,
-            *global_min_max[method],
-        )
-
-    set_style(
-        axs_b[0], show_title=False, show_xlabel=True, show_ylabel=True
-    )  # Only leftmost y-label
-    for ax in axs_b[1:]:
-        set_style(
-            ax, show_title=False, show_xlabel=True, show_ylabel=False
-        )  # No y-label
-
-    # Subfigure d (bottom right) - Adjusted to use all models
-    axs_d = subfigs[1, 1].subplots(
-        1, len(models)
-    )  # Ensure the subplot layout matches the number of models
+    fig_d, axs_d = plt.subplots(
+        1, len(models), figsize=(square_size * len(models), square_size)
+    )
     for i, model_name in enumerate(models):
-        print(model_name)
         plot_fpr_tpr(
             results1,
             model_name,
@@ -771,65 +778,134 @@ def create_plots(fontsize_title, fontsize_labels, fontsize_legend, fontsize_tick
             ylabel="True Positive Rate",
         )
         set_style(axs_d[i], show_title=False, show_xlabel=True, show_ylabel=(i == 0))
-
-    # Display the figure
-    # plt.tight_layout()  # Adjust layout
-
-    plt.savefig(path.join(PROJECT_ROOT, "data", "comparisons.pdf"))
-    plt.show()
+    plt.savefig(path.join(PROJECT_ROOT, "data", "subfigure_d.pdf"))
+    plt.close(fig_d)
 
 
-def plot_fpr_tpr(
-    results, model_name, ax, datasets, label, dataset_colors, title, xlabel, ylabel
-):
-    # Label mapping dictionary
-    label_map = {
-        "DDINA": "Directed DANI",
-        "COSS": "Cosine Similarity",
-        "DDM": "Weighted DANI",
-    }
-
-    for dataset in datasets:
-        fpr = results[dataset][model_name]["fpr"][label]
-        tpr = results[dataset][model_name]["tpr"][label]
-
-        # Use mapped label if exists, otherwise use dataset name
-        dataset_label = label_map.get(dataset, dataset)
-
-        ax.plot(fpr, tpr, label=f"{dataset_label}", color=dataset_colors[dataset])
-
-    ax.set_title(title)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    ax.legend()
-
-
-create_plots(
+save_individual_subfigures(
     fontsize_title=30, fontsize_labels=25, fontsize_legend=20, fontsize_ticks=20
 )
 
 
-# class Net(torch.nn.Module):
-#     def __init__(self, num_features=4, num_classes=2):
-#         super().__init__()
-#         self.conv1 = GATConv(num_features, 8, heads=2)
-#         self.lin1 = torch.nn.Linear(num_features, 2 * 8)
-#         self.conv2 = GATConv(2 * 8, 8, heads=2)
-#         self.lin2 = torch.nn.Linear(2 * 8, 2 * 8)
-#         self.conv3 = GATConv(2 * 8, num_classes, heads=2, concat=False)
-#         self.lin3 = torch.nn.Linear(2 * 8, num_classes)
+# def create_plots(fontsize_title, fontsize_labels, fontsize_legend, fontsize_ticks):
+#     # Create the main figure with desired size
+#     fig = plt.figure(figsize=(36, 15))
 
-#     def forward(self, x, edge_index):
-#         if torch.isnan(x).any() or torch.isinf(x).any():
-#             print("NaN or Inf in input feature x")
-#         if torch.isnan(edge_index).any() or torch.isinf(edge_index).any():
-#             print("NaN or Inf in edge_index")
-#         x = F.elu(self.conv1(x, edge_index) + self.lin1(x))
-#         x = F.elu(self.conv2(x, edge_index) + self.lin2(x))
-#         x = self.conv3(x, edge_index) + self.lin3(x)
-#         return x
+#     # Create subfigures for each of the sections (a to d)
+#     subfigs = fig.subfigures(2, 2, wspace=0.07, hspace=0.07)
 
+#     # Helper function to set the styles
+#     def set_style(ax, show_title=True, show_xlabel=True, show_ylabel=True):
+#         if show_title:
+#             ax.set_title(ax.get_title(), fontsize=fontsize_title)
+#         else:
+#             ax.set_title("")
+#         if show_xlabel:
+#             ax.set_xlabel(ax.get_xlabel(), fontsize=fontsize_labels)
+#         else:
+#             ax.set_xlabel("")
+#         if show_ylabel:
+#             ax.set_ylabel(ax.get_ylabel(), fontsize=fontsize_labels)
+#         else:
+#             ax.set_ylabel("")
+#         ax.tick_params(axis="both", which="major", labelsize=fontsize_ticks)
+#         if ax.get_legend():
+#             ax.legend(
+#                 title=ax.get_legend().get_title().get_text(),
+#                 fontsize=fontsize_legend,
+#                 title_fontsize=fontsize_legend,
+#             )
 
-# model_1 = Net(4, 2)
-# model_1.load_state_dict(torch.load("model_weights.pth"))
-# model_1.to(device)
+#     # Configure each subfigure
+#     # Subfigure a (top left)
+#     axs_a = subfigs[0, 0].subplots(1, 3)
+#     for j, method in enumerate(["GCN", "GAT", "GraphSAGE"]):
+#         method_train_times = {
+#             dataset: results[dataset][method]["train_times"] for dataset in datasets
+#         }
+#         plot_cdf(
+#             method_train_times,
+#             axs_a[j],
+#             method,
+#             dataset_colors,
+#             *global_min_max[method],
+#         )
+
+#     set_style(
+#         axs_a[0], show_title=True, show_xlabel=False, show_ylabel=True
+#     )  # Only leftmost y-label
+#     for ax in axs_a[1:]:
+#         set_style(
+#             ax, show_title=True, show_xlabel=False, show_ylabel=False
+#         )  # No y-label
+
+#     # Subfigure c (top right) - Adjusted to use all models
+#     axs_c = subfigs[0, 1].subplots(
+#         1, len(models)
+#     )  # Ensure the subplot layout matches the number of models
+#     for i, model_name in enumerate(models):
+#         print(model_name)
+
+#         plot_fpr_tpr(
+#             results,
+#             model_name,
+#             axs_c[i],
+#             datasets,
+#             label,
+#             dataset_colors,
+#             title=f"{model_name}",
+#             xlabel="False Positive Rate",
+#             ylabel="True Positive Rate",
+#         )
+#         set_style(axs_c[i], show_title=True, show_xlabel=False, show_ylabel=(i == 0))
+
+#     # Subfigure b (bottom left)
+#     axs_b = subfigs[1, 0].subplots(1, 3)
+#     for j, method in enumerate(["GCN", "GAT", "GraphSAGE"]):
+#         method_train_times = {
+#             dataset: results1[dataset][method]["train_times"] for dataset in datasets
+#         }
+#         plot_cdf(
+#             method_train_times,
+#             axs_b[j],
+#             method,
+#             dataset_colors,
+#             *global_min_max[method],
+#         )
+
+#     set_style(
+#         axs_b[0], show_title=False, show_xlabel=True, show_ylabel=True
+#     )  # Only leftmost y-label
+#     for ax in axs_b[1:]:
+#         set_style(
+#             ax, show_title=False, show_xlabel=True, show_ylabel=False
+#         )  # No y-label
+
+#     # Subfigure d (bottom right) - Adjusted to use all models
+#     axs_d = subfigs[1, 1].subplots(
+#         1, len(models)
+#     )  # Ensure the subplot layout matches the number of models
+#     for i, model_name in enumerate(models):
+#         print(model_name)
+#         plot_fpr_tpr(
+#             results1,
+#             model_name,
+#             axs_d[i],
+#             datasets,
+#             label,
+#             dataset_colors,
+#             title=f"{model_name}",
+#             xlabel="False Positive Rate",
+#             ylabel="True Positive Rate",
+#         )
+#         set_style(axs_d[i], show_title=False, show_xlabel=True, show_ylabel=(i == 0))
+
+#     # Display the figure
+#     # plt.tight_layout()  # Adjust layout
+
+#     plt.savefig(path.join(PROJECT_ROOT, "data", "comparisons.pdf"))
+#     plt.show()
+
+# create_plots(
+#     fontsize_title=30, fontsize_labels=25, fontsize_legend=20, fontsize_ticks=20
+# )

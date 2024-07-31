@@ -1,8 +1,8 @@
-import numpy as np
-from perseus.model.magamaga import split_data_noloader
 from os import path
-from perseus.settings import PROJECT_ROOT
+import numpy as np
 import matplotlib.pyplot as plt
+from perseus.model.magamaga import split_data_noloader
+from perseus.settings import PROJECT_ROOT
 
 # List of models
 model = ["DDINA", "COSS", "DDM"]
@@ -56,24 +56,16 @@ def plot_graph_summary(
             label=label,
         )
 
-    # Plot each dataset
-    plot_line_hist(node_counts, ax, "Nodes for all embedding", "skyblue")
-    plot_line_hist(
-        edge_counts_directed_dani, ax, "Edges for Directed DANI", "lightgreen"
-    )
-    plot_line_hist(edge_counts_weighted_dani, ax, "Edges for Weighted DANI", "gold")
-    plot_line_hist(edge_counts_cosine, ax, "Edges for Cosine similarity", "salmon")
+    plot_line_hist(node_counts, ax, "Nodes", "skyblue")
+    plot_line_hist(edge_counts_directed_dani, ax, "Directed DANI", "lightgreen")
+    plot_line_hist(edge_counts_weighted_dani, ax, "Weighted DANI", "gold")
+    plot_line_hist(edge_counts_cosine, ax, "Cosine similarity", "salmon")
 
-    # Add labels and legend
-    # ax.set_title('Graph Data Summary')
-    ax.set_xlabel("Number of Nodes or Edges")
-    ax.set_ylabel("Number of Graphs")
-    set_text_size(ax, title_size, label_size, tick_size)
+    ax.set_xlabel("Log Number of Nodes or Edges", fontsize=label_size)
+    ax.set_ylabel("Frequency", fontsize=label_size)
     ax.legend(fontsize=legend_size)
-
-    # Set custom tick labels for x-axis
-    xticks = ax.get_xticks()
-    ax.set_xticklabels([int(np.expm1(tick)) for tick in xticks])
+    # xticks = ax.get_xticks()
+    set_text_size(ax, title_size, label_size, tick_size)
 
     plt.tight_layout()
     plt.savefig(path.join(PROJECT_ROOT, "data", "graphs_summary_combined.pdf"))
@@ -97,8 +89,8 @@ plot_graph_summary(
     edge_counts_directed_dani,
     edge_counts_weighted_dani,
     edge_counts_cosine,
-    title_size=25,
-    label_size=25,
-    tick_size=25,
-    legend_size=15,
+    title_size=20,
+    label_size=20,
+    tick_size=20,
+    legend_size=20,
 )

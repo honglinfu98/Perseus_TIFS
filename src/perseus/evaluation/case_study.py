@@ -1,9 +1,8 @@
-import numpy as np
+from os import path
 import torch
 from torch_geometric.nn import GATConv
-from os import path
 import torch.nn.functional as F
-from perseus.dataset.compare_paper_graph import combine_features, graph_features
+from perseus.model.magamaga import combine_features, graph_features
 from perseus.dataset.preprocess.groudtruth_labeling import (
     read_labeling_csv_back_to_dict,
 )
