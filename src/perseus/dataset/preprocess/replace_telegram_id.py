@@ -1,3 +1,7 @@
+"""
+This script is used to process the cascades and return the influence graph
+"""
+
 from os import path
 import pandas as pd
 from perseus.dataset.preprocess.process import (

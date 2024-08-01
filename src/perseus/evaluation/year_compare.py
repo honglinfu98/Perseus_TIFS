@@ -1,3 +1,7 @@
+"""
+This script is used to compare the nodes and edges yearly 
+"""
+
 from os import path
 import pickle
 from perseus.model.magamaga import combine_features, graph_features
@@ -11,8 +15,6 @@ from perseus.dataset.preprocess.process import (
 from perseus.settings import PROJECT_ROOT
 
 
-# load all the data from 2018 to 2024 from PROJECT "data" whose fileanme is 2018_signals.pkl, 2019_signals.pkl, 2020_signals.pkl, 2021_signals.pkl, 2022_signals.pkl, 2023_signals.pkl, 2024_signals.pkl into datasets
-# just like the code below
 datasets = []
 for year in range(2018, 2025):
     with open(path.join(PROJECT_ROOT, "data", f"{year}_signals.pkl"), "rb") as file:

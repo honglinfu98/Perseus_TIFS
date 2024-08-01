@@ -1,3 +1,7 @@
+"""
+This script is used to plot the graph with communities. It is used to visualize the communities detected in the graph.
+"""
+
 from os import path
 import pandas as pd
 import networkx as nx
@@ -20,6 +24,10 @@ from perseus.settings import PROJECT_ROOT
 
 
 def community_detection_weighted(P_dict: dict):
+    """
+    This function detects communities in a graph using the Louvain method.
+    """
+
     communities_dict = {}
 
     # Iterate over each key in the P_dict to process its edges and weights
@@ -37,8 +45,16 @@ def community_detection_weighted(P_dict: dict):
 
 
 def draw_graph_with_communities(
-    gs, key, communities_dict, id_to_username, node_size=500, font_size=8
+    gs: dict,
+    key: str,
+    communities_dict: dict,
+    id_to_username: dict,
+    node_size=500,
+    font_size=8,
 ):
+    """
+    This function draws the graph with communities using the Louvain method.
+    """
     G = gs[key]  # Retrieve the graph for the given key
     communities = communities_dict[key]  # Retrieve the communities for this graph
 
@@ -76,20 +92,6 @@ def draw_graph_with_communities(
     # Save the graph to a PDF
     plt.savefig(path.join(PROJECT_ROOT, "data", "embedding.pdf"))
     plt.show()
-
-
-def draw(key, gs, communities_dict, id_to_username):
-    cascade_labeling[key] = [
-        [
-            tuple(
-                [id_to_username[t[0]] if t[0] in id_to_username else t[0]] + list(t[1:])
-            )
-            for t in sublist
-        ]
-        for sublist in cascade_labeling[key]
-    ]
-
-    draw_graph_with_communities(gs, key, communities_dict, id_to_username)
 
 
 # Update the function call in the main block to include id_to_username:

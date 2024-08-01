@@ -1,3 +1,7 @@
+"""
+This script is used to plot the graph so that we can investigate the relationship between the graph structure and the features in the graph
+"""
+
 import pandas as pd
 import networkx as nx
 from matplotlib import pyplot as plt
@@ -11,6 +15,10 @@ from perseus.dataset.preprocess.train_test_validate import get_test_scored_signa
 
 
 def btw_cen_vs_avg_return_by_node(processed_signals: pd.DataFrame, graphs: dict):
+    """
+    This function draws the betweenness centrality vs average return for each node in the graph
+    """
+
     # Group by commodity and telegram_chat_id
     grouped = processed_signals.groupby(["commodity", "telegram_chat_id"])
 
@@ -67,6 +75,11 @@ def btw_cen_vs_avg_return_by_node(processed_signals: pd.DataFrame, graphs: dict)
 
 
 def btw_cen_vs_total_return_by_node(processed_signals: pd.DataFrame, graphs: dict):
+    """
+    This function draws the betweenness centrality vs total returns for each node in the graph
+
+    """
+
     # Calculate total return for each group
     def total_return(x):
         return (x + 1).prod() - 1
@@ -123,6 +136,9 @@ def btw_cen_vs_total_return_by_node(processed_signals: pd.DataFrame, graphs: dic
 
 
 def draw_graph_with_avg_return(processed_signals: pd.DataFrame, graphs: dict):
+    """
+    This function draws the graph with node size proportional to the average increase
+    """
     # Group by commodity and telegram_chat_id
     grouped = processed_signals.groupby(["commodity", "telegram_chat_id"])
 
@@ -175,6 +191,10 @@ def draw_graph_with_avg_return(processed_signals: pd.DataFrame, graphs: dict):
 
 
 def in_out_cen_vs_avg_return_by_node(processed_signals: pd.DataFrame, graphs: dict):
+    """
+    This function draws the in-degree centrality vs out-degree centrality for each node in the graph, the size is determined by average increase
+    """
+
     # Group by commodity and telegram_chat_id
     grouped = processed_signals.groupby(["commodity", "telegram_chat_id"])
 

@@ -132,9 +132,4 @@ def get_valid_scored_signals():
 
 
 if __name__ == "__main__":
-    # # seperate_train_test_validate()
-    # test = get_test_scored_signals()
-    # train = get_train_scored_signals()
-    # validate = get_valid_scored_signals()
-    # # Call the function to perform the operation
     separate_by_year()

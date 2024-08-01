@@ -1,58 +1,50 @@
+"""
+This script is used to out put the label mapping csv file for labeling
+"""
+
 from os import path
 import pickle
 import pandas as pd
 from perseus.settings import PROJECT_ROOT
 
 
-# Function to create label mapping based on top n frequency
-def create_label_mapping(n: int, train_or_test: str, c_features=dict):
-    # signals = get_scored_signals()
+def create_label_mapping(
+    n: int,
+    train_or_test: str,
+):
+    """
+    Function to create label mapping based on top n frequency, which makes the labeling process easier
+    """
     if train_or_test == "test":
-        # with open(path.join(PROJECT_ROOT, "data", "signals.pkl"), "rb") as file:
-        #     data = pickle.load(file)
-        # with open(path.join(PROJECT_ROOT, "data", "signals2.pkl"), "rb") as file:
-        #     data = pickle.load(file)
         with open(path.join(PROJECT_ROOT, "data", "test_signals.pkl"), "rb") as file:
             data = pickle.load(file)
         data = data[~data["telegram_chat_id"].isna()]
 
-        # data = get_scored_signals()
     elif train_or_test == "train":
-        # with open(path.join(PROJECT_ROOT, "data", "signals1.pkl"), "rb") as file:
-        #     data = pickle.load(file)
         with open(path.join(PROJECT_ROOT, "data", "train_signals.pkl"), "rb") as file:
             data = pickle.load(file)
         data = data[~data["telegram_chat_id"].isna()]
     elif train_or_test == "valid":
-        # with open(path.join(PROJECT_ROOT, "data", "signals3.pkl"), "rb") as file:
-        #     data = pickle.load(file)
-
         with open(
             path.join(PROJECT_ROOT, "data", "validate_signals.pkl"), "rb"
         ) as file:
             data = pickle.load(file)
         data = data[~data["telegram_chat_id"].isna()]
 
-        # data = get_valid_scored_signals()
-
-    # Grouping by commodity and telegram_chat_id and counting the occurrences
     commodity_frequency = (
         data.groupby(["commodity", "telegram_chat_id"])
         .size()
         .reset_index(name="frequency")
     )
 
-    # Sorting within each commodity group by frequency in descending order
     commodity_frequency_sorted = commodity_frequency.sort_values(
         ["commodity", "frequency"], ascending=[True, False]
     )
 
-    # Extracting the sorted list for each commodity
     commodity_frequency_lists = commodity_frequency_sorted.groupby("commodity").apply(
         lambda x: x[["telegram_chat_id", "frequency"]].values.tolist()
     )
 
-    # Example: Create label mapping for top 3 telegram_chat_ids for each commodity
     label_mapping = {}
     for commodity, freq_list in commodity_frequency_lists.items():
         # Sort and take top n
@@ -72,6 +64,9 @@ def create_label_mapping(n: int, train_or_test: str, c_features=dict):
 
 
 def export_csv_for_labeling():
+    """
+    Export the label mapping to CSV for labeling
+    """
     # filter commodity less than 3 and with respect to the gs keys
 
     train_label_mapping = create_label_mapping(1, "train")
@@ -121,7 +116,9 @@ def export_csv_for_labeling():
 
 
 def read_labeling_csv_back_to_dict(train_test_valid: str):
-    # Read the edited CSV file
+    """
+    Read the edited CSV file
+    """
     if train_test_valid == "train":
         train_edited_df = pd.read_csv(
             path.join(PROJECT_ROOT, "data", "train_labeling_finished.csv")
@@ -163,11 +160,7 @@ def read_labeling_csv_back_to_dict(train_test_valid: str):
 
 
 if __name__ == "__main__":
-    # train_signals = get_train_scored_signals()
-    # test_signals = get_test_scored_signals()
-    # validate_signals = get_valid_scored_signals()
 
-    # export_csv_for_labeling()
     a = read_labeling_csv_back_to_dict("train")
     b = read_labeling_csv_back_to_dict("test")
     c = read_labeling_csv_back_to_dict("valid")

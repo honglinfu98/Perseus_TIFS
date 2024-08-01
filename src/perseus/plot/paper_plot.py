@@ -1,6 +1,14 @@
+"""
+This script is used to plot the signals for labelling purposes
+"""
+
 import pandas as pd
 import plotly.express as px
-from perseus.dataset.preprocess.train_test_validate import get_test_scored_signals, get_train_scored_signals, get_valid_scored_signals
+from perseus.dataset.preprocess.train_test_validate import (
+    get_test_scored_signals,
+    get_train_scored_signals,
+    get_valid_scored_signals,
+)
 from perseus.dataset.preprocess.process import (
     aggregate_data,
     assign_event_ids,
@@ -10,6 +18,11 @@ from perseus.dataset.preprocess.process import (
 
 
 def plot_paper_with_plotly_alphabet_fixed(processed_signals: pd.DataFrame):
+    """
+    This function plots the signals for labelling purposes
+    The dots represent the signals, with the color representing the telegram_chat_id
+    """
+
     # Define the Alphabet palette directly
     distinct_palette_alphabet_fixed = px.colors.qualitative.Alphabet
 

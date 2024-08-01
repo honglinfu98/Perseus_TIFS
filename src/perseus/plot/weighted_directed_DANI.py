@@ -1,16 +1,21 @@
+"""
+This script is used to plot the weighted directed DANI network graph
+"""
+
 from os import path
 import matplotlib.pyplot as plt
 import networkx as nx
 import torch
+import torch_geometric
 from perseus.model.magamaga import split_data_noloader
 from perseus.settings import PROJECT_ROOT
 
-aaa, _, _ = split_data_noloader("COSS")
-a, b, c = split_data_noloader("DDM")
-aa, bb, cc = split_data_noloader("DDINA")
 
+def count_reciprocal_edges(edge_index: torch.Tensor):
+    """
+    Count the number of reciprocal edges in a graph
+    """
 
-def count_reciprocal_edges(edge_index):
     # Transpose for easier comparison
     edge_index_t = edge_index.t()
     # Set of tuples for edges
@@ -20,18 +25,24 @@ def count_reciprocal_edges(edge_index):
     return reciprocal_count
 
 
-def calculate_ratio(data):
+def calculate_ratio(data: torch_geometric.data.data.Data):
+    """
+    Calculate the ratio of reciprocal edges in a graph
+    """
     num_nodes = torch.max(data.edge_index) + 1  # Assuming node indices start at 0
     reciprocal_count = count_reciprocal_edges(data.edge_index)
     return reciprocal_count / num_nodes
 
 
-sorted_data_list = sorted(a, key=calculate_ratio, reverse=True)
-
-
 def plot_graphs_side_by_side(
-    edge_index1, edge_weight1, title1="Graph 1", title_size=16
+    edge_index1: torch.Tensor,
+    edge_weight1: torch.Tensor,
+    title1="Graph 1",
+    title_size=16,
 ):
+    """
+    Plot the two graphs side by side
+    """
     # Initialize two graphs
     G1 = nx.MultiDiGraph()
     # G2 = nx.MultiDiGraph()
@@ -69,11 +80,19 @@ def plot_graphs_side_by_side(
     plt.show()
 
 
-# Example usage:
-# Assuming edge_index1, edge_weight1, edge_index2, and edge_weight2 are defined as tensors or lists
-plot_graphs_side_by_side(
-    aaa[0].edge_index,
-    aaa[0].edge_weight,
-    title1="Weighted DANI Network Graph",
-    title_size=40,
-)
+if __name__ == "__main__":
+
+    aaa, _, _ = split_data_noloader("COSS")
+    a, b, c = split_data_noloader("DDM")
+    aa, bb, cc = split_data_noloader("DDINA")
+
+    sorted_data_list = sorted(a, key=calculate_ratio, reverse=True)
+
+    # Example usage:
+    # Assuming edge_index1, edge_weight1, edge_index2, and edge_weight2 are defined as tensors or lists
+    plot_graphs_side_by_side(
+        aaa[0].edge_index,
+        aaa[0].edge_weight,
+        title1="Weighted DANI Network Graph",
+        title_size=40,
+    )

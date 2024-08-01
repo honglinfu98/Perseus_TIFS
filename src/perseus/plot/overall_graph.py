@@ -1,3 +1,7 @@
+"""
+This script is used to draw the combined graph of all the individual graphs in the dataset to show the overall graph
+"""
+
 from os import path
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -12,8 +16,11 @@ from perseus.settings import PROJECT_ROOT
 
 
 def combine_and_plot_graphs(
-    graph_dict, layout="spring", figsize=(12, 12), edge_alpha=0.5, edge_width=0.5
+    graph_dict: dict, layout="spring", figsize=(12, 12), edge_alpha=0.5, edge_width=0.5
 ):
+    """
+    This function is used to combine all the individual graphs in the dataset and plot the overall graph
+    """
     # Create a new graph to combine all the individual graphs
     combined_graph = nx.Graph()
 

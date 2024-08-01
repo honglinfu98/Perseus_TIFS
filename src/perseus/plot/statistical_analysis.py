@@ -1,8 +1,13 @@
+"""
+This script is used to perform statistical analysis on the graph features and plot the distributions of the features by group
+"""
+
 from os import path
 import pandas as pd
 import networkx as nx
 from scipy import stats
 import seaborn as sns
+import matplotlib.pyplot as plt
 from perseus.model.magamaga import combine_features, graph_features
 from perseus.dataset.preprocess.train_test_validate import (
     get_test_scored_signals,
@@ -11,6 +16,11 @@ from perseus.dataset.preprocess.train_test_validate import (
 )
 
 # from perseus.dataset.preprocess.groudtruth_labeling import create_label_mapping
+from perseus.model.magamaga import (
+    calculate_effsize_efficiency,
+    out_ego_graph,
+    in_ego_graph,
+)
 from perseus.dataset.preprocess.process import (
     features_engineer,
     get_graphs,
@@ -23,61 +33,10 @@ from perseus.dataset.preprocess.groudtruth_labeling import (
     create_label_mapping,
     read_labeling_csv_back_to_dict,
 )
-
-from perseus.dataset.preprocess.train_test_validate import (
-    get_test_scored_signals,
-    get_train_scored_signals,
-)
+from perseus.settings import PROJECT_ROOT
 
 
-def calculate_effsize_efficiency(G, ego):
-    # Get the ego network
-    ego_net = nx.ego_graph(G, ego, undirected=False)
-
-    # Get alters in the ego network (excluding ego)
-    alters = set(ego_net.nodes()) - {ego}
-    num_alters = len(alters)
-    # Inside your calculate_effsize_efficiency function:
-    avg_degree = 0  # Default to 0
-    if num_alters > 0:
-        avg_degree = (
-            sum(
-                ego_net.degree(n) - (1 if ego_net.has_edge(n, ego) else 0)
-                for n in alters
-            )
-            / num_alters
-        )
-
-    # Calculate effective size
-    eff_size = num_alters - avg_degree
-
-    # Calculate efficiency
-    efficiency = eff_size / num_alters if num_alters > 0 else 0
-
-    return eff_size, efficiency
-
-
-def out_ego_graph(G, node, radius=1):
-    """
-    Extract the out-ego network of a specified node in a directed graph.
-    """
-    # Extract the out-ego network
-    out_ego = nx.ego_graph(G, node, radius=radius)
-    return out_ego
-
-
-def in_ego_graph(G, node, radius=1):
-    """
-    Extract the in-ego network of a specified node in a directed graph.
-    """
-    # Reverse the graph
-    G_reverse = G.reverse(copy=True)
-    # Extract the in-ego network
-    in_ego = nx.ego_graph(G_reverse, node, radius=radius)
-    return in_ego
-
-
-def aggregate_and_compare_combined(gs_ls, label_mapping_ls):
+def aggregate_and_compare_combined(gs_ls: dict, label_mapping_ls: dict):
     # Initialize containers for centrality measures and additional features by group
     metrics_by_group = {
         "degree_centrality": [[], []],
@@ -146,7 +105,7 @@ def aggregate_and_compare_combined(gs_ls, label_mapping_ls):
 
 
 # Function to process signals and return necessary components for analysis
-def process_signals_and_get_components(signal_function):
+def process_signals_and_get_components(signal_function: pd.DataFrame):
     signals = signal_function()  # Get signals using the provided function
     processed_signals = process_dataframe(signals)  # Process signals
     ided_signals = assign_event_ids(processed_signals)  # Assign event IDs
@@ -166,7 +125,7 @@ def process_signals_and_get_components(signal_function):
 
 
 # Define a function to assign significance levels
-def assign_significance(p):
+def assign_significance(p: float):
     if p < 0.001:
         return "***"
     elif p < 0.01:
@@ -178,13 +137,13 @@ def assign_significance(p):
 
 
 def plot_distribution(
-    gs_ls,
-    label_mapping_ls,
+    gs_ls: dict,
+    label_mapping_ls: dict,
     font_size=10,
     title_size=12,
     legend_size=10,
     tick_label_size=10,
-    output_dir="plots",
+    output_dir=path.join(PROJECT_ROOT, "data"),
 ):
     metrics_by_group = {
         "degree_centrality": [[], []],

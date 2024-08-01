@@ -1,6 +1,7 @@
 """
-This script is used to get the circulation of all the coins and save it as a dictionary
+Used to get the circulation of all the coins and save it as a dictionary
 """
+
 from os import path
 import pickle
 import coinmarketcapapi
@@ -17,15 +18,17 @@ def get_coin_circulation():
     data_listing = cmc.cryptocurrency_listings_latest(limit=5000)
     keys = [i["symbol"] for i in data_listing.data]
     values = [i["circulating_supply"] for i in data_listing.data]
-    coin_circulating = dict(zip(keys, values))
+    coin_circulating_buffer = dict(zip(keys, values))
     self_circulating = [
         i["self_reported_circulating_supply"] for i in data_listing.data
     ]
     coin_cap_selfreported = dict(zip(keys, self_circulating))
-    for coin in coin_circulating.keys():
-        if coin_circulating[coin] == 0:
-            coin_circulating[coin] = coin_cap_selfreported[coin]
-    return coin_circulating
+
+    for k, v in coin_circulating_buffer.items():
+        if v == 0:
+            coin_circulating_buffer[k] = coin_cap_selfreported[k]
+
+    return coin_circulating_buffer
 
 
 if __name__ == "__main__":

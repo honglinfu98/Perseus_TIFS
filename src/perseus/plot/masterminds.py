@@ -1,3 +1,7 @@
+"""
+This script is used to plot the number of masterminds in the dataset
+"""
+
 from os import path
 from collections import Counter
 import matplotlib.pyplot as plt
@@ -12,7 +16,10 @@ b = read_labeling_csv_back_to_dict("test")
 c = read_labeling_csv_back_to_dict("valid")
 
 
-def process_data(data):
+def process_data(data: dict):
+    """
+    This function is used to process the data and return the frequencies and values
+    """
     counts = [sum(values.values()) for _, values in data.items()]
     frequency_counts = Counter(counts)
     frequencies = list(frequency_counts.keys())
@@ -21,14 +28,17 @@ def process_data(data):
 
 
 def plot_histogram(
-    data_a,
-    data_b,
-    data_c,
+    data_a: dict,
+    data_b: dict,
+    data_c: dict,
     font_size=10,
     title_size=12,
     legend_size=10,
     tick_label_size=10,
 ):
+    """
+    This function is used to plot the histogram of the number of masterminds in the dataset
+    """
 
     freqs_a, freq_vals_a = process_data(data_a)
     freqs_b, freq_vals_b = process_data(data_b)

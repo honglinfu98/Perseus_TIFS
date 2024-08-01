@@ -5,19 +5,16 @@ This script is used to process the scored signals and create summary for the dat
 from datetime import timedelta
 import json
 from collections import defaultdict
-
 import pandas as pd
 import networkx as nx
-from perseus.dataset.preprocess.train_test_validate import (
-    get_test_scored_signals,
-    get_train_scored_signals,
-    get_valid_scored_signals,
-)
+from perseus.dataset.preprocess.train_test_validate import get_test_scored_signals
 from perseus.dataset.preprocess.DANI import DANI
 
 
-# Function to relabel edges based on new_to_id mapping
-def relabel_edges(d, mapping):
+def relabel_edges(d: dict, mapping: dict):
+    """
+    Function to relabel edges based on new_to_id mapping
+    """
     new_d = defaultdict(float)
     for (src, dst), weight in d.items():
         # Relabel src and dst using the mapping
@@ -28,6 +25,10 @@ def relabel_edges(d, mapping):
 
 
 def assign_event_ids(df: pd.DataFrame):
+    """
+    Assigns event IDs to the pump signals based on the session timeout
+    """
+
     # Initialize the event ID
     event_id = 0
 
@@ -68,6 +69,10 @@ def assign_event_ids(df: pd.DataFrame):
 
 
 def process_dataframe(signals_df: pd.DataFrame):
+    """
+    Process the dataframe to extract and generate the features
+    """
+
     # Parsing 'price_increase' and extracting the values
     df = signals_df[signals_df["price_increase"] != "TRADE DATA NOT AVAILABLE"]
     df["parsed_price_increase"] = df["price_increase"].apply(json.loads)
@@ -80,7 +85,6 @@ def process_dataframe(signals_df: pd.DataFrame):
     df["position"] = df.apply(
         lambda x: "long" if x["start_price"] < x["end_price"] else "short", axis=1
     )
-
     df["parsed_rate"] = df["targets_achieved_rate"].apply(json.loads)
     df["targets_achieved"] = df["parsed_rate"].apply(
         lambda x: x.get("targets_achieved", None)
@@ -88,22 +92,15 @@ def process_dataframe(signals_df: pd.DataFrame):
     df["total_targets"] = df["parsed_rate"].apply(
         lambda x: x.get("total_targets", None)
     )
-
-    # Parsing 'duration' and extracting the values
     df["parsed_duration"] = df["duration"].apply(json.loads)
     df["duration_min"] = df["parsed_duration"].apply(
         lambda x: x.get("duration_min", None)
     )
-    # df["tsv"] = df["ts"] / df["d"]
     df["start_date"] = df["parsed_duration"].apply(lambda x: x.get("start_date", None))
     df["start_date"] = pd.to_datetime(df["start_date"])
     df["end_date"] = df["parsed_duration"].apply(lambda x: x.get("end_date", None))
     df["end_date"] = pd.to_datetime(df["end_date"])
-    # Drop temporary parsed columns
-    # df = df.drop(columns=['parsed_price_increase', 'parsed_duration'])
-
     df["speed"] = df["increase_percentage"] / df["duration_min"]
-
     df = df.sort_values("start_date", ascending=True)
 
     # Calculate the time difference between consecutive rows for the same entity_id and signal type
@@ -113,13 +110,16 @@ def process_dataframe(signals_df: pd.DataFrame):
 
 
 def aggregate_data(df: pd.DataFrame):
+    """
+    This function aggregates the data based on the commodity and the event_id
+    """
     df_grouped = df.sort_values("start_date").groupby(["commodity", "event_id"])
 
     intermediate_results = {}
     unique_chat_ids_per_commodity = {}
     mappings = {}
 
-    for (commodity, event_id), group in df_grouped:
+    for (commodity, _), group in df_grouped:
         dates = pd.to_datetime(group["start_date"])
         delta_minutes = (dates - dates.iloc[0]).dt.total_seconds() / 60
 
@@ -192,7 +192,9 @@ def aggregate_data(df: pd.DataFrame):
 
 
 def features_engineer(df: pd.DataFrame):
-    # Group by 'commodity' and 'telegram_chat_id' and compute the desired metrics
+    """
+    This function is used to engineer features for the signals
+    """
     grouped_data = (
         df.groupby(["commodity", "telegram_chat_id"])
         .agg(
@@ -248,7 +250,7 @@ def get_graphs(cascade: dict, no_nodes: dict, id_mapping: dict):
     :param cascade: the cascade
     :param no_nodes: the number of nodes for each commodity
     :param id_mapping: the mapping between the commodity and the id
-    :return: the graphs
+    :return: the graphs, the weight ordered edges, the edge list, and relabeled edge list
     """
     ensure_graph_learned = {}
     # Filter the no_nodes that have more than 3 nodes and have more than no nodes cascade
@@ -282,5 +284,9 @@ if __name__ == "__main__":
     signals = get_test_scored_signals()
     processed_signals = process_dataframe(signals)
     ided_signals = assign_event_ids(processed_signals)
-    cascade, no_nodes, id_mapping, cascade_labeling = aggregate_data(ided_signals)
-    gs, results, As, P_dict = get_graphs(cascade, no_nodes, id_mapping)
+    cascade_buffer, no_nodes_buffer, id_mapping_buffer, cascade_labeling = (
+        aggregate_data(ided_signals)
+    )
+    gs, results, As, P_dict = get_graphs(
+        cascade_buffer, no_nodes_buffer, id_mapping_buffer
+    )

@@ -1,6 +1,7 @@
 """
-Download signals from Cloudburst database.
+Download data from Cloudburst.
 """
+
 from os import path
 import os
 import pickle
@@ -17,22 +18,16 @@ from perseus.settings import PROJECT_ROOT
 
 
 all_scored_sql_path = os.path.join(os.path.dirname(__file__), "all.sql")
-
 direct_link = os.path.join(os.path.dirname(__file__), "direct_link.sql")
-
 volume = os.path.join(os.path.dirname(__file__), "volume.sql")
-
 
 
 with open(all_scored_sql_path, "r") as f:
     ALL_QUERY_SCORED_PUMPS = f.read()
-
 with open(direct_link, "r") as f:
     QUERY_DIRECT_LINK = f.read()
-
 with open(volume, "r") as f:
     QUERY_VOLUME = f.read()
-
 
 
 def get_direct_link(query: str = QUERY_DIRECT_LINK):
@@ -49,6 +44,7 @@ def get_direct_link(query: str = QUERY_DIRECT_LINK):
     conn.close()
 
     return links
+
 
 def get_all_scored_signals(query: str = ALL_QUERY_SCORED_PUMPS):
     """
@@ -70,7 +66,7 @@ def get_all_scored_signals(query: str = ALL_QUERY_SCORED_PUMPS):
 
 def get_volumes(query: str = QUERY_VOLUME):
     """
-    Get signals from the database for pre-pump scoring.
+    Get volumes from the database for pre-pump scoring.
     """
 
     conn = psycopg2.connect(
@@ -81,20 +77,10 @@ def get_volumes(query: str = QUERY_VOLUME):
 
     conn.close()
 
-    # result = signals[~signals["telegram_chat_id"].isna()]
-
     return result
 
 
-
-
 if __name__ == "__main__":
-    # signals1 = get_all_scored_signals()
-    # with open(path.join(PROJECT_ROOT, "data","all_scored.pkl"), "wb") as file:
-    #     pickle.dump(signals1, file)
-
     volume = get_volumes()
-    with open(path.join(PROJECT_ROOT, "data","volume.pkl"), "wb") as file:
+    with open(path.join(PROJECT_ROOT, "data", "volume.pkl"), "wb") as file:
         pickle.dump(volume, file)
-    
-
