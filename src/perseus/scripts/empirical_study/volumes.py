@@ -2,7 +2,6 @@
 This script is used to compare the normal trading volumes with average trading volumes
 """
 
-from os import path
 import pandas as pd
 from matplotlib import pyplot as plt
 from perseus.dataset.extract.cloudburst_connection import get_volumes

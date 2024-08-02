@@ -8,7 +8,7 @@ import networkx as nx
 from scipy import stats
 import seaborn as sns
 import matplotlib.pyplot as plt
-from perseus.model.magamaga import combine_features, graph_features
+from perseus.dataset.dataset_preparation import combine_features, graph_features
 from perseus.dataset.preprocess.train_test_validate import (
     get_test_scored_signals,
     get_train_scored_signals,
@@ -16,7 +16,7 @@ from perseus.dataset.preprocess.train_test_validate import (
 )
 
 # from perseus.dataset.preprocess.groudtruth_labeling import create_label_mapping
-from perseus.model.magamaga import (
+from perseus.dataset.preprocess.process import (
     calculate_effsize_efficiency,
     out_ego_graph,
     in_ego_graph,
@@ -37,6 +37,10 @@ from perseus.settings import PROJECT_ROOT
 
 
 def aggregate_and_compare_combined(gs_ls: dict, label_mapping_ls: dict):
+    """
+    This function aggregates the graph features and seperate them by group, then performs a T-test to compare the groups
+    """
+
     # Initialize containers for centrality measures and additional features by group
     metrics_by_group = {
         "degree_centrality": [[], []],
@@ -106,6 +110,9 @@ def aggregate_and_compare_combined(gs_ls: dict, label_mapping_ls: dict):
 
 # Function to process signals and return necessary components for analysis
 def process_signals_and_get_components(signal_function: pd.DataFrame):
+    """
+    This script is used to process the signals and return the necessary components for analysis
+    """
     signals = signal_function()  # Get signals using the provided function
     processed_signals = process_dataframe(signals)  # Process signals
     ided_signals = assign_event_ids(processed_signals)  # Assign event IDs
@@ -126,6 +133,9 @@ def process_signals_and_get_components(signal_function: pd.DataFrame):
 
 # Define a function to assign significance levels
 def assign_significance(p: float):
+    """
+    This script is used to assign significance levels to p-values
+    """
     if p < 0.001:
         return "***"
     elif p < 0.01:
@@ -145,6 +155,9 @@ def plot_distribution(
     tick_label_size=10,
     output_dir=path.join(PROJECT_ROOT, "data"),
 ):
+    """
+    This funtion is used to plot the distribution of graph features by group
+    """
     metrics_by_group = {
         "degree_centrality": [[], []],
         "betweenness_centrality": [[], []],

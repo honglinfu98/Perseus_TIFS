@@ -4,7 +4,7 @@ This script is used to compare the nodes and edges yearly
 
 from os import path
 import pickle
-from perseus.model.magamaga import combine_features, graph_features
+from perseus.dataset.dataset_preparation import combine_features, graph_features
 from perseus.dataset.preprocess.process import (
     aggregate_data,
     assign_event_ids,

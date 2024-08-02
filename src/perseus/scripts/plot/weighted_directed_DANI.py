@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import torch
 import torch_geometric
-from perseus.model.magamaga import split_data_noloader
+from perseus.dataset.dataset_preparation import split_data_noloader
 from perseus.settings import PROJECT_ROOT
 
 

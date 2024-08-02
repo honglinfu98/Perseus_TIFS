@@ -1,8 +1,18 @@
+"""
+This script is used to prepare the dataset for the model training. It includes the following functions:
+    - prepare_data: Prepare the data for the Directed DINA training
+    - prepare_ddm_data: Prepare the data for the Weighted DINA model
+    - prepare_cos_data: Prepare the data for the Cosine similarity model
+    - split_data: Split the data into temporal tasks 
+    - split_data_noloader: Split the data into temporal tasks, but without the DataLoader
+    - get_split_data_pickle: Load the split data from the pickle file
+    - get_train_test_validate_data_pickle: Load the train, test, and validate data from the pickle file
+    - get_train_test_validate_data: Split the data into non-temporal tasks
+"""
+
 from os import path
 import pickle
 import random
-import pandas as pd
-import networkx as nx
 import torch
 from sklearn.metrics.pairwise import cosine_similarity
 from torch_geometric.loader import DataLoader
@@ -19,6 +29,8 @@ from perseus.dataset.preprocess.process import (
     process_dataframe,
     aggregate_data,
     assign_event_ids,
+    graph_features,
+    combine_features,
 )
 from perseus.dataset.preprocess.groudtruth_labeling import (
     read_labeling_csv_back_to_dict,
@@ -26,136 +38,10 @@ from perseus.dataset.preprocess.groudtruth_labeling import (
 from perseus.settings import PROJECT_ROOT
 
 
-def calculate_effsize_efficiency(G, ego):
-    # Get the ego network
-    ego_net = nx.ego_graph(G, ego, undirected=False)
-
-    # Get alters in the ego network (excluding ego)
-    alters = set(ego_net.nodes()) - {ego}
-    num_alters = len(alters)
-    avg_degree = 0  # Default to 0
-    if num_alters > 0:
-        avg_degree = (
-            sum(
-                ego_net.degree(n) - (1 if ego_net.has_edge(n, ego) else 0)
-                for n in alters
-            )
-            / num_alters
-        )
-
-    # Calculate effective size
-    eff_size = num_alters - avg_degree
-
-    # Calculate efficiency
-    efficiency = eff_size / num_alters if num_alters > 0 else 0
-
-    return eff_size, efficiency
-
-
-def out_ego_graph(G, node, radius=1):
+def prepare_data(graphs: dict, features: dict, label_mapping: dict):
     """
-    Extract the out-ego network of a specified node in a directed graph.
+    Prepare the data for the Directed DINA model
     """
-    # Extract the out-ego network
-    out_ego = nx.ego_graph(G, node, radius=radius)
-    return out_ego
-
-
-def in_ego_graph(G, node, radius=1):
-    """
-    Extract the in-ego network of a specified node in a directed graph.
-    """
-    # Reverse the graph
-    G_reverse = G.reverse(copy=True)
-    # Extract the in-ego network
-    in_ego = nx.ego_graph(G_reverse, node, radius=radius)
-    return in_ego
-
-
-def graph_features(gs):
-    dfs = {}
-
-    # Looping through each key in the scores dictionary
-    for key in gs.keys():
-        # Creating lists to store node_ids, in-ego ratios, and out-ego ratios
-        node_ids = []
-        in_ratios = []
-        out_ratios = []
-        out_nodes = []
-        eff_sizes = []
-        efficiencies = []
-        density = []
-        clustering_coeffs = []
-
-        for i in gs[key].nodes():
-            node_id = i
-            node_ids.append(node_id)
-
-            # Calculating the in-ego ratio
-            inn = len(in_ego_graph(gs[key], node_id).nodes) / len(gs[key])
-            in_ratios.append(inn)
-
-            # Calculating the out-ego ratio
-            outt = len(out_ego_graph(gs[key], node_id).nodes) / len(gs[key])
-            out_ratios.append(outt)
-
-            out_nodes.append(len(out_ego_graph(gs[key], node_id).nodes))
-
-            # Calculate the density of the ego network
-            den = nx.density(out_ego_graph(gs[key], node_id))
-            density.append(den)
-
-            eff_size, efficiency = calculate_effsize_efficiency(gs[key], node_id)
-            eff_sizes.append(eff_size)
-            efficiencies.append(efficiency)
-            # Calculate clustering coefficient for the node
-            clustering_coeff = nx.clustering(gs[key], node_id)
-            clustering_coeffs.append(clustering_coeff)
-
-        # Creating a DataFrame for each key and storing it in the dfs dictionary
-        dfs[key] = pd.DataFrame(
-            {
-                "telegram_chat_id": node_ids,
-                "in_ratio": in_ratios,
-                "out_ratio": out_ratios,
-                "out_nodes": out_nodes,
-                "eff_size": eff_sizes,
-                "efficiency": efficiencies,
-                "density": density,
-                "clustering_coeff": clustering_coeffs,
-            }
-        )
-
-    return dfs
-
-
-def combine_features(market_features, graph_features):
-    combined_data = {}
-
-    for key in market_features.keys():
-        # Check if the key exists in dfs and 'telegram_chat_id' exists in both DataFrames
-        if (
-            key in graph_features
-            and "telegram_chat_id" in market_features[key].columns
-            and "telegram_chat_id" in graph_features[key].columns
-        ):
-            # Perform an inner join on 'telegram_chat_id'
-            combined_df = pd.merge(
-                market_features[key],
-                graph_features[key],
-                on="telegram_chat_id",
-                how="inner",
-            )
-        else:
-            # If key is not in dfs or 'telegram_chat_id' is missing in either DataFrame, use an empty DataFrame
-            combined_df = pd.DataFrame()
-
-        combined_data[key] = combined_df
-
-    return combined_data
-
-
-def prepare_data(graphs, features, label_mapping):
     prepared_data = []
     for key, graph in graphs.items():
         # Extract features for nodes present in the graph
@@ -232,7 +118,10 @@ def prepare_data(graphs, features, label_mapping):
     return prepared_data
 
 
-def prepare_ddm_data(graphs, features, label_mapping, P_dict):
+def prepare_ddm_data(graphs: dict, features: dict, label_mapping: dict, P_dict: dict):
+    """
+    Prepare the data for the Weighted DINA model
+    """
     prepared_data = []
     for key, graph in graphs.items():
         # Extract features for nodes present in the graph
@@ -287,15 +176,7 @@ def prepare_ddm_data(graphs, features, label_mapping, P_dict):
         edge_weight = torch.tensor(edge_weight_list, dtype=torch.float)
         # Populate the lists
         num_labels = 2
-        # # Prepare labels
-        # labels = [
-        #     label_mapping[key].get(node_id, 0)
-        #     for node_id in features_buffer["telegram_chat_id"]
-        # ]
-        # labels = torch.tensor(labels, dtype=torch.long)
-        # # Create a Data object
-        # data = Data(x=node_attributes, edge_index=edge_index, y=labels)
-        # Prepare labels
+
         labels = []
         for node_id in features_buffer["telegram_chat_id"]:
             node_labels = label_mapping[key].get(node_id, 0)
@@ -317,21 +198,14 @@ def prepare_ddm_data(graphs, features, label_mapping, P_dict):
             y=labels_tensor,
         )
 
-        # undirect_edge_index = to_undirected(data.edge_index, num_nodes=data.x.size(0))
-
-        # # Create a Data object
-        # data = Data(
-        #     x=node_attributes,
-        #     edge_index=undirect_edge_index,
-        #     edge_weight=edge_weight,
-        #     y=labels_tensor,
-        # )
-
         prepared_data.append(data)
     return prepared_data
 
 
-def prepare_cos_data(graphs, features, label_mapping):
+def prepare_cos_data(graphs: dict, features: dict, label_mapping: dict):
+    """
+    Prepare the data for the Cosine similarity model
+    """
     prepared_data = []
     for key, graph in graphs.items():
         # Extract features for nodes present in the graph
@@ -368,9 +242,6 @@ def prepare_cos_data(graphs, features, label_mapping):
         features_df = features_buffer.set_index("telegram_chat_id")[
             feature_columns
         ].dropna()
-
-        # Assuming features_df is a DataFrame where each row is a node's features
-        # Assuming id_to_index is a dictionary mapping chat_id to a node index
 
         edge_index_list = []
         edge_weight_list = []
@@ -442,7 +313,7 @@ def prepare_cos_data(graphs, features, label_mapping):
 
 def split_data(options: str):
     """
-    Common keys enabled
+    Split the data into train, test, and validate sets for temporal tasks
     """
     # Initial data loading and processing
     train_signals = get_train_scored_signals()
@@ -526,6 +397,9 @@ def split_data(options: str):
 
 
 def split_data_noloader(options: str):
+    """
+    Split the data into train, test, and validate sets for temporal tasks without DataLoader
+    """
     # Initial data loading and processing
     train_signals = get_train_scored_signals()
     test_signals = get_test_scored_signals()
@@ -602,67 +476,10 @@ def split_data_noloader(options: str):
     return train_data, test_data, validate_data
 
 
-def get_data_set(options: str):
-
-    train_signals = get_train_scored_signals()
-    test_signals = get_test_scored_signals()
-    validate_signals = get_valid_scored_signals()
-
-    gs_ls = []
-    features_ls = []
-    market_features_ls = []
-    P_dicts_ls = []
-
-    for i in [train_signals, test_signals, validate_signals]:
-        processed_signals = process_dataframe(i)
-        ided_signals = assign_event_ids(processed_signals)
-        cascade, no_nodes, id_mapping, cascade_labeling = aggregate_data(ided_signals)
-        gs, results, As, P_dict = get_graphs(cascade, no_nodes, id_mapping)
-        graph_feature = graph_features(gs)
-        market_feature = features_engineer(processed_signals)
-        combine_feature = combine_features(market_feature, graph_feature)
-        gs_ls.append(gs)
-        features_ls.append(combine_feature)
-        market_features_ls.append(market_feature)
-        P_dicts_ls.append(P_dict)
-
-    label_mapping_ls = []
-    label_mapping_ls.append(read_labeling_csv_back_to_dict("train"))
-    label_mapping_ls.append(read_labeling_csv_back_to_dict("test"))
-    label_mapping_ls.append(read_labeling_csv_back_to_dict("valid"))
-
-    if options == "DDINA":
-        train_data = prepare_data(gs_ls[0], features_ls[0], label_mapping_ls[0])
-        test_data = prepare_data(gs_ls[1], features_ls[1], label_mapping_ls[1])
-        validate_data = prepare_data(gs_ls[2], features_ls[2], label_mapping_ls[2])
-
-    elif options == "COSS":
-        train_data = prepare_cos_data(
-            gs_ls[0], market_features_ls[0], label_mapping_ls[0]
-        )
-        test_data = prepare_cos_data(
-            gs_ls[1], market_features_ls[1], label_mapping_ls[1]
-        )
-        validate_data = prepare_cos_data(
-            gs_ls[2], market_features_ls[2], label_mapping_ls[2]
-        )
-
-    elif options == "DDM":
-        train_data = prepare_ddm_data(
-            gs_ls[0], market_features_ls[0], label_mapping_ls[0], P_dicts_ls[0]
-        )
-        test_data = prepare_ddm_data(
-            gs_ls[1], market_features_ls[1], label_mapping_ls[1], P_dicts_ls[1]
-        )
-        validate_data = prepare_ddm_data(
-            gs_ls[2], market_features_ls[2], label_mapping_ls[2], P_dicts_ls[2]
-        )
-
-    return train_data, test_data, validate_data
-
-
-def get_data_pickle(options: str):
-
+def get_split_data_pickle(options: str):
+    """
+    Load the data for temporal tasks using the pickle file
+    """
     if options == "DDINA":
         with open(path.join(PROJECT_ROOT, "data", "DDINA_data.pkl"), "rb") as file:
             data = pickle.load(file)
@@ -683,7 +500,9 @@ def get_data_pickle(options: str):
 
 
 def get_train_test_validate_data_pickle(options: str):
-
+    """
+    Load the non-temporal data using the pickle file
+    """
     if options == "DDINA":
         with open(path.join(PROJECT_ROOT, "data", "DDINA_data_T.pkl"), "rb") as file:
             data = pickle.load(file)
@@ -704,7 +523,9 @@ def get_train_test_validate_data_pickle(options: str):
 
 
 def get_train_test_validate_data(options: str):
-
+    """
+    Split the data into non-temporal tasks
+    """
     if options == "DDINA":
         data = split_data_noloader("DDINA")
 
@@ -737,36 +558,11 @@ def get_train_test_validate_data(options: str):
 
 
 if __name__ == "__main__":
-    # a,b,c = get_data_loader("DDINA")
-    # aa,bb,cc = get_data_loader("COSS")
-    # aaa,bbb,ccc = get_data_loader("DDM")
-    # save the data
+
     a = split_data("DDINA")
-    # b = split_data("COSS")
-    # c = split_data("DDM")
-    # with open(path.join(PROJECT_ROOT, "data", "DDINA_data.pkl"), "wb") as file:
-    #     pickle.dump(a, file)
-    # with open(path.join(PROJECT_ROOT, "data", "COSS_data.pkl"), "wb") as file:
-    #     pickle.dump(b, file)
-    # with open(path.join(PROJECT_ROOT, "data", "DDM_data.pkl"), "wb") as file:
-    #     pickle.dump(c, file)
-    # a,b,c, = split_data_noloader("DDINA")
+    b = split_data("COSS")
+    c = split_data("DDM")
 
-    # aa, bb, cc =split_data_noloader("DDM")
-
-    # aaa,bbb,ccc = split_data_noloader("COSS")
-
-    # a = get_train_test_validate_data("DDINA")
-    # with open(path.join(PROJECT_ROOT, "data", "DDINA_data_T.pkl"), "wb") as file:
-    #     pickle.dump(a, file)
-    # b = get_train_test_validate_data("COSS")
-    # with open(path.join(PROJECT_ROOT, "data", "COSS_data_T.pkl"), "wb") as file:
-    #     pickle.dump(b, file)
-    # c = get_train_test_validate_data("DDM")
-    # with open(path.join(PROJECT_ROOT, "data", "DDM_data_T.pkl"), "wb") as file:
-    #     pickle.dump(c, file)
-    # all = get_all_range_data("DDINA")
-
-    # dina = split_data("DDINA")
-    # cos = split_data("COSS")
-    # ddm = split_data("DDM")
+    a = get_train_test_validate_data("DDINA")
+    b = get_train_test_validate_data("COSS")
+    c = get_train_test_validate_data("DDM")

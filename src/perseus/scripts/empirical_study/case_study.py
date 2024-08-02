@@ -1,8 +1,13 @@
+"""
+This function is used to create a case study for the empirical study. It is used to demonstrate how to use the trained model to make predictions on a single cascade.
+"""
+
 from os import path
 import torch
+from torch_geometric.data import Data
 from torch_geometric.nn import GATConv
 import torch.nn.functional as F
-from perseus.model.magamaga import combine_features, graph_features
+from perseus.dataset.dataset_preparation import combine_features, graph_features
 from perseus.dataset.preprocess.groudtruth_labeling import (
     read_labeling_csv_back_to_dict,
 )
@@ -18,11 +23,9 @@ from perseus.dataset.preprocess.train_test_validate import (
     get_test_scored_signals,
 )
 from perseus.settings import PROJECT_ROOT
-from torch_geometric.data import Data
 
 
 train_signals = get_train_scored_signals()
-
 processed_signals = process_dataframe(train_signals)
 ided_signals = assign_event_ids(processed_signals)
 cascade, no_nodes, id_mapping, cascade_labeling = aggregate_data(ided_signals)
@@ -30,16 +33,14 @@ gs, results, As, P_dict = get_graphs(cascade, no_nodes, id_mapping)
 graph_feature = graph_features(gs)
 market_feature = features_engineer(processed_signals)
 combine_feature = combine_features(market_feature, graph_feature)
-
-
 label_mapping = read_labeling_csv_back_to_dict("train")
 
-for k in gs.keys():
+for k, v in gs.items():
     try:
 
         features_buffer = combine_feature[k]
         features_buffer = features_buffer[
-            features_buffer["telegram_chat_id"].isin(gs[k].nodes)
+            features_buffer["telegram_chat_id"].isin(v.nodes)
         ]
 
         # Specify feature columns and normalize them
@@ -70,7 +71,7 @@ for k in gs.keys():
 
         # Create edge index
         edge_index = []
-        for source_node, target_node in gs[k].edges():
+        for source_node, target_node in v.edges():
             source = id_to_index[source_node]
             target = id_to_index[target_node]
             edge_index.append([source, target])

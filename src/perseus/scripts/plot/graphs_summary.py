@@ -5,7 +5,7 @@ This script is used to plot the number of nodes and edges in the graphs for the 
 from os import path
 import numpy as np
 import matplotlib.pyplot as plt
-from perseus.model.magamaga import split_data_noloader
+from perseus.dataset.dataset_preparation import split_data_noloader
 from perseus.settings import PROJECT_ROOT
 
 

@@ -8,7 +8,7 @@ import networkx as nx
 
 # Updated function to include font size for edge weights
 def draw_custom_edge_labels(
-    G, pos, edge_weights, offset_factor=0.1, weight_font_size=12
+    G: dict, pos, edge_weights, offset_factor=0.1, weight_font_size=12
 ):
     """
     Draw edge labels with a custom offset from the edge midpoint

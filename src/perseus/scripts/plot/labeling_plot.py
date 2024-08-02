@@ -7,6 +7,9 @@ import pandas as pd
 import networkx as nx
 from networkx.algorithms.community import louvain_communities
 import matplotlib.pyplot as plt
+from perseus.dataset.preprocess.groudtruth_labeling import (
+    read_labeling_csv_back_to_dict,
+)
 from perseus.dataset.preprocess.process import (
     aggregate_data,
     assign_event_ids,
@@ -19,7 +22,7 @@ from perseus.dataset.preprocess.train_test_validate import (
     get_train_scored_signals,
     get_valid_scored_signals,
 )
-from perseus.model.magamaga import combine_features, graph_features
+from perseus.dataset.dataset_preparation import combine_features, graph_features
 from perseus.settings import PROJECT_ROOT
 
 
@@ -49,11 +52,12 @@ def draw_graph_with_communities(
     key: str,
     communities_dict: dict,
     id_to_username: dict,
-    node_size=500,
+    labels: dict,
+    base_node_size=500,
     font_size=8,
 ):
     """
-    This function draws the graph with communities using the Louvain method.
+    Draw the graph with communities and labels.
     """
     G = gs[key]  # Retrieve the graph for the given key
     communities = communities_dict[key]  # Retrieve the communities for this graph
@@ -67,12 +71,18 @@ def draw_graph_with_communities(
     # Assign a unique color for each community
     colors = [node_to_community[node] for node in G.nodes()]
 
+    # Map node sizes based on labels
+    node_sizes = [
+        base_node_size
+        * (1.5 if labels.get(id_to_username.get(node, None), 0) == 1 else 1)
+        for node in G.nodes()
+    ]
+
     # Define the plot size (larger)
-    plt.figure(figsize=(12, 12))  # Increase this to give more room
+    plt.figure(figsize=(12, 12))
 
     # Draw the graph
     pos = nx.circular_layout(G)  # Change layout to kamada_kawai layout
-    # pos = nx.spring_layout(G, k=0.5)  # Change layout to spring layout with more space between nodes
     labels = {
         node: id_to_username[node] if node in id_to_username else str(node)
         for node in G.nodes()
@@ -85,7 +95,7 @@ def draw_graph_with_communities(
         with_labels=True,
         labels=labels,
         cmap=plt.cm.tab20,
-        node_size=node_size,
+        node_size=node_sizes,
         font_size=font_size,
     )
 
@@ -107,8 +117,8 @@ if __name__ == "__main__":
     communities_dict = community_detection_weighted(P_dict)
     # Assume id_to_username is available here
 
-    a = pd.read_csv(path.join(PROJECT_ROOT, "data", "telegram_id.csv"))
-    id_to_username = dict(zip(a.telegram_chat_id, a.username))
+    telegram_id = pd.read_csv(path.join(PROJECT_ROOT, "data", "telegram_id.csv"))
+    id_to_username = dict(zip(telegram_id.telegram_chat_id, telegram_id.username))
 
     # Replacing the first element of each tuple in each sublist with the corresponding username
     cascade_labeling["ACA"] = [
@@ -121,5 +131,9 @@ if __name__ == "__main__":
         for sublist in cascade_labeling["ACA"]
     ]
 
-    draw_graph_with_communities(gs, "ACA", communities_dict, id_to_username)
+    # draw_graph_with_communities(gs, "ACA", communities_dict, id_to_username)
     # draw("ACA", gs, communities_dict, id_to_username)
+
+    labels = read_labeling_csv_back_to_dict("train")
+    # labels = {id_to_username[k]: v for k, v in labels.items()}  # Convert to username-based keys if needed
+    draw_graph_with_communities(gs, "ACA", communities_dict, id_to_username, labels)

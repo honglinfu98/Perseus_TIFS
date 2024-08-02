@@ -11,6 +11,144 @@ from perseus.dataset.preprocess.train_test_validate import get_test_scored_signa
 from perseus.dataset.preprocess.DANI import DANI
 
 
+def calculate_effsize_efficiency(G, ego):
+    """
+    This function is used to calculate the effective size and efficiency of a node in a graph
+    """
+    # Get the ego network
+    ego_net = nx.ego_graph(G, ego, undirected=False)
+
+    # Get alters in the ego network (excluding ego)
+    alters = set(ego_net.nodes()) - {ego}
+    num_alters = len(alters)
+    avg_degree = 0  # Default to 0
+    if num_alters > 0:
+        avg_degree = (
+            sum(
+                ego_net.degree(n) - (1 if ego_net.has_edge(n, ego) else 0)
+                for n in alters
+            )
+            / num_alters
+        )
+
+    # Calculate effective size
+    eff_size = num_alters - avg_degree
+
+    # Calculate efficiency
+    efficiency = eff_size / num_alters if num_alters > 0 else 0
+
+    return eff_size, efficiency
+
+
+def out_ego_graph(G, node, radius=1):
+    """
+    Extract the out-ego network of a specified node in a directed graph.
+    """
+    # Extract the out-ego network
+    out_ego = nx.ego_graph(G, node, radius=radius)
+    return out_ego
+
+
+def in_ego_graph(G, node, radius=1):
+    """
+    Extract the in-ego network of a specified node in a directed graph.
+    """
+    # Reverse the graph
+    G_reverse = G.reverse(copy=True)
+    # Extract the in-ego network
+    in_ego = nx.ego_graph(G_reverse, node, radius=radius)
+    return in_ego
+
+
+def graph_features(gs: dict):
+    """
+    This function is used to extract graph features from the graph
+    """
+    dfs = {}
+
+    # Looping through each key in the scores dictionary
+    for key in gs.keys():
+        # Creating lists to store node_ids, in-ego ratios, and out-ego ratios
+        node_ids = []
+        in_ratios = []
+        out_ratios = []
+        out_nodes = []
+        eff_sizes = []
+        efficiencies = []
+        density = []
+        clustering_coeffs = []
+
+        for i in gs[key].nodes():
+            node_id = i
+            node_ids.append(node_id)
+
+            # Calculating the in-ego ratio
+            inn = len(in_ego_graph(gs[key], node_id).nodes) / len(gs[key])
+            in_ratios.append(inn)
+
+            # Calculating the out-ego ratio
+            outt = len(out_ego_graph(gs[key], node_id).nodes) / len(gs[key])
+            out_ratios.append(outt)
+
+            out_nodes.append(len(out_ego_graph(gs[key], node_id).nodes))
+
+            # Calculate the density of the ego network
+            den = nx.density(out_ego_graph(gs[key], node_id))
+            density.append(den)
+
+            eff_size, efficiency = calculate_effsize_efficiency(gs[key], node_id)
+            eff_sizes.append(eff_size)
+            efficiencies.append(efficiency)
+            # Calculate clustering coefficient for the node
+            clustering_coeff = nx.clustering(gs[key], node_id)
+            clustering_coeffs.append(clustering_coeff)
+
+        # Creating a DataFrame for each key and storing it in the dfs dictionary
+        dfs[key] = pd.DataFrame(
+            {
+                "telegram_chat_id": node_ids,
+                "in_ratio": in_ratios,
+                "out_ratio": out_ratios,
+                "out_nodes": out_nodes,
+                "eff_size": eff_sizes,
+                "efficiency": efficiencies,
+                "density": density,
+                "clustering_coeff": clustering_coeffs,
+            }
+        )
+
+    return dfs
+
+
+def combine_features(market_features: dict, graph_features: dict):
+    """
+    This function is used to combine the market and graph features
+    """
+    combined_data = {}
+
+    for key in market_features.keys():
+        # Check if the key exists in dfs and 'telegram_chat_id' exists in both DataFrames
+        if (
+            key in graph_features
+            and "telegram_chat_id" in market_features[key].columns
+            and "telegram_chat_id" in graph_features[key].columns
+        ):
+            # Perform an inner join on 'telegram_chat_id'
+            combined_df = pd.merge(
+                market_features[key],
+                graph_features[key],
+                on="telegram_chat_id",
+                how="inner",
+            )
+        else:
+            # If key is not in dfs or 'telegram_chat_id' is missing in either DataFrame, use an empty DataFrame
+            combined_df = pd.DataFrame()
+
+        combined_data[key] = combined_df
+
+    return combined_data
+
+
 def relabel_edges(d: dict, mapping: dict):
     """
     Function to relabel edges based on new_to_id mapping
@@ -269,7 +407,7 @@ def get_graphs(cascade: dict, no_nodes: dict, id_mapping: dict):
         )
         graphs[key] = nx.relabel_nodes(graphs[key], id_mapping[key]["new_to_id"])
 
-        # Loop over each key in P_dict and apply the mapping
+    # Loop over each key in P_dict and apply the mapping
     for key in P_dict:
         if key in id_mapping:
             # Extract new_to_id mapping for the current key
@@ -290,3 +428,6 @@ if __name__ == "__main__":
     gs, results, As, P_dict = get_graphs(
         cascade_buffer, no_nodes_buffer, id_mapping_buffer
     )
+    graph_feature = graph_features(gs)
+    market_feature = features_engineer(processed_signals)
+    combine_feature = combine_features(market_feature, graph_feature)

@@ -1,3 +1,7 @@
+"""
+This script is used to tune the parameters on the models and datasets. It is used to run the experiments for the empirical study and evaluate the performance of the models on the test set.
+"""
+
 from os import path
 import time
 import pickle
@@ -19,7 +23,7 @@ from sklearn.metrics import (
     confusion_matrix,
 )
 from perseus.settings import PROJECT_ROOT
-from perseus.model.magamaga import get_data_pickle, split_data
+from perseus.dataset.dataset_preparation import get_split_data_pickle, split_data
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -111,6 +115,9 @@ def calculate_f1_score(labels, preds):
 #     return accuracy, precision, recall, f1
 @torch.no_grad()
 def compute_metrics(model, loader):
+    """
+    Compute the evaluation metrics for the model on the given
+    """
     model.eval()
     all_probs, all_labels = [], []
     for data in loader:
@@ -167,6 +174,9 @@ models = [
 
 
 def run_experiments():
+    """
+    Run experiments for all models on all datasets with different
+    """
     learning_rates = [1e-5, 5e-5, 1e-4, 5e-4]
     hidden_channels_list = [8, 16, 32, 64]
     num_layers_options = [2, 3, 4, 5]
@@ -174,7 +184,7 @@ def run_experiments():
     results = []
 
     for dataset_name in datasets:
-        train_loader, test_loader, _ = get_data_pickle(dataset_name)
+        train_loader, test_loader, _ = get_split_data_pickle(dataset_name)
         dataset_results = {}  # Dictionary for storing results per dataset
 
         for model_name in models:
@@ -219,6 +229,9 @@ def run_experiments():
 
 
 def run_experiment(model, train_loader, test_loader, optimizer, num_epochs=100):
+    """
+    Custom training loop for the model on the given dataset.
+    """
     model = model.to(device)
     loss_op = torch.nn.BCEWithLogitsLoss()
     train_times = []
@@ -267,47 +280,11 @@ def run_experiment(model, train_loader, test_loader, optimizer, num_epochs=100):
     return model, fpr_dict, tpr_dict, thresholds_dict, train_times
 
 
-# Function to create ROC plots for a single dataset
-def create_roc_plots_for_dataset(dataset_results, dataset_name):
-    # Create separate figures for each model
-    for model in models:
-        fig, axes = plt.subplots(
-            len(learning_rates),
-            len(hidden_channels_list),
-            figsize=(20, 15),
-            sharex=True,
-            sharey=True,
-        )
-        fig.suptitle(f"ROC Curves for {dataset_name} - {model}")
-
-        for i, lr in enumerate(learning_rates):
-            for j, h in enumerate(hidden_channels_list):
-                for layers in num_layers_options:
-                    model_name = f"{model}_lr{lr}_h{h}_layers{layers}"
-                    if model_name in dataset_results:
-                        # Only plot for label 1
-                        if (
-                            1 in dataset_results[model_name]["fpr"]
-                            and 1 in dataset_results[model_name]["tpr"]
-                        ):
-                            fpr = dataset_results[model_name]["fpr"][1]
-                            tpr = dataset_results[model_name]["tpr"][1]
-                            axes[i, j].plot(fpr, tpr, label=f"Layers {layers}")
-                            axes[i, j].set_title(f"LR={lr}, Hidden={h}")
-
-        # Add legends, labels, and adjust layout for each model's figure
-        for ax in axes.flat:
-            ax.label_outer()  # Hide x labels and tick labels for top plots and y ticks for right plots.
-            ax.set_xlabel("False Positive Rate")
-            ax.set_ylabel("True Positive Rate")
-            ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
-
-        plt.subplots_adjust(hspace=0.3, wspace=0.3, right=0.8)
-        plt.show()
-
-
 # Function to calculate AUC for each model configuration
 def calculate_auc_for_models(dataset_results):
+    """
+    Calculate AUC for each model configuration in the dataset results.
+    """
     auc_results = {}
     for model in models:
         for lr in learning_rates:
@@ -328,6 +305,9 @@ def calculate_auc_for_models(dataset_results):
 
 # Function to print sorted AUC results
 def print_sorted_auc_results(dataset_name, auc_results):
+    """
+    Print the sorted AUC results for the given dataset.
+    """
     print(f"Sorted AUC Results for {dataset_name}:")
     sorted_auc = sorted(auc_results.items(), key=lambda item: item[1], reverse=True)
     for model_name, auc_score in sorted_auc:
@@ -336,6 +316,9 @@ def print_sorted_auc_results(dataset_name, auc_results):
 
 # Function to convert AUC results dictionary into a DataFrame
 def convert_to_df(auc_results):
+    """
+    Convert the AUC results dictionary into a DataFrame.
+    """
     data = []
     for model_name, auc_score in auc_results.items():
         parts = model_name.split("_")
@@ -405,77 +388,76 @@ if __name__ == "__main__":
         "Layers": 2,
     }
 
+    # Your existing setup
+    fig, axes = plt.subplots(1, 3, figsize=(35, 10), sharey=True)
+    norm = plt.Normalize(global_min_auc, global_max_auc)
+    cmap = "YlGnBu"
 
-# Your existing setup
-fig, axes = plt.subplots(1, 3, figsize=(35, 10), sharey=True)
-norm = plt.Normalize(global_min_auc, global_max_auc)
-cmap = "YlGnBu"
-
-captions = [
-    "(a) AUC Scores for Directed DANI",
-    "(b) AUC Scores for Weighted DANI",
-    "(c) AUC Scores for Cosine Similarity",
-]
-
-# Mapping and formatting for each subplot
-for i, (df, title) in enumerate(zip(dfs, titles)):
-    df["Model"] = df["Model"].map(model_mapping)
-    df["Model"] = pd.Categorical(
-        df["Model"], categories=["GCN", "GraphSAGE", "GAT"], ordered=True
-    )
-    pivot_table = df.pivot_table(
-        index=["Model", "Learning Rate"],
-        columns=["Hidden Channels", "Layers"],
-        values="AUC Score",
-    )
-    formatted_columns = [
-        f"({hidden}, {layer})" for hidden, layer in pivot_table.columns
+    captions = [
+        "(a) AUC Scores for Directed DANI",
+        "(b) AUC Scores for Weighted DANI",
+        "(c) AUC Scores for Cosine Similarity",
     ]
-    pivot_table.columns = formatted_columns
 
-    ax = axes[i]
-    sns.heatmap(
-        pivot_table, annot=False, fmt=".2f", cmap=cmap, norm=norm, ax=ax, cbar=False
+    # Mapping and formatting for each subplot
+    for i, (df, title) in enumerate(zip(dfs, titles)):
+        df["Model"] = df["Model"].map(model_mapping)
+        df["Model"] = pd.Categorical(
+            df["Model"], categories=["GCN", "GraphSAGE", "GAT"], ordered=True
+        )
+        pivot_table = df.pivot_table(
+            index=["Model", "Learning Rate"],
+            columns=["Hidden Channels", "Layers"],
+            values="AUC Score",
+        )
+        formatted_columns = [
+            f"({hidden}, {layer})" for hidden, layer in pivot_table.columns
+        ]
+        pivot_table.columns = formatted_columns
+
+        ax = axes[i]
+        sns.heatmap(
+            pivot_table, annot=False, fmt=".2f", cmap=cmap, norm=norm, ax=ax, cbar=False
+        )
+        ax.set_xlabel("Hidden Channels - Layers", fontsize=label_fontsize)
+        ax.tick_params(axis="both", which="major", labelsize=tick_fontsize)
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
+        if i == 0:
+            ax.set_ylabel("Model - Learning Rate", fontsize=label_fontsize)
+        else:
+            ax.set_ylabel("")  # Remove the y-axis label for the second and third plots
+        ax.set_yticklabels(
+            [f"{model}-{lr:.0e}" for model, lr in pivot_table.index],
+            fontsize=tick_fontsize,
+        )
+
+        # Add specific highlights and annotations
+        if title == "Directed DANI":
+            num_rows = pivot_table.shape[0]
+            row = num_rows - 2  # Second last row
+            col = 0  # First column
+            ax.plot([col, col + 1], [row, row + 1], color="red", lw=3)
+            ax.plot([col, col + 1], [row + 1, row], color="red", lw=3)
+
+        ax.text(
+            0.5,
+            -0.25,
+            captions[i],
+            ha="center",
+            va="center",
+            transform=ax.transAxes,
+            fontsize=label_fontsize,
+        )
+
+    # Color bar and saving
+    cbar_ax = fig.add_axes([0.93, 0.15, 0.02, 0.7])
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    fig.colorbar(sm, cax=cbar_ax)
+    plt.subplots_adjust(left=0.05, right=0.9, top=0.95, bottom=0.05)
+    plt.savefig(
+        path.join(PROJECT_ROOT, "data", "auc_scores_combined.pdf"), bbox_inches="tight"
     )
-    ax.set_xlabel("Hidden Channels - Layers", fontsize=label_fontsize)
-    ax.tick_params(axis="both", which="major", labelsize=tick_fontsize)
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
-    if i == 0:
-        ax.set_ylabel("Model - Learning Rate", fontsize=label_fontsize)
-    else:
-        ax.set_ylabel("")  # Remove the y-axis label for the second and third plots
-    ax.set_yticklabels(
-        [f"{model}-{lr:.0e}" for model, lr in pivot_table.index],
-        fontsize=tick_fontsize,
-    )
-
-    # Add specific highlights and annotations
-    if title == "Directed DANI":
-        num_rows = pivot_table.shape[0]
-        row = num_rows - 2  # Second last row
-        col = 0  # First column
-        ax.plot([col, col + 1], [row, row + 1], color="red", lw=3)
-        ax.plot([col, col + 1], [row + 1, row], color="red", lw=3)
-
-    ax.text(
-        0.5,
-        -0.25,
-        captions[i],
-        ha="center",
-        va="center",
-        transform=ax.transAxes,
-        fontsize=label_fontsize,
-    )
-
-# Color bar and saving
-cbar_ax = fig.add_axes([0.93, 0.15, 0.02, 0.7])
-sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-sm.set_array([])
-fig.colorbar(sm, cax=cbar_ax)
-plt.subplots_adjust(left=0.05, right=0.9, top=0.95, bottom=0.05)
-plt.savefig(
-    path.join(PROJECT_ROOT, "data", "auc_scores_combined.pdf"), bbox_inches="tight"
-)
-plt.show()
-plt.close(fig)
-print("Combined plot saved successfully.")
+    plt.show()
+    plt.close(fig)
+    print("Combined plot saved successfully.")
