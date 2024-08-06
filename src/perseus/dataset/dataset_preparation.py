@@ -130,17 +130,7 @@ def prepare_ddm_data(graphs: dict, features: dict, label_mapping: dict, P_dict: 
             features_buffer["telegram_chat_id"].isin(graph.nodes)
         ]
         # Specify feature columns and normalize them
-        feature_columns = [
-            "average_increase_percentage",
-            "number_of_signals",
-            # "average_speed",
-            # "sum_targets_achieved",
-            # "rating",
-            # "in_ratio",
-            # "out_ratio",
-            # "eff_size",
-            # "efficiency",
-        ]
+        feature_columns = ["average_increase_percentage", "number_of_signals"]
         features_to_process = features_buffer[feature_columns]
         normalized_features = (
             features_to_process - features_to_process.mean()

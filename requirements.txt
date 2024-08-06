@@ -1,7 +1,10 @@
 torch
 torchvision
 torch-geometric
-pygod
+pickle
+pandas
+scikit-learn
+networkx
 scipy>=1.6.0
 python-coinmarketcap
 coverage==7.5.1

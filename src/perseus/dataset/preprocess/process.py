@@ -331,7 +331,7 @@ def aggregate_data(df: pd.DataFrame):
 
 def features_engineer(df: pd.DataFrame):
     """
-    This function is used to engineer features for the signals
+    This function is used to engineer market features for the signals
     """
     grouped_data = (
         df.groupby(["commodity", "telegram_chat_id"])

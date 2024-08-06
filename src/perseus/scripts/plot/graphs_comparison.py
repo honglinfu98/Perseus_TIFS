@@ -1,31 +1,25 @@
-"""
-This script generates the three graphs used in the paper
-"""
-
+from os import path
 import matplotlib.pyplot as plt
 import networkx as nx
+from perseus.settings import PROJECT_ROOT
 
 
-# Updated function to include font size for edge weights
-def draw_custom_edge_labels(
-    G: dict, pos, edge_weights, offset_factor=0.1, weight_font_size=12
-):
+# Function to draw custom edge labels
+def draw_custom_edge_labels(G, pos, offset_factor=0.1, weight_font_size=12):
     """
     Draw edge labels with a custom offset from the edge midpoint
     """
-    for (u, v), weight in edge_weights.items():
+    for u, v, data in G.edges(data=True):
+        weight = data["weight"]
         x_midpoint, y_midpoint = (pos[u][0] + pos[v][0]) / 2, (
             pos[u][1] + pos[v][1]
         ) / 2
         dx, dy = pos[v][0] - pos[u][0], pos[v][1] - pos[u][1]
         norm = (dx**2 + dy**2) ** 0.5
-        if norm == 0:  # Avoid division by zero
+        if norm == 0:
             norm = 1
-        dx, dy = dx / norm, dy / norm  # Normalize
-        offset_x, offset_y = (
-            dy * offset_factor,
-            -dx * offset_factor,
-        )  # Perpendicular offset
+        dx, dy = dx / norm, dy / norm
+        offset_x, offset_y = dy * offset_factor, -dx * offset_factor
 
         plt.text(
             x_midpoint + offset_x,
@@ -34,123 +28,109 @@ def draw_custom_edge_labels(
             horizontalalignment="center",
             verticalalignment="center",
             fontsize=weight_font_size,
-            color="blue",
-        )  # Use the passed font size
-        reverse_weight = edge_weights.get((v, u), "")
-        if reverse_weight:
-            plt.text(
-                x_midpoint - offset_x,
-                y_midpoint - offset_y,
-                str(reverse_weight),
-                horizontalalignment="center",
-                verticalalignment="center",
-                fontsize=weight_font_size,
-                color="red",
-            )  # Use the passed font size
+            color="blue" if G.has_edge(v, u) else "red",
+        )
 
 
 if __name__ == "__main__":
-    # Settings
+
+    pos = {"m": (0, 0), "n1": (0.5, 0.86), "n2": (1, 0), "n3": (0.5, -0.86)}
     node_color = "lightblue"
-    node_size = 6000
-    mastermind_size = 8000
-    edge_width = 60
-    arrow_size = 60
-    font_size = 60
-    weight_font_size = 20  # Define a variable for weight font size for easy adjustment
+    node_size = 1200
+    font_size = 25
+    weight_font_size = 30
 
-    # Define positions for nodes
-    pos = {"m": (0, 0), "p1": (0.5, 0.86), "p2": (1, 0), "p3": (0.5, -0.86)}
-
-    # GRAPH 1: Dominant DANI (No title)
+    # Initialize directed graph G1
     G1 = nx.DiGraph()
-    G1.add_edges_from([("m", "p1"), ("p1", "p2"), ("p2", "p3")])
+    edge_1 = [("m", "n1", 1), ("n1", "n2", 1), ("n2", "n3", 1)]
+    for u, v, _ in edge_1:
+        G1.add_edge(u, v)
+
+    # Plotting
     plt.figure(figsize=(8, 6))
-    nx.draw(
-        G1,
-        pos,
-        with_labels=True,
-        node_color=node_color,
-        node_size=[mastermind_size if node == "m" else node_size for node in G1],
-        arrowsize=arrow_size,
-        font_size=font_size,
-        edge_color="gray",
+    nx.draw_networkx_edges(
+        G1, pos, edge_color="gray", arrowstyle="-|>", arrows=True, arrowsize=40
     )
+    nx.draw_networkx_nodes(G1, pos, node_color=node_color, node_size=node_size)
+    nx.draw_networkx_labels(
+        G1, pos, font_size=font_size, font_color="black"
+    )  # Add labels to the nodes
     plt.axis("off")
     plt.tight_layout()
     plt.savefig("graph1.pdf", format="pdf")
-
     plt.show()
     plt.close()
 
-    # GRAPH 2: Cosine Matrix (No title)
-    G2 = nx.DiGraph()
+    # Initialize Graph G2
+    G2 = nx.MultiDiGraph()
     edges_2 = [
-        ("m", "p1", 0.5),
-        ("p1", "m", 0.5),
-        ("m", "p2", 0.8),
-        ("p2", "m", 0.8),
-        ("m", "p3", 0.6),
-        ("p3", "m", 0.6),
-        ("p1", "p2", 0.7),
-        ("p2", "p1", 0.7),
-        ("p1", "p3", 0.9),
-        ("p3", "p1", 0.9),
-        ("p2", "p3", 0.4),
-        ("p3", "p2", 0.4),
+        ("m", "n1", 0.5),
+        ("n1", "m", 0.5),
+        ("m", "n2", 0.8),
+        ("n2", "m", 0.8),
+        ("m", "n3", 0.6),
+        ("n3", "m", 0.6),
+        ("n1", "n2", 0.7),
+        ("n2", "n1", 0.7),
+        ("n1", "n3", 0.9),
+        ("n3", "n1", 0.9),
+        ("n2", "n3", 0.4),
+        ("n3", "n2", 0.4),
     ]
-    G2.add_weighted_edges_from(edges_2)
+    for u, v, w in edges_2:
+        G2.add_edge(u, v, weight=w)
+
+    # Plot settings for G2
     plt.figure(figsize=(8, 6))
-    nx.draw(
+    nx.draw_networkx_edges(
         G2,
         pos,
-        with_labels=True,
-        node_color=node_color,
-        node_size=[mastermind_size if node == "m" else node_size for node in G2],
-        arrowsize=arrow_size,
-        font_size=font_size,
         edge_color="gray",
+        arrowstyle="-|>",
+        arrows=True,
+        arrowsize=40,
+        connectionstyle="arc3,rad=0.1",
     )
-    edge_weights_2 = nx.get_edge_attributes(G2, "weight")
+    nx.draw_networkx_nodes(G2, pos, node_color=node_color, node_size=node_size)
+    nx.draw_networkx_labels(G2, pos, font_size=font_size, font_color="black")
     draw_custom_edge_labels(
-        G2, pos, edge_weights_2, offset_factor=0.2, weight_font_size=weight_font_size
+        G2, pos, offset_factor=0.1, weight_font_size=weight_font_size
     )
     plt.axis("off")
     plt.tight_layout()
     plt.savefig("graph2.pdf", format="pdf")
-
     plt.show()
     plt.close()
 
-    # GRAPH 3: DANI Diffusion (No title)
-    G3 = nx.DiGraph()
+    G3 = nx.MultiDiGraph()
     edges_3 = [
-        ("m", "p1", 1.0),
-        ("p1", "m", 0.8),
-        ("p1", "p2", 0.8),
-        ("p2", "p1", 0.6),
-        ("p2", "p3", 0.6),
-        ("p3", "p2", 0.4),
+        ("m", "n1", 1.0),
+        ("n1", "m", 0.8),
+        ("n1", "n2", 0.8),
+        ("n2", "n1", 0.6),
+        ("n2", "n3", 0.6),
+        ("n3", "n2", 0.4),
     ]
-    G3.add_weighted_edges_from(edges_3)
+    for u, v, w in edges_3:
+        G3.add_edge(u, v, weight=w)
+    # Plot settings for G2
     plt.figure(figsize=(8, 6))
-    nx.draw(
+    nx.draw_networkx_edges(
         G3,
         pos,
-        with_labels=True,
-        node_color=node_color,
-        node_size=[mastermind_size if node == "m" else node_size for node in G3],
-        arrowsize=arrow_size,
-        font_size=font_size,
         edge_color="gray",
+        arrowstyle="-|>",
+        arrows=True,
+        arrowsize=40,
+        connectionstyle="arc3,rad=0.1",
     )
-    edge_weights_3 = nx.get_edge_attributes(G3, "weight")
+    nx.draw_networkx_nodes(G3, pos, node_color=node_color, node_size=node_size)
+    nx.draw_networkx_labels(G3, pos, font_size=font_size, font_color="black")
     draw_custom_edge_labels(
-        G3, pos, edge_weights_3, offset_factor=0.2, weight_font_size=weight_font_size
+        G3, pos, offset_factor=0.1, weight_font_size=weight_font_size
     )
     plt.axis("off")
     plt.tight_layout()
     plt.savefig("graph3.pdf", format="pdf")
-
     plt.show()
     plt.close()

@@ -8,7 +8,7 @@ import numpy as np
 import networkx as nx
 
 
-def sort_cascade(cascade: list):
+def sort_cascade(cascade: list) -> list:
     """
     This function is used to sort the cascade based on the infected time
     Return: sorted cascade
@@ -21,7 +21,7 @@ def sort_cascade(cascade: list):
     return [sorted_node_id, sorted_infected_time]
 
 
-def trans_list(cascade_dict: dict):
+def trans_list(cascade_dict: dict) -> list:
     """
     This function is used to transform the cascade from dictionary to list
     Return: cascade in list format
@@ -41,7 +41,7 @@ def trans_list(cascade_dict: dict):
     return cascade
 
 
-def get_index(cascade: list):
+def get_index(cascade: list) -> dict:
     """
     This function is used to get the index of the nodes in the cascade
     Return: index of the nodes in the cascade
@@ -55,7 +55,7 @@ def get_index(cascade: list):
     return CV
 
 
-def DANI(N: int, cascades: list):
+def DANI(N: int, cascades: list) -> tuple:
     """
     This script is used to process the cascades and return the influence graph
     Return: Influence graph, edge list sorted, , P_dict
