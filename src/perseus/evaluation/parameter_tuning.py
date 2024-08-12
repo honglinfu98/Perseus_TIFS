@@ -344,9 +344,9 @@ if __name__ == "__main__":
     with open(path.join(PROJECT_ROOT, "data", "parameter_results.pkl"), "rb") as file:
         results = pickle.load(file)
 
-    title_fontsize = 25
-    label_fontsize = 25
-    tick_fontsize = 20
+    title_fontsize = 35
+    label_fontsize = 35
+    tick_fontsize = 30
 
     datasets_dict = {
         "DDINA": results[0],
@@ -391,7 +391,7 @@ if __name__ == "__main__":
     # Your existing setup
     fig, axes = plt.subplots(1, 3, figsize=(35, 10), sharey=True)
     norm = plt.Normalize(global_min_auc, global_max_auc)
-    cmap = "YlGnBu"
+    cmap = "inferno"
 
     captions = [
         "(a) AUC Scores for Directed DANI",

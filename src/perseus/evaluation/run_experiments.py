@@ -8,6 +8,7 @@ import random
 import pickle
 import torch
 import numpy as np
+from sklearn.manifold import TSNE
 from sklearn.metrics import (
     roc_curve,
     precision_score,
@@ -27,7 +28,7 @@ from perseus.model.gnn_model import GCNNet, Net, GraphSAGENet
 from perseus.settings import PROJECT_ROOT
 
 # Set a seed value
-seed = 724
+seed = 725
 random.seed(seed)
 np.random.seed(seed)
 torch.manual_seed(seed)
@@ -53,7 +54,7 @@ def run_experiment(model, train_loader, test_loader, num_epochs=100):
             for data in train_loader:
                 data = data.to(device)
                 optimizer.zero_grad()
-                output = model(data.x, data.edge_index)
+                output, _ = model(data.x, data.edge_index)
                 loss = loss_op(output, data.y.float())
                 loss.backward()
                 optimizer.step()
@@ -68,16 +69,27 @@ def run_experiment(model, train_loader, test_loader, num_epochs=100):
     @torch.no_grad()
     def test(loader):
         model.eval()
-        all_probs, all_labels = [], []
+        all_probs, all_labels, all_embs = [], [], []
+        batch_times, num_nodes = [], []
         for data in loader:
             data = data.to(device)
-            out = model(data.x, data.edge_index)
+            start_time = time.time()
+            out, embs = model(
+                data.x, data.edge_index
+            )  # Make sure embs are the last layer embeddings
+            batch_time = time.time() - start_time
+            batch_times.append(batch_time)
+
             all_probs.append(out.cpu())
             all_labels.append(data.y.cpu())
-        return all_probs, all_labels
+            all_embs.append(embs.cpu())  # Collect embeddings
+
+        return all_probs, all_labels, all_embs, batch_times, num_nodes
 
     train()
-    probs, labels = test(test_loader)
+    print(len(test(test_loader)))  # Check the number of returned values
+
+    probs, labels, embs, batch_times, num_nodes = test(test_loader)
     probs = torch.cat(probs, dim=0).sigmoid().numpy()
     labels = torch.cat(labels, dim=0).numpy()
 
@@ -87,7 +99,19 @@ def run_experiment(model, train_loader, test_loader, num_epochs=100):
         fpr, tpr, thresholds = roc_curve(labels[:, i], probs[:, i])
         fpr_dict[i], tpr_dict[i], thresholds_dict[i] = fpr, tpr, thresholds
 
-    return model, fpr_dict, tpr_dict, thresholds_dict, train_times
+    all_labels = [torch.cat(test(test_loader)[1])]
+
+    return (
+        model,
+        fpr_dict,
+        tpr_dict,
+        thresholds_dict,
+        train_times,
+        batch_times,
+        num_nodes,
+        embs,
+        all_labels,
+    )
 
 
 # Updated Metrics Calculation Functions
@@ -117,7 +141,7 @@ def compute_metrics(model, loader):
     all_probs, all_labels = [], []
     for data in loader:
         data = data.to(device)
-        out = model(data.x, data.edge_index)
+        out, _ = model(data.x, data.edge_index)
         all_probs.append(out.cpu())
         all_labels.append(data.y.cpu())
     probs = torch.cat(all_probs, dim=0).sigmoid().numpy()
@@ -196,8 +220,8 @@ for dataset in datasets:
             model = GraphSAGENet(num_features, hidden_channels, num_classes)
 
         print(f"Running {model_name} Experiment on {dataset}")
-        m, fpr, tpr, _, train_times = run_experiment(
-            model, train_loader, test_loader, num_epochs=100
+        m, fpr, tpr, _, train_times, batch_times, num_nodes, embs, labels = (
+            run_experiment(model, train_loader, test_loader, num_epochs=100)
         )
         metrics = compute_metrics(model, test_loader)
         # Store results along with training times
@@ -207,6 +231,10 @@ for dataset in datasets:
             "fpr": fpr,
             "tpr": tpr,
             "train_times": train_times,  # Storing the training times
+            "batch_times": batch_times,
+            "num_nodes": num_nodes,
+            "embs": embs,
+            "labels": labels,
         }
 
 
@@ -236,8 +264,8 @@ for dataset in datasets:
             model = GraphSAGENet(num_features, hidden_channels, num_classes)
 
         print(f"Running {model_name} Experiment on {dataset}")
-        m, fpr, tpr, _, train_times = run_experiment(
-            model, train_loader, test_loader, num_epochs=100
+        m, fpr, tpr, _, train_times, batch_times, num_nodes, embs, labels = (
+            run_experiment(model, train_loader, test_loader, num_epochs=100)
         )
         metrics = compute_metrics(model, test_loader)
         # Store results along with training times
@@ -247,6 +275,10 @@ for dataset in datasets:
             "fpr": fpr,
             "tpr": tpr,
             "train_times": train_times,  # Storing the training times
+            "batch_times": batch_times,
+            "num_nodes": num_nodes,
+            "embs": embs,
+            "labels": labels,
         }
 
 with open(path.join(PROJECT_ROOT, "data", "results.pkl"), "wb") as file:
