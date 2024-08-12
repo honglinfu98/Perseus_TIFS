@@ -4,6 +4,7 @@ This script is used to plot the graph with communities. It is used to visualize 
 
 from os import path
 import pandas as pd
+import numpy as np
 import networkx as nx
 from networkx.algorithms.community import louvain_communities
 import matplotlib.pyplot as plt
@@ -53,11 +54,14 @@ def draw_graph_with_communities(
     communities_dict: dict,
     id_to_username: dict,
     labels: dict,
-    base_node_size=500,
-    font_size=8,
+    base_node_size=1200,
+    font_size=40,
+    arrow_size=40,
+    label_distance=0.2,  # Distance of the label from the node center
 ):
     """
-    Draw the graph with communities and labels.
+    Draw the graph with communities and labels with adjustable text layout.
+    Ensuring that labels are not cut off or overlapping.
     """
     G = gs[key]  # Retrieve the graph for the given key
     communities = communities_dict[key]  # Retrieve the communities for this graph
@@ -73,34 +77,54 @@ def draw_graph_with_communities(
 
     # Map node sizes based on labels
     node_sizes = [
-        base_node_size
-        * (1.5 if labels.get(id_to_username.get(node, None), 0) == 1 else 1)
-        for node in G.nodes()
+        base_node_size * (3 if labels.get(node, 0) == 1 else 1) for node in G.nodes()
     ]
 
     # Define the plot size (larger)
-    plt.figure(figsize=(12, 12))
+    plt.figure(figsize=(20, 20))
 
     # Draw the graph
-    pos = nx.circular_layout(G)  # Change layout to kamada_kawai layout
-    labels = {
-        node: id_to_username[node] if node in id_to_username else str(node)
-        for node in G.nodes()
-    }  # Map nodes to usernames
-
+    pos = nx.circular_layout(G)  # Circular layout to avoid overlap as much as possible
     nx.draw(
         G,
         pos,
         node_color=colors,
-        with_labels=True,
-        labels=labels,
         cmap=plt.cm.tab20,
         node_size=node_sizes,
-        font_size=font_size,
+        arrowsize=arrow_size,  # Increased arrow size
     )
 
+    # Adjusting node labels to prevent overlap and ensure visibility
+    label_pos = {}
+    for node, (x, y) in pos.items():
+        angle = np.arctan2(y, x)
+        offset_x = 4 * label_distance * np.cos(angle)
+        offset_y = 3 * label_distance * np.sin(angle)
+        label_pos[node] = (x + offset_x, y + offset_y)
+
+    adjusted_labels = {node: id_to_username.get(node, str(node)) for node in G.nodes()}
+    nx.draw_networkx_labels(
+        G,
+        pos=label_pos,
+        labels=adjusted_labels,
+        font_size=font_size,
+        font_color="black",
+    )
+
+    # Ensure that all labels and elements are within the plot area
+    plt.axis("equal")  # Ensure the aspect ratio does not distort distances
+    plt.xlim(
+        min(pos[x][0] for x in pos) - 1.5, max(pos[x][0] for x in pos) + 1.5
+    )  # Adjust the x limits
+    plt.ylim(
+        min(pos[x][1] for x in pos) - 1.5, max(pos[x][1] for x in pos) + 1.5
+    )  # Adjust the y limits
+
     # Save the graph to a PDF
-    plt.savefig(path.join(PROJECT_ROOT, "data", "embedding.pdf"))
+    plt.tight_layout()  # Adjust layout to prevent cutoff
+    plt.savefig(
+        path.join(PROJECT_ROOT, "data", "community.pdf")
+    )  # Adjust path as necessary
     plt.show()
 
 
@@ -135,5 +159,7 @@ if __name__ == "__main__":
     # draw("ACA", gs, communities_dict, id_to_username)
 
     labels = read_labeling_csv_back_to_dict("train")
-    # labels = {id_to_username[k]: v for k, v in labels.items()}  # Convert to username-based keys if needed
-    draw_graph_with_communities(gs, "ACA", communities_dict, id_to_username, labels)
+    # labels["ACA"] = {id_to_username[k]: v for k, v in labels["ACA"].items()}
+    draw_graph_with_communities(
+        gs, "ACA", communities_dict, id_to_username, labels["ACA"]
+    )

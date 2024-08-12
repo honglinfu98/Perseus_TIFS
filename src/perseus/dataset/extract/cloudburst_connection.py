@@ -81,6 +81,6 @@ def get_volumes(query: str = QUERY_VOLUME):
 
 
 if __name__ == "__main__":
-    volume = get_volumes()
-    with open(path.join(PROJECT_ROOT, "data", "volume.pkl"), "wb") as file:
-        pickle.dump(volume, file)
+    all = get_all_scored_signals()
+    with open(path.join(PROJECT_ROOT, "data", "all_810.pkl"), "wb") as file:
+        pickle.dump(all, file)

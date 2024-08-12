@@ -3,6 +3,7 @@ This script is used to perform statistical analysis on the graph features and pl
 """
 
 from os import path
+import numpy as np
 import pandas as pd
 import networkx as nx
 from scipy import stats
@@ -151,12 +152,12 @@ def plot_distribution(
     label_mapping_ls: dict,
     font_size=10,
     title_size=12,
-    legend_size=10,
+    legend_size=5,
     tick_label_size=10,
     output_dir=path.join(PROJECT_ROOT, "data"),
 ):
     """
-    This funtion is used to plot the distribution of graph features by group
+    This function is used to plot the distribution of graph features by group, including mean and variance in the legend.
     """
     metrics_by_group = {
         "degree_centrality": [[], []],
@@ -193,15 +194,11 @@ def plot_distribution(
                 )
                 metrics_by_group["pagerank"][group].append(pagerank.get(node, 0))
 
-                # Calculate and aggregate additional graph features
-                # Assume in_ego_graph and out_ego_graph are defined elsewhere
                 in_ego = in_ego_graph(graph, node)
                 out_ego = out_ego_graph(graph, node)
                 in_ratio = len(in_ego.nodes) / len(graph.nodes)
                 out_ratio = len(out_ego.nodes) / len(graph.nodes)
-                eff_size, efficiency = calculate_effsize_efficiency(
-                    graph, node
-                )  # Assume defined elsewhere
+                eff_size, efficiency = calculate_effsize_efficiency(graph, node)
                 density = nx.density(out_ego)
                 clustering_coeff = nx.clustering(graph, node)
 
@@ -223,12 +220,24 @@ def plot_distribution(
     plt.rc("legend", fontsize=legend_size)
 
     for metric in metrics_to_plot:
-        fig, ax = plt.subplots(figsize=(5, 4))  # Explicitly creating a figure with axes
-        sns.kdeplot(metrics_by_group[metric][0], ax=ax, label="Mastermind")
-        sns.kdeplot(metrics_by_group[metric][1], ax=ax, label="Non-mastermind")
-        ax.set_title(metric)
+        fig, ax = plt.subplots(figsize=(6, 5))  # Explicitly creating a figure with axes
+        group0 = metrics_by_group[metric][0]
+        group1 = metrics_by_group[metric][1]
+        mean0, var0 = np.mean(group0), np.var(group0)
+        mean1, var1 = np.mean(group1), np.var(group1)
+        sns.kdeplot(
+            group0, ax=ax, label=f"Mastermind:\nMean:{mean0:.2f}, Variance:{var0:.2f}"
+        )
+        sns.kdeplot(
+            group1,
+            ax=ax,
+            label=f"Non-mastermind:\nMean:{mean1:.2f}, Variance:{var1:.2f}",
+        )
+        # ax.set_title(metric)
         ax.set_ylabel("Density")
-        ax.legend(loc="upper right")
+        ax.legend(
+            loc="upper center", bbox_to_anchor=(0.5, -0.25), ncol=1
+        )  # Adjust legend position and ncol for vertical layout
         plt.tight_layout()  # Adjust layout
         plt.savefig(path.join(output_dir, f"distribution_{metric}.pdf"))
         plt.close(fig)  # Close the figure to free memory

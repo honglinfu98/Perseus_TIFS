@@ -11,6 +11,8 @@ Inspired by Perseus’s clever and strategic approach to challenges, this reposi
 ```bash
 python3 -m venv venv
 source venv/bin/activate
+pip install -r requirements.txt
+pip install -r dev-requirements.txt
 pip3 install -e .
 export $(cat .env | xargs)
 ```
@@ -19,7 +21,7 @@ export $(cat .env | xargs)
 
 ```bash
 python -m venv venv
-source venv/bin/activate
+venv\Scripts\activate.bat
 pip install -r requirements.txt
 pip install -r dev-requirements.txt
 pip install -e .
@@ -27,5 +29,20 @@ export $(cat .env | xargs)
 ```
 
 ### For running 
+Download the dataset COSS_data.pkl, DDINA_data.pkl, DDM_data.pkl, test_signals.pkl, train_signals.pkl, validate_signals.pkl.
+
+Run experiments
+
+```
+cd src/perseus/evaluation
+python run_experiments.py
+```
+
+Plot experiments results 
+```
+cd src/perseus/scripts/plot
+python plot_results.py
+```
+
 
 

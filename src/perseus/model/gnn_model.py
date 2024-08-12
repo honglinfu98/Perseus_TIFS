@@ -11,9 +11,9 @@ class GCNNet(torch.nn.Module):
 
     def forward(self, x, edge_index, edge_weight=None):
         x = F.relu(self.conv1(x, edge_index, edge_weight=edge_weight))
-        x = F.dropout(x, training=self.training)
-        x = self.conv2(x, edge_index)
-        return x
+        embeddings = F.dropout(x, training=self.training)
+        x = self.conv2(embeddings, edge_index)
+        return x, embeddings  # Return both output and embeddings
 
 
 class GraphSAGENet(torch.nn.Module):
@@ -24,9 +24,9 @@ class GraphSAGENet(torch.nn.Module):
 
     def forward(self, x, edge_index, edge_weight=None):
         x = F.relu(self.conv1(x, edge_index))
-        x = F.dropout(x, training=self.training)
-        x = self.conv2(x, edge_index)
-        return x
+        embeddings = F.dropout(x, training=self.training)
+        x = self.conv2(embeddings, edge_index)
+        return x, embeddings  # Return both output and embeddings
 
 
 class Net(torch.nn.Module):
@@ -44,7 +44,7 @@ class Net(torch.nn.Module):
             print("NaN or Inf in input feature x")
         if torch.isnan(edge_index).any() or torch.isinf(edge_index).any():
             print("NaN or Inf in edge_index")
-        x = F.elu(self.conv1(x, edge_index) + self.lin1(x))
-        x = F.elu(self.conv2(x, edge_index) + self.lin2(x))
-        x = self.conv3(x, edge_index) + self.lin3(x)
-        return x
+        x1 = F.elu(self.conv1(x, edge_index) + self.lin1(x))
+        embeddings = F.elu(self.conv2(x1, edge_index) + self.lin2(x1))
+        x = self.conv3(embeddings, edge_index) + self.lin3(embeddings)
+        return x, embeddings  # Return both output and embeddings

@@ -5,7 +5,7 @@ from perseus.settings import PROJECT_ROOT
 
 
 # Function to draw custom edge labels
-def draw_custom_edge_labels(G, pos, offset_factor=0.1, weight_font_size=12):
+def draw_custom_edge_labels(G, pos, offset_factor=0.9, weight_font_size=12):
     """
     Draw edge labels with a custom offset from the edge midpoint
     """
@@ -36,9 +36,10 @@ if __name__ == "__main__":
 
     pos = {"m": (0, 0), "n1": (0.5, 0.86), "n2": (1, 0), "n3": (0.5, -0.86)}
     node_color = "lightblue"
-    node_size = 1200
-    font_size = 25
-    weight_font_size = 30
+    node_size = 9500
+    font_size = 80
+    weight_font_size = 60
+    arrow_size = 160
 
     # Initialize directed graph G1
     G1 = nx.DiGraph()
@@ -47,9 +48,9 @@ if __name__ == "__main__":
         G1.add_edge(u, v)
 
     # Plotting
-    plt.figure(figsize=(8, 6))
+    plt.figure(figsize=(10, 10))
     nx.draw_networkx_edges(
-        G1, pos, edge_color="gray", arrowstyle="-|>", arrows=True, arrowsize=40
+        G1, pos, edge_color="gray", arrowstyle="-|>", arrows=True, arrowsize=arrow_size
     )
     nx.draw_networkx_nodes(G1, pos, node_color=node_color, node_size=node_size)
     nx.draw_networkx_labels(
@@ -57,7 +58,7 @@ if __name__ == "__main__":
     )  # Add labels to the nodes
     plt.axis("off")
     plt.tight_layout()
-    plt.savefig("graph1.pdf", format="pdf")
+    plt.savefig(path.join(PROJECT_ROOT, "data", "graph1.pdf"), format="pdf")
     plt.show()
     plt.close()
 
@@ -81,24 +82,24 @@ if __name__ == "__main__":
         G2.add_edge(u, v, weight=w)
 
     # Plot settings for G2
-    plt.figure(figsize=(8, 6))
+    plt.figure(figsize=(10, 10))
     nx.draw_networkx_edges(
         G2,
         pos,
         edge_color="gray",
         arrowstyle="-|>",
         arrows=True,
-        arrowsize=40,
-        connectionstyle="arc3,rad=0.1",
+        arrowsize=arrow_size,
+        connectionstyle="arc3,rad=0.25",
     )
     nx.draw_networkx_nodes(G2, pos, node_color=node_color, node_size=node_size)
     nx.draw_networkx_labels(G2, pos, font_size=font_size, font_color="black")
     draw_custom_edge_labels(
-        G2, pos, offset_factor=0.1, weight_font_size=weight_font_size
+        G2, pos, offset_factor=0.17, weight_font_size=weight_font_size
     )
     plt.axis("off")
     plt.tight_layout()
-    plt.savefig("graph2.pdf", format="pdf")
+    plt.savefig(path.join(PROJECT_ROOT, "data", "graph2.pdf"), format="pdf")
     plt.show()
     plt.close()
 
@@ -114,15 +115,15 @@ if __name__ == "__main__":
     for u, v, w in edges_3:
         G3.add_edge(u, v, weight=w)
     # Plot settings for G2
-    plt.figure(figsize=(8, 6))
+    plt.figure(figsize=(10, 10))
     nx.draw_networkx_edges(
         G3,
         pos,
         edge_color="gray",
         arrowstyle="-|>",
         arrows=True,
-        arrowsize=40,
-        connectionstyle="arc3,rad=0.1",
+        arrowsize=arrow_size,
+        connectionstyle="arc3,rad=0.2",
     )
     nx.draw_networkx_nodes(G3, pos, node_color=node_color, node_size=node_size)
     nx.draw_networkx_labels(G3, pos, font_size=font_size, font_color="black")
@@ -131,6 +132,6 @@ if __name__ == "__main__":
     )
     plt.axis("off")
     plt.tight_layout()
-    plt.savefig("graph3.pdf", format="pdf")
+    plt.savefig(path.join(PROJECT_ROOT, "data", "graph3.pdf"), format="pdf")
     plt.show()
     plt.close()

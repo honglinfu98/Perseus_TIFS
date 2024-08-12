@@ -549,10 +549,10 @@ def get_train_test_validate_data(options: str):
 
 if __name__ == "__main__":
 
-    a = split_data("DDINA")
-    b = split_data("COSS")
-    c = split_data("DDM")
+    a = split_data_noloader("DDINA")
+    b = split_data_noloader("COSS")
+    c = split_data_noloader("DDM")
 
-    a = get_train_test_validate_data("DDINA")
-    b = get_train_test_validate_data("COSS")
-    c = get_train_test_validate_data("DDM")
+    # a = get_train_test_validate_data_pickle("DDINA")
+    # b = get_train_test_validate_data_pickle("COSS")
+    # c = get_train_test_validate_data_pickle("DDM")
