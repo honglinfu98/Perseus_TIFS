@@ -12,7 +12,7 @@ langdetect==1.0.9
 matplotlib==3.7.1
 matplotlib-inline==0.1.6
 networkx==3.0
-numpy==1.24.2
+numpy
 phonenumbers==8.13.36
 plotly
 psycopg2-binary==2.9.5
