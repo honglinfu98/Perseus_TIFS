@@ -8,7 +8,6 @@ import random
 import pickle
 import torch
 import numpy as np
-from sklearn.manifold import TSNE
 from sklearn.metrics import (
     roc_curve,
     precision_score,

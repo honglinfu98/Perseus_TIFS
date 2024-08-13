@@ -5,8 +5,6 @@ This function is used to get the global minimum and maximum training times
 from os import path
 import pickle
 import numpy as np
-import pandas as pd
-from scipy.interpolate import make_interp_spline
 from matplotlib import pyplot as plt
 import seaborn as sns
 import matplotlib.ticker as ticker

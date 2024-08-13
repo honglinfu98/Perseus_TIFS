@@ -34,7 +34,7 @@ def calculate_ratio(data: torch_geometric.data.data.Data):
     return reciprocal_count / num_nodes
 
 
-def plot_graphs_side_by_side(
+def plot_weighted_edges(
     edge_index1: torch.Tensor,
     edge_weight1: torch.Tensor,
     title1="Graph 1",
@@ -55,13 +55,13 @@ def plot_graphs_side_by_side(
         G1.add_edge(u, v, weight=weight)
 
     # Create a figure with two subplots
-    plt.figure(figsize=(50, 50))  # Adjust overall figure size
+    plt.figure(figsize=(10, 10))  # Adjust overall figure size
 
     # Graph 1
     # plt.subplot(1, 2, 1)  # 1 row, 2 columns, subplot 1
     pos = nx.shell_layout(G1)
     edge_widths = [G1[u][v][0]["weight"] * 12 for u, v in G1.edges()]
-    nx.draw_networkx_nodes(G1, pos, node_size=1200, node_color="skyblue")
+    nx.draw_networkx_nodes(G1, pos, node_size=100, node_color="skyblue")
     nx.draw_networkx_edges(
         G1,
         pos,
@@ -71,11 +71,57 @@ def plot_graphs_side_by_side(
         edge_color="k",
         connectionstyle="arc3, rad = 0.1",
     )
-    plt.title(title1, fontsize=title_size)
+    # plt.title(title1, fontsize=title_size)
     plt.axis("off")
 
     # Display the plot
-    plt.savefig(path.join(PROJECT_ROOT, "data", "embedding.pdf"))
+    plt.savefig(path.join(PROJECT_ROOT, "data", "embedding1.pdf"))
+
+    plt.show()
+
+
+def plot_directed_edges(
+    edge_index1: torch.Tensor,
+    # edge_weight1: torch.Tensor,
+    title1="Graph 1",
+    title_size=16,
+):
+    """
+    Plot the two graphs side by side
+    """
+    # Initialize two graphs
+    G1 = nx.MultiDiGraph()
+    # G2 = nx.MultiDiGraph()
+
+    # Convert tensors if necessary and add edges for Graph 1
+    if isinstance(edge_index1, torch.Tensor):
+        edge_index1 = edge_index1.t().tolist()
+    # edge_weights1 = edge_weight1.tolist()
+    for u, v in edge_index1:
+        G1.add_edge(u, v)
+
+    # Create a figure with two subplots
+    plt.figure(figsize=(10, 10))  # Adjust overall figure size
+
+    # Graph 1
+    # plt.subplot(1, 2, 1)  # 1 row, 2 columns, subplot 1
+    pos = nx.shell_layout(G1)
+    # edge_widths = [G1[u][v][0]["weight"] * 12 for u, v in G1.edges()]
+    nx.draw_networkx_nodes(G1, pos, node_size=100, node_color="skyblue")
+    nx.draw_networkx_edges(
+        G1,
+        pos,
+        width=30,
+        arrowstyle="-|>",
+        arrowsize=50,
+        edge_color="k",
+        # connectionstyle="arc3, rad = 0.1",
+    )
+    # plt.title(title1, fontsize=title_size)
+    plt.axis("off")
+
+    # Display the plot
+    plt.savefig(path.join(PROJECT_ROOT, "data", "embedding2.pdf"))
 
     plt.show()
 
@@ -86,13 +132,24 @@ if __name__ == "__main__":
     a, b, c = split_data_noloader("DDM")
     aa, bb, cc = split_data_noloader("DDINA")
 
-    sorted_data_list = sorted(a, key=calculate_ratio, reverse=True)
+    # sorted_data_list = sorted(a, key=calculate_ratio, reverse=True)
+    indexed_data = list(enumerate(a))
+    sorted_indexed_data = sorted(
+        indexed_data, key=lambda x: calculate_ratio(x[1]), reverse=True
+    )
+    original_indices = [idx for idx, _ in sorted_indexed_data]
 
     # Example usage:
     # Assuming edge_index1, edge_weight1, edge_index2, and edge_weight2 are defined as tensors or lists
-    plot_graphs_side_by_side(
-        aaa[0].edge_index,
-        aaa[0].edge_weight,
-        title1="Weighted DANI Network Graph",
+    plot_weighted_edges(
+        a[0].edge_index,
+        a[0].edge_weight,
+        # title1="Weighted Diffusion Network Graph",
+        title_size=40,
+    )
+
+    plot_directed_edges(
+        aa[89].edge_index,
+        # title1="Directed Diffusion Network Graph",
         title_size=40,
     )

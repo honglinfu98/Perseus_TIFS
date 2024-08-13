@@ -100,7 +100,7 @@ def get_train_scored_signals():
     Get signals from the database for pre-pump scoring.
     """
 
-    with open(path.join(PROJECT_ROOT, "data", "train_signals_81.pkl"), "rb") as file:
+    with open(path.join(PROJECT_ROOT, "data", "train_signals.pkl"), "rb") as file:
         signals = pickle.load(file)
     result = signals[~signals["telegram_chat_id"].isna()]
 
@@ -112,7 +112,7 @@ def get_test_scored_signals():
     Get signals from the database for pre-pump scoring.
     """
 
-    with open(path.join(PROJECT_ROOT, "data", "test_signals_81.pkl"), "rb") as file:
+    with open(path.join(PROJECT_ROOT, "data", "test_signals.pkl"), "rb") as file:
         signals = pickle.load(file)
     result = signals[~signals["telegram_chat_id"].isna()]
 
@@ -124,7 +124,7 @@ def get_valid_scored_signals():
     Get signals from the database for pre-pump scoring.
     """
 
-    with open(path.join(PROJECT_ROOT, "data", "validate_signals_81.pkl"), "rb") as file:
+    with open(path.join(PROJECT_ROOT, "data", "validate_signals.pkl"), "rb") as file:
         signals = pickle.load(file)
     result = signals[~signals["telegram_chat_id"].isna()]
 
