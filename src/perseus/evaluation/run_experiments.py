@@ -28,7 +28,7 @@ from perseus.model.gnn_model import GCNNet, Net, GraphSAGENet
 from perseus.settings import PROJECT_ROOT
 
 # Set a seed value
-seed = 725
+seed = 728
 random.seed(seed)
 np.random.seed(seed)
 torch.manual_seed(seed)
@@ -74,6 +74,7 @@ def run_experiment(model, train_loader, test_loader, num_epochs=100):
         for data in loader:
             data = data.to(device)
             start_time = time.time()
+            num_nodes.append(data.x.size(0))
             out, embs = model(
                 data.x, data.edge_index
             )  # Make sure embs are the last layer embeddings

@@ -1,3 +1,7 @@
+"""
+This function is used to plot the tsne of the features between masterminds and non-masterminds
+"""
+
 from os import path
 import pickle
 from matplotlib import pyplot as plt
@@ -23,6 +27,9 @@ with open(path.join(PROJECT_ROOT, "data", "results1.pkl"), "rb") as file:
 
 
 def one_hot_to_indices(labels):
+    """
+    This function converts the torch labels into one hot encoding in numpy array
+    """
     indices = []
     for label in labels:
         index_array = np.where(label == 1)[0]
@@ -37,6 +44,9 @@ def one_hot_to_indices(labels):
 
 
 def visualize_tsne(embeddings, labels, title="t-SNE Visualization of GNN Embeddings"):
+    """
+    This function visualize all the t-sne embeddings
+    """
     tsne = TSNE(n_components=2, random_state=33)
     transformed_embeddings = tsne.fit_transform(embeddings)
     xs, ys = transformed_embeddings[:, 0], transformed_embeddings[:, 1]
@@ -55,7 +65,10 @@ def visualize_tsne(embeddings, labels, title="t-SNE Visualization of GNN Embeddi
 
 
 # Call the visualization function
-def plot_all_tsne(results, datasets, models):
+def plot_all_tsne(results: dict, datasets: str, models: str):
+    """
+    This function plots all the tsne embeddings
+    """
     for dataset in datasets:
         for model in models:
             # Check if the model and dataset combination exists in results
@@ -78,4 +91,4 @@ def plot_all_tsne(results, datasets, models):
                 print(f"No results available for {dataset} - {model}")
 
 
-plot_all_tsne(results, datasets, models)
+plot_all_tsne(results1, datasets, models)

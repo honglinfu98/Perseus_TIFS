@@ -19,10 +19,6 @@ with open(path.join(PROJECT_ROOT, "data", "results1.pkl"), "rb") as file:
 
 
 data = []
-metrics_columns = sorted(results[datasets[0]][models[0]]["metrics"].keys())
-
-
-data = []
 metrics_columns = sorted(results1[datasets[0]][models[0]]["metrics"].keys())
 for dataset in datasets:
     for model_name in models:
@@ -41,10 +37,27 @@ for dataset in datasets:
 columns = ["Dataset", "Model"] + metrics_columns
 df = pd.DataFrame(data, columns=columns)
 filtered_df = df[["Dataset", "Model", "accuracy", "f1", "precision", "recall"]]
+filtered_df["Dataset"] = filtered_df["Dataset"].replace(
+    {
+        "DDINA": "Directed Diffusion",
+        "COSS": "Cossine Similarity",  # Note: There's a typo here, it should be "cosine similarity"
+        "DDM": "Weighted Diffusion",
+    }
+)
+filtered_df["Method"] = filtered_df["Dataset"] + " - " + filtered_df["Model"]
+filtered_df = filtered_df.drop(columns=["Dataset", "Model"])
+
+filtered_df = filtered_df[["Method", "accuracy", "f1", "precision", "recall"]]
+
 highlighted_df1 = filtered_df.style.highlight_max(
     subset=["accuracy", "f1", "precision", "recall"], color="yellow", axis=0
 )
 highlighted_df1
+
+
+data = []
+metrics_columns = sorted(results[datasets[0]][models[0]]["metrics"].keys())
+
 
 # Loop through each dataset and model to gather metrics
 for dataset in datasets:
@@ -65,6 +78,18 @@ for dataset in datasets:
 columns = ["Dataset", "Model"] + metrics_columns
 df = pd.DataFrame(data, columns=columns)
 filtered_df = df[["Dataset", "Model", "accuracy", "f1", "precision", "recall"]]
+filtered_df["Dataset"] = filtered_df["Dataset"].replace(
+    {
+        "DDINA": "Directed Diffusion",
+        "COSS": "Cossine Similarity",  # Note: There's a typo here, it should be "cosine similarity"
+        "DDM": "Weighted Diffusion",
+    }
+)
+filtered_df["Method"] = filtered_df["Dataset"] + " - " + filtered_df["Model"]
+filtered_df = filtered_df.drop(columns=["Dataset", "Model"])
+
+filtered_df = filtered_df[["Method", "accuracy", "f1", "precision", "recall"]]
+
 highlighted_df = filtered_df.style.highlight_max(
     subset=["accuracy", "f1", "precision", "recall"], color="yellow", axis=0
 )

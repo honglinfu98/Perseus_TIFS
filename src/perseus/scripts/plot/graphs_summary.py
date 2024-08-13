@@ -61,13 +61,13 @@ def plot_graph_summary(
     # Store original bin centers for x-ticks
     node_bin_centers = plot_line_hist(node_counts, ax, "Nodes", "skyblue")
     directed_dani_bin_centers = plot_line_hist(
-        edge_counts_directed_dani, ax, "Edges for Directed DANI", "lightgreen"
+        edge_counts_directed_dani, ax, "Edges for Directed Diffusion", "lightgreen"
     )
     weighted_dani_bin_centers = plot_line_hist(
-        edge_counts_weighted_dani, ax, "Edges for Weighted DANI", "gold"
+        edge_counts_weighted_dani, ax, "Edges for Weighted Diffusion", "gold"
     )
     cosine_bin_centers = plot_line_hist(
-        edge_counts_cosine, ax, "Edges for Cosine similarity", "salmon"
+        edge_counts_cosine, ax, "Edges for Cosine Similarity", "salmon"
     )
 
     ax.set_xlabel("Number of Nodes or Edges", fontsize=label_size)

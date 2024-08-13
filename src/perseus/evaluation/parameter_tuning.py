@@ -394,8 +394,8 @@ if __name__ == "__main__":
     cmap = "inferno"
 
     captions = [
-        "(a) AUC Scores for Directed DANI",
-        "(b) AUC Scores for Weighted DANI",
+        "(a) AUC Scores for Directed Diffusion",
+        "(b) AUC Scores for Weighted Diffusion",
         "(c) AUC Scores for Cosine Similarity",
     ]
 
