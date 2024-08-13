@@ -14,7 +14,7 @@ matplotlib-inline==0.1.6
 networkx==3.0
 numpy==1.24.2
 phonenumbers==8.13.36
-plotly==5.14.1
+plotly
 psycopg2-binary==2.9.5
 pycountry==23.12.11
 pytz==2023.3
