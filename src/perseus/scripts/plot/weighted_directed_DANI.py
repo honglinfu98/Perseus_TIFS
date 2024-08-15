@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import torch
 import torch_geometric
-from perseus.dataset.dataset_preparation import split_data_noloader
+from perseus.dataset.dataset_preparation import split_data
 from perseus.settings import PROJECT_ROOT
 
 
@@ -37,8 +37,6 @@ def calculate_ratio(data: torch_geometric.data.data.Data):
 def plot_weighted_edges(
     edge_index1: torch.Tensor,
     edge_weight1: torch.Tensor,
-    title1="Graph 1",
-    title_size=16,
 ):
     """
     Plot the two graphs side by side
@@ -80,12 +78,7 @@ def plot_weighted_edges(
     plt.show()
 
 
-def plot_directed_edges(
-    edge_index1: torch.Tensor,
-    # edge_weight1: torch.Tensor,
-    title1="Graph 1",
-    title_size=16,
-):
+def plot_directed_edges(edge_index1: torch.Tensor):
     """
     Plot the two graphs side by side
     """
@@ -128,9 +121,9 @@ def plot_directed_edges(
 
 if __name__ == "__main__":
 
-    aaa, _, _ = split_data_noloader("COSS")
-    a, b, c = split_data_noloader("DDM")
-    aa, bb, cc = split_data_noloader("DDINA")
+    aaa, _, _ = split_data("COSS")
+    a, b, c = split_data("DDM")
+    aa, bb, cc = split_data("DDINA")
 
     # sorted_data_list = sorted(a, key=calculate_ratio, reverse=True)
     indexed_data = list(enumerate(a))
@@ -141,15 +134,6 @@ if __name__ == "__main__":
 
     # Example usage:
     # Assuming edge_index1, edge_weight1, edge_index2, and edge_weight2 are defined as tensors or lists
-    plot_weighted_edges(
-        a[0].edge_index,
-        a[0].edge_weight,
-        # title1="Weighted Diffusion Network Graph",
-        title_size=40,
-    )
+    plot_weighted_edges(a[0].edge_index, a[0].edge_weight)
 
-    plot_directed_edges(
-        aa[89].edge_index,
-        # title1="Directed Diffusion Network Graph",
-        title_size=40,
-    )
+    plot_directed_edges(aa[89].edge_index)
