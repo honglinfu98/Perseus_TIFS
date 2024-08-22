@@ -6,9 +6,9 @@ import time
 from os import path
 import random
 import pickle
+from concurrent.futures import ProcessPoolExecutor, as_completed
 import torch
 import numpy as np
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from sklearn.metrics import (
     roc_curve,
     precision_score,
@@ -28,7 +28,7 @@ from perseus.model.gnn_model import GCNNet, Net, GraphSAGENet
 from perseus.settings import PROJECT_ROOT
 
 # Set a seed value
-seed = 728
+seed = 724
 random.seed(seed)
 np.random.seed(seed)
 torch.manual_seed(seed)
@@ -101,8 +101,11 @@ def run_experiment(model, train_loader, test_loader, num_epochs=100):
 
     all_labels = [torch.cat(test(test_loader)[1])]
 
+    model_weights = model.state_dict()
+
     return (
         model,
+        model_weights,
         fpr_dict,
         tpr_dict,
         thresholds_dict,
@@ -186,51 +189,9 @@ def compute_metrics(model, loader):
     }
 
 
-label = 1  # Adjust this based on the label you're interested in
-datasets = ["DDINA", "COSS", "DDM"]
-models = ["GAT", "GCN", "GraphSAGE"]
-num_features = 2  # Set this according to your dataset
-num_classes = 2  # Set this according to your dataset
-hidden_channels = 8
-dataset_colors = {"DDINA": "blue", "COSS": "green", "DDM": "red"}
-
-# Non time dimension related experiments
-results = {"DDINA": {}, "COSS": {}, "DDM": {}}
-
-# for dataset in datasets:
-#     if dataset == "DDINA":
-#         num_features = 4
-#     else:
-#         num_features = 2
-#     train_loader, test_loader, _ = get_split_data_pickle(dataset)
-#     for model_name in models:
-#         if model_name == "GAT":
-#             model = Net(num_features, num_classes)
-#         elif model_name == "GCN":
-#             model = GCNNet(num_features, hidden_channels, num_classes)
-#         elif model_name == "GraphSAGE":
-#             model = GraphSAGENet(num_features, hidden_channels, num_classes)
-
-#         print(f"Running {model_name} Experiment on {dataset}")
-#         m, fpr, tpr, _, train_times, batch_times, num_nodes, embs, labels = (
-#             run_experiment(model, train_loader, test_loader, num_epochs=100)
-#         )
-#         metrics = compute_metrics(model, test_loader)
-#         # Store results along with training times
-#         results[dataset][model_name] = {
-#             "model": m,
-#             "metrics": metrics,
-#             "fpr": fpr,
-#             "tpr": tpr,
-#             "train_times": train_times,  # Storing the training times
-#             "batch_times": batch_times,
-#             "num_nodes": num_nodes,
-#             "embs": embs,
-#             "labels": labels,
-#         }
-
-
 def experiment_pipeline(model_name, dataset, train_loader, test_loader, num_epochs=100):
+    num_classes = 2  # Set this according to your dataset
+    hidden_channels = 8
     if dataset == "DDINA":
         num_features = 4
     else:
@@ -244,12 +205,13 @@ def experiment_pipeline(model_name, dataset, train_loader, test_loader, num_epoc
         model = GraphSAGENet(num_features, hidden_channels, num_classes)
 
     print(f"Running {model_name} Experiment on {dataset}")
-    m, fpr, tpr, _, train_times, batch_times, num_nodes, embs, labels = run_experiment(
-        model, train_loader, test_loader, num_epochs=num_epochs
+    m, model_weights, fpr, tpr, _, train_times, batch_times, num_nodes, embs, labels = (
+        run_experiment(model, train_loader, test_loader, num_epochs=num_epochs)
     )
     metrics = compute_metrics(model, test_loader)
     return {
         "model": m,
+        "model_weights": model_weights,  # Include the weights in the results
         "metrics": metrics,
         "fpr": fpr,
         "tpr": tpr,
@@ -261,63 +223,63 @@ def experiment_pipeline(model_name, dataset, train_loader, test_loader, num_epoc
     }
 
 
-with ThreadPoolExecutor(max_workers=12) as executor:
-    future_to_model = {}
-    for dataset in datasets:
-        train_loader, test_loader, _ = get_split_data_pickle(dataset)
-        for model_name in models:
-            future = executor.submit(
-                experiment_pipeline, model_name, dataset, train_loader, test_loader
-            )
-            future_to_model[future] = (dataset, model_name)
+if __name__ == "__main__":
 
-    for future in as_completed(future_to_model):
-        dataset, model_name = future_to_model[future]
-        try:
-            result = future.result()
-            results[dataset][model_name] = result
-            print(f"Completed {model_name} Experiment on {dataset}")
-        except Exception as exc:
-            print(f"{model_name} experiment on {dataset} generated an exception: {exc}")
+    label = 1  # Adjust this based on the label you're interested in
+    datasets = ["DDINA", "COSS", "DDM"]
+    models = ["GAT", "GCN", "GraphSAGE"]
+    num_features = 2  # Set this according to your dataset
 
-# results1 = {"DDINA": {}, "COSS": {}, "DDM": {}}
+    dataset_colors = {"DDINA": "blue", "COSS": "green", "DDM": "red"}
 
+    # Non time dimension related experiments
+    results = {"DDINA": {}, "COSS": {}, "DDM": {}}
+    results1 = {"DDINA": {}, "COSS": {}, "DDM": {}}
 
-# for dataset in datasets:
-#     if dataset == "DDINA":
-#         num_features = 4
-#     else:
-#         num_features = 2
-#     train_loader, test_loader, _ = get_train_test_validate_data_pickle(dataset)
-#     for model_name in models:
-#         if model_name == "GAT":
-#             model = Net(num_features, num_classes)
-#         elif model_name == "GCN":
-#             model = GCNNet(num_features, hidden_channels, num_classes)
-#         elif model_name == "GraphSAGE":
-#             model = GraphSAGENet(num_features, hidden_channels, num_classes)
+    with ProcessPoolExecutor(max_workers=12) as executor:
+        future_to_model = {}
+        for dataset in datasets:
+            train_loader, test_loader, _ = get_split_data_pickle(dataset)
+            for model_name in models:
+                future = executor.submit(
+                    experiment_pipeline, model_name, dataset, train_loader, test_loader
+                )
+                future_to_model[future] = (dataset, model_name)
 
-#         print(f"Running {model_name} Experiment on {dataset}")
-#         m, fpr, tpr, _, train_times, batch_times, num_nodes, embs, labels = (
-#             run_experiment(model, train_loader, test_loader, num_epochs=100)
-#         )
-#         metrics = compute_metrics(model, test_loader)
-#         # Store results along with training times
-#         results1[dataset][model_name] = {
-#             "model": m,
-#             "metrics": metrics,
-#             "fpr": fpr,
-#             "tpr": tpr,
-#             "train_times": train_times,  # Storing the training times
-#             "batch_times": batch_times,
-#             "num_nodes": num_nodes,
-#             "embs": embs,
-#             "labels": labels,
-#         }
+        for future in as_completed(future_to_model):
+            dataset, model_name = future_to_model[future]
+            try:
+                result = future.result()
+                results[dataset][model_name] = result
+                print(f"Completed {model_name} Experiment on {dataset}")
+            except Exception as exc:
+                print(
+                    f"{model_name} experiment on {dataset} generated an exception: {exc}"
+                )
 
-with open(path.join(PROJECT_ROOT, "data", "results.pkl"), "wb") as file:
-    pickle.dump(results, file)
+    with ProcessPoolExecutor(max_workers=12) as executor:
+        future_to_model = {}
+        for dataset in datasets:
+            train_loader, test_loader, _ = get_train_test_validate_data_pickle(dataset)
+            for model_name in models:
+                future = executor.submit(
+                    experiment_pipeline, model_name, dataset, train_loader, test_loader
+                )
+                future_to_model[future] = (dataset, model_name)
 
+        for future in as_completed(future_to_model):
+            dataset, model_name = future_to_model[future]
+            try:
+                result = future.result()
+                results1[dataset][model_name] = result
+                print(f"Completed {model_name} Experiment on {dataset}")
+            except Exception as exc:
+                print(
+                    f"{model_name} experiment on {dataset} generated an exception: {exc}"
+                )
 
-# with open(path.join(PROJECT_ROOT, "data", "results1.pkl"), "wb") as file:
-#     pickle.dump(results1, file)
+    with open(path.join(PROJECT_ROOT, "data", "results.pkl"), "wb") as file:
+        pickle.dump(results, file)
+
+    with open(path.join(PROJECT_ROOT, "data", "results1.pkl"), "wb") as file:
+        pickle.dump(results1, file)
