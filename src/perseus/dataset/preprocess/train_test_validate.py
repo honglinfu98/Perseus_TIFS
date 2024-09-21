@@ -40,7 +40,7 @@ def seperate_train_test_validate(start_date="2024-01-10", end_date="2024-02-05")
     Seperate the data into train, test and validate sets.
     """
 
-    with open(path.join(PROJECT_ROOT, "data", "all_scored.pkl"), "rb") as file:
+    with open(path.join(PROJECT_ROOT, "data", "all_810.pkl"), "rb") as file:
         df = pickle.load(file)
 
     df = df[~df["telegram_chat_id"].isna()]
@@ -62,7 +62,7 @@ def seperate_train_test_validate(start_date="2024-01-10", end_date="2024-02-05")
     with open(path.join(PROJECT_ROOT, "data", "validate_signals.pkl"), "wb") as file:
         pickle.dump(validate_df, file)
 
-    return
+    return train_df, test_df, validate_df
 
 
 def seperate_dataset(start_date="2018-01-01", end_date="2024-02-05"):
@@ -100,7 +100,9 @@ def get_train_scored_signals():
     Get signals from the database for pre-pump scoring.
     """
 
-    with open(path.join(PROJECT_ROOT, "data", "train_signals.pkl"), "rb") as file:
+    with open(
+        path.join(PROJECT_ROOT, "data", "old", "train_signals.pkl"), "rb"
+    ) as file:
         signals = pickle.load(file)
     result = signals[~signals["telegram_chat_id"].isna()]
 
@@ -112,7 +114,7 @@ def get_test_scored_signals():
     Get signals from the database for pre-pump scoring.
     """
 
-    with open(path.join(PROJECT_ROOT, "data", "test_signals.pkl"), "rb") as file:
+    with open(path.join(PROJECT_ROOT, "data", "old", "test_signals.pkl"), "rb") as file:
         signals = pickle.load(file)
     result = signals[~signals["telegram_chat_id"].isna()]
 
@@ -124,7 +126,9 @@ def get_valid_scored_signals():
     Get signals from the database for pre-pump scoring.
     """
 
-    with open(path.join(PROJECT_ROOT, "data", "validate_signals.pkl"), "rb") as file:
+    with open(
+        path.join(PROJECT_ROOT, "data", "old", "validate_signals.pkl"), "rb"
+    ) as file:
         signals = pickle.load(file)
     result = signals[~signals["telegram_chat_id"].isna()]
 
@@ -133,3 +137,6 @@ def get_valid_scored_signals():
 
 if __name__ == "__main__":
     a, b, c = seperate_dataset()
+    # a = get_train_scored_signals()
+    # b = get_test_scored_signals()
+    # c = get_valid_scored_signals()

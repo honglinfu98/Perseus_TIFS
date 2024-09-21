@@ -4,7 +4,33 @@ import networkx as nx
 from perseus.settings import PROJECT_ROOT
 
 
-# Function to draw custom edge labels
+# # Function to draw custom edge labels
+# def draw_custom_edge_labels(G, pos, offset_factor=0.9, weight_font_size=12):
+#     """
+#     Draw edge labels with a custom offset from the edge midpoint
+#     """
+#     for u, v, data in G.edges(data=True):
+#         weight = data["weight"]
+#         x_midpoint, y_midpoint = (pos[u][0] + pos[v][0]) / 2, (
+#             pos[u][1] + pos[v][1]
+#         ) / 2
+#         dx, dy = pos[v][0] - pos[u][0], pos[v][1] - pos[u][1]
+#         norm = (dx**2 + dy**2) ** 0.5
+#         if norm == 0:
+#             norm = 1
+#         dx, dy = dx / norm, dy / norm
+#         offset_x, offset_y = dy * offset_factor, -dx * offset_factor
+
+
+#         plt.text(
+#             x_midpoint + offset_x,
+#             y_midpoint + offset_y,
+#             str(weight),
+#             horizontalalignment="center",
+#             verticalalignment="center",
+#             fontsize=weight_font_size,
+#             color="blue" if G.has_edge(v, u) else "red",
+#         )
 def draw_custom_edge_labels(G, pos, offset_factor=0.9, weight_font_size=12):
     """
     Draw edge labels with a custom offset from the edge midpoint
@@ -28,7 +54,8 @@ def draw_custom_edge_labels(G, pos, offset_factor=0.9, weight_font_size=12):
             horizontalalignment="center",
             verticalalignment="center",
             fontsize=weight_font_size,
-            color="blue" if G.has_edge(v, u) else "red",
+            color="black",  # Changed from conditional coloring to always black
+            fontweight="bold",  # Bold font
         )
 
 
@@ -54,7 +81,7 @@ if __name__ == "__main__":
     )
     nx.draw_networkx_nodes(G1, pos, node_color=node_color, node_size=node_size)
     nx.draw_networkx_labels(
-        G1, pos, font_size=font_size, font_color="black"
+        G1, pos, font_size=font_size, font_color="black", font_weight="bold"
     )  # Add labels to the nodes
     plt.axis("off")
     plt.tight_layout()
@@ -93,7 +120,9 @@ if __name__ == "__main__":
         connectionstyle="arc3,rad=0.25",
     )
     nx.draw_networkx_nodes(G2, pos, node_color=node_color, node_size=node_size)
-    nx.draw_networkx_labels(G2, pos, font_size=font_size, font_color="black")
+    nx.draw_networkx_labels(
+        G2, pos, font_size=font_size, font_color="black", font_weight="bold"
+    )
     draw_custom_edge_labels(
         G2, pos, offset_factor=0.17, weight_font_size=weight_font_size
     )
@@ -126,7 +155,9 @@ if __name__ == "__main__":
         connectionstyle="arc3,rad=0.2",
     )
     nx.draw_networkx_nodes(G3, pos, node_color=node_color, node_size=node_size)
-    nx.draw_networkx_labels(G3, pos, font_size=font_size, font_color="black")
+    nx.draw_networkx_labels(
+        G3, pos, font_size=font_size, font_color="black", font_weight="bold"
+    )
     draw_custom_edge_labels(
         G3, pos, offset_factor=0.1, weight_font_size=weight_font_size
     )

@@ -24,6 +24,7 @@ from perseus.dataset.preprocess.train_test_validate import (
     get_valid_scored_signals,
 )
 from perseus.dataset.preprocess.process import (
+    compute_weighted_in_out_ratios,
     features_engineer,
     get_graphs,
     process_dataframe,
@@ -130,7 +131,12 @@ def prepare_ddm_data(graphs: dict, features: dict, label_mapping: dict, P_dict: 
             features_buffer["telegram_chat_id"].isin(graph.nodes)
         ]
         # Specify feature columns and normalize them
-        feature_columns = ["average_increase_percentage", "number_of_signals"]
+        feature_columns = [
+            "average_increase_percentage",
+            "number_of_signals",
+            "weighted_in_ratio",
+            "weighted_out_ratio",
+        ]
         features_to_process = features_buffer[feature_columns]
         normalized_features = (
             features_to_process - features_to_process.mean()
@@ -161,7 +167,6 @@ def prepare_ddm_data(graphs: dict, features: dict, label_mapping: dict, P_dict: 
                 edge_index_list.append([source, target])
                 edge_weight_list.append(weight)
         # Convert lists to PyTorch tensors
-        print(key)
         edge_index = torch.tensor(edge_index_list, dtype=torch.long).t().contiguous()
         edge_weight = torch.tensor(edge_weight_list, dtype=torch.float)
         # Populate the lists
@@ -301,7 +306,7 @@ def prepare_cos_data(graphs: dict, features: dict, label_mapping: dict):
     return prepared_data
 
 
-def split_data(options: str):
+def split_data(options: str, loader: bool = True):
     """
     Split the data into train, test, and validate sets for temporal tasks
     """
@@ -316,19 +321,26 @@ def split_data(options: str):
     market_features_ls = []
     P_dicts_ls = []
     label_mapping_ls = []
+    P_com_ls = []
 
     for dataset in datasets:
         processed_signals = process_dataframe(dataset)
         ided_signals = assign_event_ids(processed_signals)
         cascade, no_nodes, id_mapping, cascade_labeling = aggregate_data(ided_signals)
-        gs, results, As, P_dict = get_graphs(cascade, no_nodes, id_mapping)
+        gs, results, As, P_dict, P_com = get_graphs(cascade, no_nodes, id_mapping)
         graph_feature = graph_features(gs)
         market_feature = features_engineer(processed_signals)
-        combine_feature = combine_features(market_feature, graph_feature)
+        weighted_feature = compute_weighted_in_out_ratios(P_com)
+
+        combine_feature = combine_features(
+            market_feature, graph_feature, weighted_feature
+        )
+
         gs_ls.append(gs)
         features_ls.append(combine_feature)
         market_features_ls.append(market_feature)
         P_dicts_ls.append(P_dict)
+        P_com_ls.append(P_com)
 
     label_mapping_ls = [
         read_labeling_csv_back_to_dict("train"),
@@ -352,6 +364,9 @@ def split_data(options: str):
         P_dicts_ls[i] = {
             key: P_dicts_ls[i][key] for key in common_keys if key in P_dicts_ls[i]
         }
+        P_com_ls[i] = {
+            key: P_com_ls[i][key] for key in common_keys if key in P_com_ls[i]
+        }
 
     if options == "DDINA":
         train_data = prepare_data(gs_ls[0], features_ls[0], label_mapping_ls[0])
@@ -370,100 +385,25 @@ def split_data(options: str):
         )
     elif options == "DDM":
         train_data = prepare_ddm_data(
-            gs_ls[0], market_features_ls[0], label_mapping_ls[0], P_dicts_ls[0]
+            gs_ls[0], features_ls[0], label_mapping_ls[0], P_com_ls[0]
         )
         test_data = prepare_ddm_data(
-            gs_ls[1], market_features_ls[1], label_mapping_ls[1], P_dicts_ls[1]
+            gs_ls[1], features_ls[1], label_mapping_ls[1], P_com_ls[1]
         )
         validate_data = prepare_ddm_data(
-            gs_ls[2], market_features_ls[2], label_mapping_ls[2], P_dicts_ls[2]
+            gs_ls[2], features_ls[2], label_mapping_ls[2], P_com_ls[2]
         )
 
-    train_loader = DataLoader(train_data, batch_size=1, shuffle=True)
-    test_loader = DataLoader(test_data, batch_size=1, shuffle=True)
-    validate_loader = DataLoader(validate_data, batch_size=1, shuffle=True)
+    if loader:
+        train_loader = DataLoader(train_data, batch_size=1, shuffle=True)
+        test_loader = DataLoader(test_data, batch_size=1, shuffle=True)
+        validate_loader = DataLoader(validate_data, batch_size=1, shuffle=True)
 
-    return train_loader, test_loader, validate_loader
+        return train_loader, test_loader, validate_loader
 
+    else:
 
-def split_data_noloader(options: str):
-    """
-    Split the data into train, test, and validate sets for temporal tasks without DataLoader
-    """
-    # Initial data loading and processing
-    train_signals = get_train_scored_signals()
-    test_signals = get_test_scored_signals()
-    validate_signals = get_valid_scored_signals()
-
-    datasets = [train_signals, test_signals, validate_signals]
-    gs_ls = []
-    features_ls = []
-    market_features_ls = []
-    P_dicts_ls = []
-    label_mapping_ls = []
-
-    for dataset in datasets:
-        processed_signals = process_dataframe(dataset)
-        ided_signals = assign_event_ids(processed_signals)
-        cascade, no_nodes, id_mapping, cascade_labeling = aggregate_data(ided_signals)
-        gs, results, As, P_dict = get_graphs(cascade, no_nodes, id_mapping)
-        graph_feature = graph_features(gs)
-        market_feature = features_engineer(processed_signals)
-        combine_feature = combine_features(market_feature, graph_feature)
-        gs_ls.append(gs)
-        features_ls.append(combine_feature)
-        market_features_ls.append(market_feature)
-        P_dicts_ls.append(P_dict)
-
-    label_mapping_ls = [
-        read_labeling_csv_back_to_dict("train"),
-        read_labeling_csv_back_to_dict("test"),
-        read_labeling_csv_back_to_dict("valid"),
-    ]
-
-    for i in range(3):
-        common_keys = set(
-            label_mapping_ls[i].keys()
-        )  # Assuming label_mapping_ls[i] is a dict with relevant keys
-        gs_ls[i] = {key: gs_ls[i][key] for key in common_keys if key in gs_ls[i]}
-        features_ls[i] = {
-            key: features_ls[i][key] for key in common_keys if key in features_ls[i]
-        }
-        market_features_ls[i] = {
-            key: market_features_ls[i][key]
-            for key in common_keys
-            if key in market_features_ls[i]
-        }
-        P_dicts_ls[i] = {
-            key: P_dicts_ls[i][key] for key in common_keys if key in P_dicts_ls[i]
-        }
-
-    if options == "DDINA":
-        train_data = prepare_data(gs_ls[0], features_ls[0], label_mapping_ls[0])
-        test_data = prepare_data(gs_ls[1], features_ls[1], label_mapping_ls[1])
-        validate_data = prepare_data(gs_ls[2], features_ls[2], label_mapping_ls[2])
-    elif options == "COSS":
-        train_data = prepare_cos_data(
-            gs_ls[0], market_features_ls[0], label_mapping_ls[0]
-        )
-        test_data = prepare_cos_data(
-            gs_ls[1], market_features_ls[1], label_mapping_ls[1]
-        )
-        validate_data = prepare_cos_data(
-            gs_ls[2], market_features_ls[2], label_mapping_ls[2]
-        )
-    elif options == "DDM":
-        train_data = prepare_ddm_data(
-            gs_ls[0], market_features_ls[0], label_mapping_ls[0], P_dicts_ls[0]
-        )
-        test_data = prepare_ddm_data(
-            gs_ls[1], market_features_ls[1], label_mapping_ls[1], P_dicts_ls[1]
-        )
-        validate_data = prepare_ddm_data(
-            gs_ls[2], market_features_ls[2], label_mapping_ls[2], P_dicts_ls[2]
-        )
-
-    return train_data, test_data, validate_data
+        return train_data, test_data, validate_data
 
 
 def get_split_data_pickle(options: str):
@@ -485,6 +425,90 @@ def get_split_data_pickle(options: str):
     train_loader = data[0]
     test_loader = data[1]
     validate_loader = data[2]
+
+    return train_loader, test_loader, validate_loader
+
+
+def get_split_data_pickle_com(options: str):
+    """
+    Load the data for temporal tasks using the pickle file
+    """
+    if options == "DDINA":
+        with open(path.join(PROJECT_ROOT, "data", "DDINA_data_com.pkl"), "rb") as file:
+            data = pickle.load(file)
+
+    elif options == "COSS":
+        with open(path.join(PROJECT_ROOT, "data", "COSS_data_com.pkl"), "rb") as file:
+            data = pickle.load(file)
+
+    elif options == "DDM":
+        with open(path.join(PROJECT_ROOT, "data", "DDM_data_com.pkl"), "rb") as file:
+            data = pickle.load(file)
+
+    train_loader = data[0]
+    test_loader = data[1]
+    validate_loader = data[2]
+
+    return train_loader, test_loader, validate_loader
+
+
+def distribute_evenly_with_redistribution(data, sizes):
+    # Create initial 3 chunks
+    chunks = [data[i::3] for i in range(3)]
+
+    # If initial chunk sizes don't match required sizes, borrow elements from other chunks
+    for i in range(3):
+        while len(chunks[i]) < sizes[i]:
+            # Try to borrow from next chunks cyclically
+            for j in range(1, 3):
+                donor_index = (i + j) % 3
+                if len(chunks[donor_index]) > sizes[donor_index]:
+                    # Move elements from donor to current chunk
+                    chunks[i].append(chunks[donor_index].pop())
+                    break
+
+    return [chunks[i][: sizes[i]] for i in range(3)]
+
+
+def get_train_test_validate_data(options: str):
+    # Assume split_data loads and optionally preprocesses data
+    if options == "DDINA":
+        with open(path.join(PROJECT_ROOT, "data", "DDINA_data_no.pkl"), "rb") as file:
+            data = pickle.load(file)
+        # data = split_data("DDINA", loader=False)
+    elif options == "COSS":
+        with open(path.join(PROJECT_ROOT, "data", "COSS_data_no.pkl"), "rb") as file:
+            data = pickle.load(file)
+        # data = split_data("COSS", loader=False)
+    elif options == "DDM":
+        with open(path.join(PROJECT_ROOT, "data", "DDM_data_no.pkl"), "rb") as file:
+            data = pickle.load(file)
+        # data = split_data("DDM", loader=False)
+
+    dataset = data[0] + data[1] + data[2]
+
+    data_sorted = sorted(dataset, key=lambda i: len(i.x), reverse=True)
+
+    # Calculate the size of each set
+    total_size = len(data_sorted)
+    train_size = int(0.7 * total_size)
+    val_size = int(0.15 * total_size)
+    test_size = total_size - train_size - val_size
+
+    # Distribute data among train, validate, test
+    train_data, val_data, test_data = distribute_evenly_with_redistribution(
+        data_sorted, [train_size, val_size, test_size]
+    )
+
+    # random shuffle train_data, val_data, test_data
+    random.shuffle(train_data)
+    random.shuffle(val_data)
+    random.shuffle(test_data)
+
+    # Create DataLoaders
+    train_loader = DataLoader(train_data, batch_size=1, shuffle=True)
+    test_loader = DataLoader(test_data, batch_size=1, shuffle=True)
+    validate_loader = DataLoader(val_data, batch_size=1, shuffle=True)
 
     return train_loader, test_loader, validate_loader
 
@@ -512,47 +536,55 @@ def get_train_test_validate_data_pickle(options: str):
     return train_loader, test_loader, validate_loader
 
 
-def get_train_test_validate_data(options: str):
+def get_train_test_validate_data_pickle_com(options: str):
     """
-    Split the data into non-temporal tasks
+    Load the non-temporal data using the pickle file
     """
     if options == "DDINA":
-        data = split_data_noloader("DDINA")
+        with open(
+            path.join(PROJECT_ROOT, "data", "DDINA_data_com_T.pkl"), "rb"
+        ) as file:
+            data = pickle.load(file)
 
     elif options == "COSS":
-        data = split_data_noloader("COSS")
+        with open(path.join(PROJECT_ROOT, "data", "COSS_data_com_T.pkl"), "rb") as file:
+            data = pickle.load(file)
 
     elif options == "DDM":
-        data = split_data_noloader("DDM")
+        with open(path.join(PROJECT_ROOT, "data", "DDM_data_com_T.pkl"), "rb") as file:
+            data = pickle.load(file)
 
-    dataset = data[0] + data[1] + data[2]
-
-    # Shuffle the dataset to ensure it's randomly ordered
-    random.shuffle(dataset)
-
-    # Calculate the size of each set
-    total_size = len(dataset)
-    train_size = int(0.7 * total_size)
-    val_size = int(0.15 * total_size)
-
-    # Split the data
-    train_data = dataset[:train_size]
-    val_data = dataset[train_size : (train_size + val_size)]
-    test_data = dataset[(train_size + val_size) :]
-
-    train_loader = DataLoader(train_data, batch_size=1, shuffle=True)
-    test_loader = DataLoader(test_data, batch_size=1, shuffle=True)
-    validate_loader = DataLoader(val_data, batch_size=1, shuffle=True)
+    train_loader = data[0]
+    test_loader = data[1]
+    validate_loader = data[2]
 
     return train_loader, test_loader, validate_loader
 
 
 if __name__ == "__main__":
 
-    a = split_data_noloader("DDINA")
-    b = split_data_noloader("COSS")
-    c = split_data_noloader("DDM")
+    # a = split_data("DDINA", loader=True)
+    # # save it in pickle
+    # with open(path.join(PROJECT_ROOT, "data", "DDINA_data_com.pkl"), "wb") as file:
+    #     pickle.dump(a, file)
+    # b = split_data("COSS", loader=True)
+    # # save it in pickle
+    # with open(path.join(PROJECT_ROOT, "data", "COSS_data_com.pkl"), "wb") as file:
+    #     pickle.dump(b, file)
+    # c = split_data("DDM", loader=True)
+    # # save it in pickle
+    # with open(path.join(PROJECT_ROOT, "data", "DDM_data_com.pkl"), "wb") as file:
+    #     pickle.dump(c, file)
 
-    # a = get_train_test_validate_data_pickle("DDINA")
-    # b = get_train_test_validate_data_pickle("COSS")
-    # c = get_train_test_validate_data_pickle("DDM")
+    # a = get_train_test_validate_data("DDINA")
+    # with open(path.join(PROJECT_ROOT, "data", "DDINA_data_com_T.pkl"), "wb") as file:
+    #     pickle.dump(a, file)
+    # b = get_train_test_validate_data("COSS")
+    # with open(path.join(PROJECT_ROOT, "data", "COSS_data_com_T.pkl"), "wb") as file:
+    #     pickle.dump(b, file)
+    # c = get_train_test_validate_data("DDM")
+    # with open(path.join(PROJECT_ROOT, "data", "DDM_data_com_T.pkl"), "wb") as file:
+    #     pickle.dump(c, file)
+
+    a = get_split_data_pickle_com("DDM")
+    get_train_test_validate_data_pickle_com("DDM")

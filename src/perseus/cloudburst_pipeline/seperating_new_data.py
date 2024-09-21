@@ -1,10 +1,10 @@
-"""
-This function is used to create a case study for the empirical study. It is used to demonstrate how to use the trained model to make predictions on a single cascade.
-"""
+from perseus.dataset.preprocess.train_test_validate import seperate_train_test_validate
+from perseus.dataset.dataset_preparation import split_data
+
 
 from os import path
-import pickle
 import torch
+import pickle
 from torch_geometric.data import Data
 from torch_geometric.nn import GATConv
 import torch.nn.functional as F
@@ -26,6 +26,17 @@ from perseus.dataset.preprocess.train_test_validate import (
 from perseus.settings import PROJECT_ROOT
 
 
+train, test, validate = seperate_train_test_validate("2024-01-10", "2024-03-05")
+train, test, validate = seperate_train_test_validate("2024-01-15", "2024-04-01")
+
+print(len(train))
+print(len(test))
+print(len(validate))
+print(train["telegram_chat_id"].nunique())
+print(test["telegram_chat_id"].nunique())
+print(validate["telegram_chat_id"].nunique())
+
+
 train_signals = get_train_scored_signals()
 processed_signals = process_dataframe(train_signals)
 ided_signals = assign_event_ids(processed_signals)
@@ -34,8 +45,6 @@ gs, results, As, P_dict = get_graphs(cascade, no_nodes, id_mapping)
 graph_feature = graph_features(gs)
 market_feature = features_engineer(processed_signals)
 combine_feature = combine_features(market_feature, graph_feature)
-label_mapping = read_labeling_csv_back_to_dict("train")
-all_predictions = {}
 
 for k, v in gs.items():
     try:
@@ -81,24 +90,8 @@ for k, v in gs.items():
 
         num_labels = 2
 
-        # Prepare labels
-        labels = []
-        for node_id in features_buffer["telegram_chat_id"]:
-            node_labels = label_mapping[k].get(node_id, 0)
-            if not isinstance(node_labels, list):
-                node_labels = [node_labels]  # Convert to list for consistency
-
-            # Convert to one-hot encoded format
-            label_vector = [0] * num_labels
-            for label in node_labels:
-                if label < num_labels:
-                    label_vector[label] = 1
-            labels.append(label_vector)
-
-        # Convert list of labels to a tensor
-        labels_tensor = torch.tensor(labels, dtype=torch.float)
         # Create a Data object
-        data = Data(x=node_attributes, edge_index=edge_index, y=labels_tensor)
+        data = Data(x=node_attributes, edge_index=edge_index)
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Example after training your model
@@ -123,15 +116,14 @@ for k, v in gs.items():
                 return x
 
         model_1 = Net(4, 2)
-        # model_1.load_state_dict(
-        #     torch.load(path.join(PROJECT_ROOT, "data", "model_weights.pth"))
-        # )
-        with open(
-            path.join(PROJECT_ROOT, "data", "saved", "results.pkl"), "rb"
-        ) as file:
+
+        with open(path.join(PROJECT_ROOT, "data", "results.pkl"), "rb") as file:
             results = pickle.load(file)
         model_1.load_state_dict(results["DDINA"]["GAT"]["model_weights"])
 
+        # model_1.load_state_dict(
+        #     torch.load(path.join(PROJECT_ROOT, "data", "model_weights.pth"))
+        # )
         model_1.to(device)
 
         # Extract node IDs in the order they are being processed
@@ -139,7 +131,7 @@ for k, v in gs.items():
 
         model_1.eval()  # Set the model to evaluation mode
 
-        all_predictions[k] = {}
+        all_predictions = []
 
         with torch.no_grad():
             data = data.to(device)
@@ -148,10 +140,8 @@ for k, v in gs.items():
             # Pair each prediction with its corresponding node ID and actual label
             for i, pred in enumerate(predictions.cpu().numpy()):
                 node_id = node_ids[i]
-                actual_label = label_mapping[k].get(
-                    node_id, 0
-                )  # Default to 0 if not found
-                all_predictions[k][node_id] = (pred, actual_label)
+
+                all_predictions.append((node_id, pred))
 
         # Now `all_predictions` is a list of tuples, each containing (node_id, predicted_label, actual_label)
         print(all_predictions)
@@ -159,8 +149,3 @@ for k, v in gs.items():
     except Exception as e:
         print(e)
         continue
-
-
-# Save the predictions to a pickle file in data
-with open(path.join(PROJECT_ROOT, "data", "predictions.pkl"), "wb") as file:
-    pickle.dump(all_predictions, file)

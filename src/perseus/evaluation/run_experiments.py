@@ -23,12 +23,14 @@ from perseus.dataset.dataset_preparation import (
     split_data,
     get_train_test_validate_data,
     get_train_test_validate_data_pickle,
+    get_split_data_pickle_com,
+    get_train_test_validate_data_pickle_com,
 )
 from perseus.model.gnn_model import GCNNet, Net, GraphSAGENet
 from perseus.settings import PROJECT_ROOT
 
 # Set a seed value
-seed = 724
+seed = 17
 random.seed(seed)
 np.random.seed(seed)
 torch.manual_seed(seed)
@@ -192,10 +194,10 @@ def compute_metrics(model, loader):
 def experiment_pipeline(model_name, dataset, train_loader, test_loader, num_epochs=100):
     num_classes = 2  # Set this according to your dataset
     hidden_channels = 8
-    if dataset == "DDINA":
-        num_features = 4
-    else:
+    if dataset == "COSS":
         num_features = 2
+    else:
+        num_features = 4
 
     if model_name == "GAT":
         model = Net(num_features, num_classes)
@@ -239,7 +241,7 @@ if __name__ == "__main__":
     with ProcessPoolExecutor(max_workers=12) as executor:
         future_to_model = {}
         for dataset in datasets:
-            train_loader, test_loader, _ = get_split_data_pickle(dataset)
+            train_loader, test_loader, _ = get_split_data_pickle_com(dataset)
             for model_name in models:
                 future = executor.submit(
                     experiment_pipeline, model_name, dataset, train_loader, test_loader
@@ -260,7 +262,9 @@ if __name__ == "__main__":
     with ProcessPoolExecutor(max_workers=12) as executor:
         future_to_model = {}
         for dataset in datasets:
-            train_loader, test_loader, _ = get_train_test_validate_data_pickle(dataset)
+            train_loader, test_loader, _ = get_train_test_validate_data_pickle_com(
+                dataset
+            )
             for model_name in models:
                 future = executor.submit(
                     experiment_pipeline, model_name, dataset, train_loader, test_loader
@@ -278,8 +282,8 @@ if __name__ == "__main__":
                     f"{model_name} experiment on {dataset} generated an exception: {exc}"
                 )
 
-    with open(path.join(PROJECT_ROOT, "data", "results.pkl"), "wb") as file:
+    with open(path.join(PROJECT_ROOT, "data", "results_com.pkl"), "wb") as file:
         pickle.dump(results, file)
 
-    with open(path.join(PROJECT_ROOT, "data", "results1.pkl"), "wb") as file:
+    with open(path.join(PROJECT_ROOT, "data", "results1_com.pkl"), "wb") as file:
         pickle.dump(results1, file)

@@ -120,7 +120,83 @@ def graph_features(gs: dict):
     return dfs
 
 
-def combine_features(market_features: dict, graph_features: dict):
+def compute_weighted_in_out_ratios(edge_weights: dict):
+    dfs = {}
+    for key in edge_weights.keys():
+        # Build the graph
+        G = nx.DiGraph()
+        for k, w in edge_weights[key].items():
+            u = k[0]
+            v = k[1]
+            G.add_edge(u, v, weight=w)
+
+        # Compute total edge weight W
+        W = sum([w for w in edge_weights[key].values()])
+        # if W == 0:
+        #     W = 1  # Avoid division by zero
+
+        # Prepare lists to store results
+        node_ids = []
+        weighted_in_ratios = []
+        weighted_out_ratios = []
+        weighted_in_degrees = []
+        weighted_out_degrees = []
+
+        # Calculate weighted degrees and ratios for each node
+        for node in G.nodes():
+            node_ids.append(node)
+            weighted_in_deg = G.in_degree(node, weight="weight")
+            weighted_out_deg = G.out_degree(node, weight="weight")
+            weighted_in_degrees.append(weighted_in_deg)
+            weighted_out_degrees.append(weighted_out_deg)
+            weighted_in_ratios.append(weighted_in_deg / W)
+            weighted_out_ratios.append(weighted_out_deg / W)
+
+        # Create DataFrame
+        dfs[key] = pd.DataFrame(
+            {
+                "telegram_chat_id": node_ids,
+                "weighted_in_ratio": weighted_in_ratios,
+                "weighted_out_ratio": weighted_out_ratios,
+            }
+        )
+
+    return dfs
+
+
+# def combine_features(market_features: dict, graph_features: dict, weighted_features: dict):
+#     """
+#     This function is used to combine the market and graph features
+#     """
+#     combined_data = {}
+
+#     for key in market_features.keys():
+#         # Check if the key exists in dfs and 'telegram_chat_id' exists in both DataFrames
+#         if (
+#             key in graph_features
+#             and "telegram_chat_id" in market_features[key].columns
+#             and "telegram_chat_id" in graph_features[key].columns
+#         ):
+#             # Perform an inner join on 'telegram_chat_id'
+#             combined_df = pd.merge(
+#                 market_features[key],
+#                 graph_features[key],
+#                 on="telegram_chat_id",
+#                 how="inner",
+#             )
+#         else:
+#             # If key is not in dfs or 'telegram_chat_id' is missing in either DataFrame, use an empty DataFrame
+#             combined_df = pd.DataFrame()
+
+#         combined_data[key] = combined_df
+
+#     return combined_data
+
+
+# merge three dfs market_features: dict, graph_features: dict, weighted_features: dict like combine_features
+def combine_features(
+    market_features: dict, graph_features: dict, weighted_features: dict
+):
     """
     This function is used to combine the market and graph features
     """
@@ -132,11 +208,18 @@ def combine_features(market_features: dict, graph_features: dict):
             key in graph_features
             and "telegram_chat_id" in market_features[key].columns
             and "telegram_chat_id" in graph_features[key].columns
+            and "telegram_chat_id" in weighted_features[key].columns
         ):
             # Perform an inner join on 'telegram_chat_id'
             combined_df = pd.merge(
                 market_features[key],
                 graph_features[key],
+                on="telegram_chat_id",
+                how="inner",
+            )
+            combined_df = pd.merge(
+                combined_df,
+                weighted_features[key],
                 on="telegram_chat_id",
                 how="inner",
             )
@@ -401,8 +484,9 @@ def get_graphs(cascade: dict, no_nodes: dict, id_mapping: dict):
     result = {}
     A = {}
     P_dict = {}
+    P_com = {}
     for key, value in ensure_graph_learned.items():
-        graphs[key], result[key], A[key], P_dict[key] = DANI(
+        graphs[key], result[key], A[key], P_dict[key], P_com[key] = DANI(
             ensure_graph_learned[key], cascade[key]
         )
         graphs[key] = nx.relabel_nodes(graphs[key], id_mapping[key]["new_to_id"])
@@ -415,7 +499,15 @@ def get_graphs(cascade: dict, no_nodes: dict, id_mapping: dict):
             # Relabel edges in the current dictionary using the new_to_id mapping
             P_dict[key] = relabel_edges(P_dict[key], new_to_id)
 
-    return graphs, result, A, P_dict
+    # Loop over each key in P_com and apply the mapping
+    for key in P_com:
+        if key in id_mapping:
+            # Extract new_to_id mapping for the current key
+            new_to_id = id_mapping[key]["new_to_id"]
+            # Relabel edges in the current dictionary using the new_to_id mapping
+            P_com[key] = relabel_edges(P_com[key], new_to_id)
+
+    return graphs, result, A, P_dict, P_com
 
 
 if __name__ == "__main__":
@@ -425,9 +517,10 @@ if __name__ == "__main__":
     cascade_buffer, no_nodes_buffer, id_mapping_buffer, cascade_labeling = (
         aggregate_data(ided_signals)
     )
-    gs, results, As, P_dict = get_graphs(
+    gs, results, As, P_dict, P_com = get_graphs(
         cascade_buffer, no_nodes_buffer, id_mapping_buffer
     )
     graph_feature = graph_features(gs)
     market_feature = features_engineer(processed_signals)
-    combine_feature = combine_features(market_feature, graph_feature)
+    weighted_feature = compute_weighted_in_out_ratios(P_com)
+    combine_feature = combine_features(market_feature, graph_feature, weighted_feature)

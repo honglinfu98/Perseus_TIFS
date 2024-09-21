@@ -151,10 +151,11 @@ def save_individual_subfigures(
                 title=ax.get_legend().get_title().get_text(),
                 fontsize=fontsize_legend,
                 title_fontsize=fontsize_legend,
-                loc="lower right",  # Set the legend location to the bottom right
+                loc="lower right",
             )
 
-    fig_a, axs_a = plt.subplots(1, 3, figsize=(36, 8))
+    # Adjusting to a vertical layout (1 column, 3 rows)
+    fig_a, axs_a = plt.subplots(3, 1, figsize=(12, 24))  # Adjusted for vertical layout
     for j, method in enumerate(["GCN", "GAT", "GraphSAGE"]):
         method_train_times = {
             dataset: results[dataset][method]["train_times"] for dataset in datasets
@@ -166,16 +167,18 @@ def save_individual_subfigures(
             dataset_colors,
             *global_min_max[method],
         )
-        if j < 2:  # Remove legends for the first two subplots
-            axs_a[j].get_legend().remove()
-    set_style(axs_a[0], show_title=True, show_xlabel=False, show_ylabel=True)
-    for ax in axs_a[1:]:
-        set_style(ax, show_title=True, show_xlabel=False, show_ylabel=False)
+        axs_a[j].get_legend().remove()
+
+    for j, ax in enumerate(axs_a):
+        set_style(
+            ax, show_title=True, show_xlabel=(j == 2), show_ylabel=True
+        )  # x-titles removed for first two plots
     plt.tight_layout()
     plt.savefig(path.join(PROJECT_ROOT, "data", "subfigure_a.pdf"))
+    plt.show()
     plt.close(fig_a)
 
-    fig_b, axs_b = plt.subplots(1, 3, figsize=(36, 8))
+    fig_b, axs_b = plt.subplots(3, 1, figsize=(12, 24))  # Adjusted for vertical layout
     for j, method in enumerate(["GCN", "GAT", "GraphSAGE"]):
         method_train_times = {
             dataset: results1[dataset][method]["train_times"] for dataset in datasets
@@ -187,16 +190,21 @@ def save_individual_subfigures(
             dataset_colors,
             *global_min_max[method],
         )
-        axs_b[j].get_legend().remove()  # Remove legend for each subplot
-    set_style(axs_b[0], show_title=False, show_xlabel=True, show_ylabel=True)
-    for ax in axs_b[1:]:
-        set_style(ax, show_title=False, show_xlabel=True, show_ylabel=False)
+        if j < 2:
+            axs_b[j].get_legend().remove()
+
+    for j, ax in enumerate(axs_b):
+        set_style(
+            ax, show_title=True, show_xlabel=(j == 2), show_ylabel=False
+        )  # x-titles removed for first two plots
     plt.tight_layout()
     plt.savefig(path.join(PROJECT_ROOT, "data", "subfigure_b.pdf"))
+    plt.show()
     plt.close(fig_b)
 
-    # For subfigure_c
-    fig_c, axs_c = plt.subplots(1, len(models), figsize=(36, 8))
+    fig_c, axs_c = plt.subplots(
+        len(models), 1, figsize=(12, 24)
+    )  # Adjusted for vertical layout
     for i, model_name in enumerate(models):
         plot_fpr_tpr(
             results,
@@ -209,16 +217,20 @@ def save_individual_subfigures(
             xlabel="False Positive Rate",
             ylabel="True Positive Rate",
         )
-        if i < len(models) - 1:  # Remove legends for the first two models
-            axs_c[i].get_legend().remove()
-    set_style(axs_c[0], show_title=True, show_xlabel=False, show_ylabel=True)
-    for ax in axs_c[1:]:
-        set_style(ax, show_title=True, show_xlabel=False, show_ylabel=False)
+        axs_c[i].get_legend().remove()
+
+    for i, ax in enumerate(axs_c):
+        set_style(
+            ax, show_title=True, show_xlabel=(i == len(models) - 1), show_ylabel=True
+        )  # x-titles removed for first two plots
     plt.tight_layout()
     plt.savefig(path.join(PROJECT_ROOT, "data", "subfigure_c.pdf"))
+    plt.show()
     plt.close(fig_c)
-    # For subfigure_d
-    fig_d, axs_d = plt.subplots(1, len(models), figsize=(36, 8))
+
+    fig_d, axs_d = plt.subplots(
+        len(models), 1, figsize=(12, 24)
+    )  # Adjusted for vertical layout
     for i, model_name in enumerate(models):
         plot_fpr_tpr(
             results1,
@@ -231,13 +243,16 @@ def save_individual_subfigures(
             xlabel="False Positive Rate",
             ylabel="True Positive Rate",
         )
-        axs_d[i].get_legend().remove()  # Remove legends for each subplot
-    set_style(axs_d[0], show_title=False, show_xlabel=True, show_ylabel=True)
-    for ax in axs_d[1:]:
-        set_style(ax, show_title=False, show_xlabel=True, show_ylabel=False)
+        if i < 2:
+            axs_d[i].get_legend().remove()
 
+    for i, ax in enumerate(axs_d):
+        set_style(
+            ax, show_title=True, show_xlabel=(i == len(models) - 1), show_ylabel=False
+        )  # x-titles removed for first two plots
     plt.tight_layout()
     plt.savefig(path.join(PROJECT_ROOT, "data", "subfigure_d.pdf"))
+    plt.show()
     plt.close(fig_d)
 
 

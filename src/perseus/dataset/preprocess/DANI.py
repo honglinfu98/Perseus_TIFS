@@ -58,7 +58,7 @@ def get_index(cascade: list) -> dict:
 def DANI(N: int, cascades: list) -> tuple:
     """
     This script is used to process the cascades and return the influence graph
-    Return: Influence graph, edge list sorted, P_dict
+    Return: Influence graph, edge list sorted, , P_dict
     """
     P = np.zeros([N, N])
 
@@ -99,6 +99,24 @@ def DANI(N: int, cascades: list) -> tuple:
             if i in cascade[0]:
                 node_status_set[i].add(c_i)
 
+    node_status_matrix = {}
+    for i in range(N):
+        for j in range(N):
+            if i == j:
+                continue
+            else:
+                node_status_matrix[(i, j)] = len(
+                    node_status_set[i] & node_status_set[j]
+                ) / len(node_status_set[i] | node_status_set[j])
+
+    P_dict_real = {}
+    for i in range(N):
+        for j in range(N):
+            if i == j:
+                continue
+            else:
+                P_dict_real[(i, j)] = P_dict[(i, j)] * node_status_matrix[(i, j)]
+
     A = {}
     for u in range(N):
         for v in range(u + 1, N):
@@ -132,4 +150,4 @@ def DANI(N: int, cascades: list) -> tuple:
         if i >= len(result):
             break
 
-    return IG, result, A, P_dict
+    return IG, result, A, P_dict, P_dict_real
