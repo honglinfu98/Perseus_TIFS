@@ -138,3 +138,6 @@ data/
 venv
 .env
 .DS_Store
+data/test_signals.pkl
+data/validate_signals.pkl
+data/train_signals.pkl
