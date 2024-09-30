@@ -98,24 +98,33 @@ def prepare_data(graphs: dict, features: dict, label_mapping: dict):
             edge_index.append([source, target])
         edge_index = torch.tensor(edge_index, dtype=torch.long).t().contiguous()
 
-        num_labels = 2
+        # num_labels = 2
+
+        # # Prepare labels
+        # labels = []
+        # for node_id in features_buffer["telegram_chat_id"]:
+        #     node_labels = label_mapping[key].get(node_id, 0)
+        #     if not isinstance(node_labels, list):
+        #         node_labels = [node_labels]  # Convert to list for consistency
+
+        #     # Convert to one-hot encoded format
+        #     label_vector = [0] * num_labels
+        #     for label in node_labels:
+        #         if label < num_labels:
+        #             label_vector[label] = 1
+        #     labels.append(label_vector)
+
+        # # Convert list of labels to a tensor
+        # labels_tensor = torch.tensor(labels, dtype=torch.float)
 
         # Prepare labels
-        labels = []
-        for node_id in features_buffer["telegram_chat_id"]:
-            node_labels = label_mapping[key].get(node_id, 0)
-            if not isinstance(node_labels, list):
-                node_labels = [node_labels]  # Convert to list for consistency
+        # Prepare labels
+        labels = [
+            label_mapping[key].get(node_id, 0)
+            for node_id in features_buffer["telegram_chat_id"]
+        ]
+        labels_tensor = torch.tensor(labels, dtype=torch.float).unsqueeze(1)
 
-            # Convert to one-hot encoded format
-            label_vector = [0] * num_labels
-            for label in node_labels:
-                if label < num_labels:
-                    label_vector[label] = 1
-            labels.append(label_vector)
-
-        # Convert list of labels to a tensor
-        labels_tensor = torch.tensor(labels, dtype=torch.float)
         # Create a Data object
         data = Data(x=node_attributes, edge_index=edge_index, y=labels_tensor)
 
@@ -184,21 +193,29 @@ def prepare_ddm_data(graphs: dict, features: dict, label_mapping: dict, P_dict: 
         edge_index = torch.tensor(edge_index_list, dtype=torch.long).t().contiguous()
         edge_weight = torch.tensor(edge_weight_list, dtype=torch.float)
         # Populate the lists
-        num_labels = 2
+        # num_labels = 2
 
-        labels = []
-        for node_id in features_buffer["telegram_chat_id"]:
-            node_labels = label_mapping[key].get(node_id, 0)
-            if not isinstance(node_labels, list):
-                node_labels = [node_labels]  # Convert to list for consistency
-            # Convert to one-hot encoded format
-            label_vector = [0] * num_labels
-            for label in node_labels:
-                if label < num_labels:
-                    label_vector[label] = 1
-            labels.append(label_vector)
-        # Convert list of labels to a tensor
-        labels_tensor = torch.tensor(labels, dtype=torch.float)
+        # labels = []
+        # for node_id in features_buffer["telegram_chat_id"]:
+        #     node_labels = label_mapping[key].get(node_id, 0)
+        #     if not isinstance(node_labels, list):
+        #         node_labels = [node_labels]  # Convert to list for consistency
+        #     # Convert to one-hot encoded format
+        #     label_vector = [0] * num_labels
+        #     for label in node_labels:
+        #         if label < num_labels:
+        #             label_vector[label] = 1
+        #     labels.append(label_vector)
+        # # Convert list of labels to a tensor
+        # labels_tensor = torch.tensor(labels, dtype=torch.float)
+
+        # Prepare labels
+        labels = [
+            label_mapping[key].get(node_id, 0)
+            for node_id in features_buffer["telegram_chat_id"]
+        ]
+        labels_tensor = torch.tensor(labels, dtype=torch.float).unsqueeze(1)
+
         # Create a Data object
         data = Data(
             x=node_attributes,
@@ -281,22 +298,30 @@ def prepare_cos_data(graphs: dict, features: dict, label_mapping: dict):
         edge_index = torch.tensor(edge_index_list, dtype=torch.long).t().contiguous()
         edge_weight = torch.tensor(edge_weight_list, dtype=torch.float)
 
-        # Populate the lists
-        num_labels = 2
+        # # Populate the lists
+        # num_labels = 2
 
-        labels = []
-        for node_id in features_buffer["telegram_chat_id"]:
-            node_labels = label_mapping[key].get(node_id, 0)
-            if not isinstance(node_labels, list):
-                node_labels = [node_labels]  # Convert to list for consistency
-            # Convert to one-hot encoded format
-            label_vector = [0] * num_labels
-            for label in node_labels:
-                if label < num_labels:
-                    label_vector[label] = 1
-            labels.append(label_vector)
-        # Convert list of labels to a tensor
-        labels_tensor = torch.tensor(labels, dtype=torch.float)
+        # labels = []
+        # for node_id in features_buffer["telegram_chat_id"]:
+        #     node_labels = label_mapping[key].get(node_id, 0)
+        #     if not isinstance(node_labels, list):
+        #         node_labels = [node_labels]  # Convert to list for consistency
+        #     # Convert to one-hot encoded format
+        #     label_vector = [0] * num_labels
+        #     for label in node_labels:
+        #         if label < num_labels:
+        #             label_vector[label] = 1
+        #     labels.append(label_vector)
+        # # Convert list of labels to a tensor
+        # labels_tensor = torch.tensor(labels, dtype=torch.float)
+
+        # Prepare labels
+        labels = [
+            label_mapping[key].get(node_id, 0)
+            for node_id in features_buffer["telegram_chat_id"]
+        ]
+        labels_tensor = torch.tensor(labels, dtype=torch.float).unsqueeze(1)
+
         # Create a Data object
         data = Data(
             x=node_attributes,
@@ -671,15 +696,15 @@ if __name__ == "__main__":
 
     a = split_data("DDINA", loader=True)
     # save it in pickle
-    with open(path.join(PROJECT_ROOT, "data", "DDINA_data_e.pkl"), "wb") as file:
+    with open(path.join(PROJECT_ROOT, "data", "DDINA_data_t.pkl"), "wb") as file:
         pickle.dump(a, file)
     b = split_data("COSS", loader=True)
     # save it in pickle
-    with open(path.join(PROJECT_ROOT, "data", "COSS_data_e.pkl"), "wb") as file:
+    with open(path.join(PROJECT_ROOT, "data", "COSS_data_t.pkl"), "wb") as file:
         pickle.dump(b, file)
     c = split_data("DDM", loader=True)
     # save it in pickle
-    with open(path.join(PROJECT_ROOT, "data", "DDM_data_e.pkl"), "wb") as file:
+    with open(path.join(PROJECT_ROOT, "data", "DDM_data_t.pkl"), "wb") as file:
         pickle.dump(c, file)
 
     # a = get_train_test_validate_data("DDINA")

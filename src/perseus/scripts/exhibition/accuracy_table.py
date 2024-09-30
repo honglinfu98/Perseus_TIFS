@@ -10,11 +10,11 @@ models = ["GCN", "GAT", "GraphSAGE"]
 label = 1
 
 
-with open(path.join(PROJECT_ROOT, "data", "results_com.pkl"), "rb") as file:
+with open(path.join(PROJECT_ROOT, "data", "saved", "results_com.pkl"), "rb") as file:
     results = pickle.load(file)
 
 
-with open(path.join(PROJECT_ROOT, "data", "results1_com.pkl"), "rb") as file:
+with open(path.join(PROJECT_ROOT, "data", "saved", "results1_com.pkl"), "rb") as file:
     results1 = pickle.load(file)
 
 

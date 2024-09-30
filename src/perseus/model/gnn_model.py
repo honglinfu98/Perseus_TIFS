@@ -13,7 +13,11 @@ class GCNNet(torch.nn.Module):
         x = F.relu(self.conv1(x, edge_index, edge_weight=edge_weight))
         embeddings = F.dropout(x, training=self.training)
         x = self.conv2(embeddings, edge_index)
-        return x, embeddings  # Return both output and embeddings
+        # if self.conv2.out_channels == 1:
+        x = torch.sigmoid(x)  # Sigmoid activation for binary classification
+        # else:
+        #     x = F.log_softmax(x, dim=1)  # Log softmax activation for multi-class
+        return x, embeddings
 
 
 class GraphSAGENet(torch.nn.Module):
@@ -26,25 +30,25 @@ class GraphSAGENet(torch.nn.Module):
         x = F.relu(self.conv1(x, edge_index))
         embeddings = F.dropout(x, training=self.training)
         x = self.conv2(embeddings, edge_index)
-        return x, embeddings  # Return both output and embeddings
+        x = torch.sigmoid(x)  # Sigmoid for binary
+
+        return x, embeddings
 
 
 class Net(torch.nn.Module):
-    def __init__(self, num_features=4, num_classes=2):
+    def __init__(self, num_features, num_classes):
         super().__init__()
         self.conv1 = GATConv(num_features, 8, heads=2)
-        self.lin1 = torch.nn.Linear(num_features, 2 * 8)
-        self.conv2 = GATConv(2 * 8, 8, heads=2)
-        self.lin2 = torch.nn.Linear(2 * 8, 2 * 8)
-        self.conv3 = GATConv(2 * 8, num_classes, heads=2, concat=False)
-        self.lin3 = torch.nn.Linear(2 * 8, num_classes)
+        self.lin1 = torch.nn.Linear(num_features, 16)
+        self.conv2 = GATConv(16, 8, heads=2)
+        self.lin2 = torch.nn.Linear(16, 16)
+        self.conv3 = GATConv(16, num_classes, heads=2, concat=False)
+        self.lin3 = torch.nn.Linear(16, num_classes)
 
     def forward(self, x, edge_index):
-        if torch.isnan(x).any() or torch.isinf(x).any():
-            print("NaN or Inf in input feature x")
-        if torch.isnan(edge_index).any() or torch.isinf(edge_index).any():
-            print("NaN or Inf in edge_index")
         x1 = F.elu(self.conv1(x, edge_index) + self.lin1(x))
         embeddings = F.elu(self.conv2(x1, edge_index) + self.lin2(x1))
         x = self.conv3(embeddings, edge_index) + self.lin3(embeddings)
-        return x, embeddings  # Return both output and embeddings
+        x = torch.sigmoid(x)  # Sigmoid for binary
+
+        return x, embeddings
