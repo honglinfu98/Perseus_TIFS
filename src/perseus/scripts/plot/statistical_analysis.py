@@ -9,6 +9,7 @@ import networkx as nx
 from scipy import stats
 import seaborn as sns
 import matplotlib.pyplot as plt
+from sklearn.metrics import roc_curve, auc
 from perseus.dataset.dataset_preparation import combine_features, graph_features
 from perseus.dataset.preprocess.train_test_validate import (
     get_test_scored_signals,
@@ -19,6 +20,7 @@ from perseus.dataset.preprocess.train_test_validate import (
 # from perseus.dataset.preprocess.groudtruth_labeling import create_label_mapping
 from perseus.dataset.preprocess.process import (
     calculate_effsize_efficiency,
+    compute_weighted_in_out_ratios,
     out_ego_graph,
     in_ego_graph,
 )
@@ -106,7 +108,7 @@ def aggregate_and_compare_combined(gs_ls: dict, label_mapping_ls: dict):
             groups[0], groups[1], equal_var=False, nan_policy="omit"
         )
 
-    return ttest_results
+    return ttest_results, metrics_by_group
 
 
 # Function to process signals and return necessary components for analysis
@@ -120,12 +122,16 @@ def process_signals_and_get_components(signal_function: pd.DataFrame):
     cascade, no_nodes, id_mapping, cascade_labeling = aggregate_data(
         ided_signals
     )  # Aggregate data
-    gs, results, As, P_dict = get_graphs(cascade, no_nodes, id_mapping)  # Get graphs
-    graph_feature = graph_features(gs)  # Get graph features
-    market_feature = features_engineer(processed_signals)  # Engineer market features
-    combine_feature = combine_features(
-        market_feature, graph_feature
-    )  # Combine features
+    gs, results, As, P_dict, P_com = get_graphs(
+        cascade, no_nodes, id_mapping
+    )  # Get graphs
+    # graph_feature = graph_features(gs)  # Get graph features
+    # market_feature = features_engineer(processed_signals)  # Engineer market features
+    # weighted_feature = compute_weighted_in_out_ratios(P_com)
+
+    # combine_feature = combine_features(
+    #     market_feature, graph_feature, weighted_feature
+    # )  # Combine features
     label_mapping = read_labeling_csv_back_to_dict(
         "test"
     )  # Read label mapping (adjust as needed)
@@ -245,6 +251,40 @@ def plot_distribution(
     return metrics_by_group
 
 
+def plot_closeness_roc(metrics_by_group):
+    closeness_group_0 = metrics_by_group["closeness_centrality"][0]
+    closeness_group_1 = metrics_by_group["closeness_centrality"][1]
+
+    labels = np.array([0] * len(closeness_group_0) + [1] * len(closeness_group_1))
+    scores = np.array(closeness_group_0 + closeness_group_1)
+
+    fpr, tpr, thresholds = roc_curve(labels, scores)
+    roc_auc = auc(fpr, tpr)
+
+    # Check if AUC is less than 0.5 and invert scores if so
+    if roc_auc < 0.5:
+        scores = 1 - scores  # Invert the scores
+        fpr, tpr, thresholds = roc_curve(labels, scores)
+        roc_auc = auc(fpr, tpr)  # Recalculate AUC with inverted scores
+
+    plt.figure()
+    plt.plot(
+        fpr,
+        tpr,
+        color="darkorange",
+        lw=2,
+        label="ROC curve (area = {:.2f})".format(roc_auc),
+    )
+    plt.plot([0, 1], [0, 1], color="navy", lw=2, linestyle="--")
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel("False Positive Rate")
+    plt.ylabel("True Positive Rate")
+    plt.title("Receiver Operating Characteristic")
+    plt.legend(loc="lower right")
+    plt.show()
+
+
 # Main execution block
 if __name__ == "__main__":
     # Process each dataset
@@ -267,7 +307,7 @@ if __name__ == "__main__":
     }
 
     # Running the pooled analysis
-    results = aggregate_and_compare_combined(all_gs, all_label_mappings)
+    results, c = aggregate_and_compare_combined(all_gs, all_label_mappings)
     plot_distribution(all_gs, all_label_mappings, 25, 25, 17, 25)
 
     # Transform the t-test results into a format suitable for DataFrame construction
@@ -298,3 +338,5 @@ if __name__ == "__main__":
 
     # Show or return the DataFrame
     print(df_results)
+
+    plot_closeness_roc(c)

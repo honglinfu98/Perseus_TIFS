@@ -12,7 +12,8 @@ This script is used to prepare the dataset for the model training. It includes t
 
 from os import path
 import pickle
-import random
+
+# import random
 import torch
 from sklearn.metrics.pairwise import cosine_similarity
 from torch_geometric.loader import DataLoader
@@ -60,6 +61,10 @@ def prepare_data(graphs: dict, features: dict, label_mapping: dict):
             # "rating",
             "in_ratio",
             "out_ratio",
+            "weighted_in_ratio",
+            "weighted_out_ratio",
+            "closeness_centrality",
+            "weighted_closeness_centrality",
             # "eff_size",
             # "efficiency",
         ]
@@ -134,8 +139,17 @@ def prepare_ddm_data(graphs: dict, features: dict, label_mapping: dict, P_dict: 
         feature_columns = [
             "average_increase_percentage",
             "number_of_signals",
+            # "average_speed",
+            # "sum_targets_achieved",
+            # "rating",
+            "in_ratio",
+            "out_ratio",
             "weighted_in_ratio",
             "weighted_out_ratio",
+            "closeness_centrality",
+            "weighted_closeness_centrality",
+            # "eff_size",
+            # "efficiency",
         ]
         features_to_process = features_buffer[feature_columns]
         normalized_features = (
@@ -429,20 +443,20 @@ def get_split_data_pickle(options: str):
     return train_loader, test_loader, validate_loader
 
 
-def get_split_data_pickle_com(options: str):
+def get_split_data_pickle_f(options: str):
     """
     Load the data for temporal tasks using the pickle file
     """
     if options == "DDINA":
-        with open(path.join(PROJECT_ROOT, "data", "DDINA_data_com.pkl"), "rb") as file:
+        with open(path.join(PROJECT_ROOT, "data", "DDINA_data_f.pkl"), "rb") as file:
             data = pickle.load(file)
 
     elif options == "COSS":
-        with open(path.join(PROJECT_ROOT, "data", "COSS_data_com.pkl"), "rb") as file:
+        with open(path.join(PROJECT_ROOT, "data", "COSS_data_f.pkl"), "rb") as file:
             data = pickle.load(file)
 
     elif options == "DDM":
-        with open(path.join(PROJECT_ROOT, "data", "DDM_data_com.pkl"), "rb") as file:
+        with open(path.join(PROJECT_ROOT, "data", "DDM_data_f.pkl"), "rb") as file:
             data = pickle.load(file)
 
     train_loader = data[0]
@@ -452,81 +466,20 @@ def get_split_data_pickle_com(options: str):
     return train_loader, test_loader, validate_loader
 
 
-def distribute_evenly_with_redistribution(data, sizes):
-    # Create initial 3 chunks
-    chunks = [data[i::3] for i in range(3)]
-
-    # If initial chunk sizes don't match required sizes, borrow elements from other chunks
-    for i in range(3):
-        while len(chunks[i]) < sizes[i]:
-            # Try to borrow from next chunks cyclically
-            for j in range(1, 3):
-                donor_index = (i + j) % 3
-                if len(chunks[donor_index]) > sizes[donor_index]:
-                    # Move elements from donor to current chunk
-                    chunks[i].append(chunks[donor_index].pop())
-                    break
-
-    return [chunks[i][: sizes[i]] for i in range(3)]
-
-
-def get_train_test_validate_data(options: str):
-    # Assume split_data loads and optionally preprocesses data
-    if options == "DDINA":
-        with open(path.join(PROJECT_ROOT, "data", "DDINA_data_no.pkl"), "rb") as file:
-            data = pickle.load(file)
-        # data = split_data("DDINA", loader=False)
-    elif options == "COSS":
-        with open(path.join(PROJECT_ROOT, "data", "COSS_data_no.pkl"), "rb") as file:
-            data = pickle.load(file)
-        # data = split_data("COSS", loader=False)
-    elif options == "DDM":
-        with open(path.join(PROJECT_ROOT, "data", "DDM_data_no.pkl"), "rb") as file:
-            data = pickle.load(file)
-        # data = split_data("DDM", loader=False)
-
-    dataset = data[0] + data[1] + data[2]
-
-    data_sorted = sorted(dataset, key=lambda i: len(i.x), reverse=True)
-
-    # Calculate the size of each set
-    total_size = len(data_sorted)
-    train_size = int(0.7 * total_size)
-    val_size = int(0.15 * total_size)
-    test_size = total_size - train_size - val_size
-
-    # Distribute data among train, validate, test
-    train_data, val_data, test_data = distribute_evenly_with_redistribution(
-        data_sorted, [train_size, val_size, test_size]
-    )
-
-    # random shuffle train_data, val_data, test_data
-    random.shuffle(train_data)
-    random.shuffle(val_data)
-    random.shuffle(test_data)
-
-    # Create DataLoaders
-    train_loader = DataLoader(train_data, batch_size=1, shuffle=True)
-    test_loader = DataLoader(test_data, batch_size=1, shuffle=True)
-    validate_loader = DataLoader(val_data, batch_size=1, shuffle=True)
-
-    return train_loader, test_loader, validate_loader
-
-
-def get_train_test_validate_data_pickle(options: str):
+def get_split_data_pickle_t(options: str):
     """
-    Load the non-temporal data using the pickle file
+    Load the data for temporal tasks using the pickle file
     """
     if options == "DDINA":
-        with open(path.join(PROJECT_ROOT, "data", "DDINA_data_T.pkl"), "rb") as file:
+        with open(path.join(PROJECT_ROOT, "data", "DDINA_data_t.pkl"), "rb") as file:
             data = pickle.load(file)
 
     elif options == "COSS":
-        with open(path.join(PROJECT_ROOT, "data", "COSS_data_T.pkl"), "rb") as file:
+        with open(path.join(PROJECT_ROOT, "data", "COSS_data_t.pkl"), "rb") as file:
             data = pickle.load(file)
 
     elif options == "DDM":
-        with open(path.join(PROJECT_ROOT, "data", "DDM_data_T.pkl"), "rb") as file:
+        with open(path.join(PROJECT_ROOT, "data", "DDM_data_t.pkl"), "rb") as file:
             data = pickle.load(file)
 
     train_loader = data[0]
@@ -536,22 +489,20 @@ def get_train_test_validate_data_pickle(options: str):
     return train_loader, test_loader, validate_loader
 
 
-def get_train_test_validate_data_pickle_com(options: str):
+def get_split_data_pickle_fv(options: str):
     """
-    Load the non-temporal data using the pickle file
+    Load the data for temporal tasks using the pickle file
     """
     if options == "DDINA":
-        with open(
-            path.join(PROJECT_ROOT, "data", "DDINA_data_com_T.pkl"), "rb"
-        ) as file:
+        with open(path.join(PROJECT_ROOT, "data", "DDINA_data_fv.pkl"), "rb") as file:
             data = pickle.load(file)
 
     elif options == "COSS":
-        with open(path.join(PROJECT_ROOT, "data", "COSS_data_com_T.pkl"), "rb") as file:
+        with open(path.join(PROJECT_ROOT, "data", "COSS_data_fv.pkl"), "rb") as file:
             data = pickle.load(file)
 
     elif options == "DDM":
-        with open(path.join(PROJECT_ROOT, "data", "DDM_data_com_T.pkl"), "rb") as file:
+        with open(path.join(PROJECT_ROOT, "data", "DDM_data_fv.pkl"), "rb") as file:
             data = pickle.load(file)
 
     train_loader = data[0]
@@ -559,32 +510,187 @@ def get_train_test_validate_data_pickle_com(options: str):
     validate_loader = data[2]
 
     return train_loader, test_loader, validate_loader
+
+
+def get_split_data_pickle_tr(options: str):
+    """
+    Load the data for temporal tasks using the pickle file
+    """
+    if options == "DDINA":
+        with open(path.join(PROJECT_ROOT, "data", "DDINA_data_tr.pkl"), "rb") as file:
+            data = pickle.load(file)
+
+    elif options == "COSS":
+        with open(path.join(PROJECT_ROOT, "data", "COSS_data_tr.pkl"), "rb") as file:
+            data = pickle.load(file)
+
+    elif options == "DDM":
+        with open(path.join(PROJECT_ROOT, "data", "DDM_data_tr.pkl"), "rb") as file:
+            data = pickle.load(file)
+
+    train_loader = data[0]
+    test_loader = data[1]
+    validate_loader = data[2]
+
+    return train_loader, test_loader, validate_loader
+
+
+def get_split_data_pickle_e(options: str):
+    """
+    Load the data for temporal tasks using the pickle file
+    """
+    if options == "DDINA":
+        with open(path.join(PROJECT_ROOT, "data", "DDINA_data_e.pkl"), "rb") as file:
+            data = pickle.load(file)
+
+    elif options == "COSS":
+        with open(path.join(PROJECT_ROOT, "data", "COSS_data_e.pkl"), "rb") as file:
+            data = pickle.load(file)
+
+    elif options == "DDM":
+        with open(path.join(PROJECT_ROOT, "data", "DDM_data_e.pkl"), "rb") as file:
+            data = pickle.load(file)
+
+    train_loader = data[0]
+    test_loader = data[1]
+    validate_loader = data[2]
+
+    return train_loader, test_loader, validate_loader
+
+
+# def distribute_evenly_with_redistribution(data, sizes):
+#     # Create initial 3 chunks
+#     chunks = [data[i::3] for i in range(3)]
+
+#     # If initial chunk sizes don't match required sizes, borrow elements from other chunks
+#     for i in range(3):
+#         while len(chunks[i]) < sizes[i]:
+#             # Try to borrow from next chunks cyclically
+#             for j in range(1, 3):
+#                 donor_index = (i + j) % 3
+#                 if len(chunks[donor_index]) > sizes[donor_index]:
+#                     # Move elements from donor to current chunk
+#                     chunks[i].append(chunks[donor_index].pop())
+#                     break
+
+#     return [chunks[i][: sizes[i]] for i in range(3)]
+
+
+# def get_train_test_validate_data(options: str):
+#     # Assume split_data loads and optionally preprocesses data
+#     if options == "DDINA":
+#         # with open(path.join(PROJECT_ROOT, "data", "DDINA_data_no.pkl"), "rb") as file:
+#         #     data = pickle.load(file)
+#         data = split_data("DDINA", loader=False)
+#     elif options == "COSS":
+#         # with open(path.join(PROJECT_ROOT, "data", "COSS_data_no.pkl"), "rb") as file:
+#         #     data = pickle.load(file)
+#         data = split_data("COSS", loader=False)
+#     elif options == "DDM":
+#         # with open(path.join(PROJECT_ROOT, "data", "DDM_data_no.pkl"), "rb") as file:
+#         #     data = pickle.load(file)
+#         data = split_data("DDM", loader=False)
+
+#     dataset = data[0] + data[1] + data[2]
+
+#     data_sorted = sorted(dataset, key=lambda i: len(i.x), reverse=True)
+
+#     # Calculate the size of each set
+#     total_size = len(data_sorted)
+#     train_size = int(0.7 * total_size)
+#     val_size = int(0.15 * total_size)
+#     test_size = total_size - train_size - val_size
+
+#     # Distribute data among train, validate, test
+#     train_data, val_data, test_data = distribute_evenly_with_redistribution(
+#         data_sorted, [train_size, val_size, test_size]
+#     )
+
+#     # random shuffle train_data, val_data, test_data
+#     random.shuffle(train_data)
+#     random.shuffle(val_data)
+#     random.shuffle(test_data)
+
+#     # Create DataLoaders
+#     train_loader = DataLoader(train_data, batch_size=1, shuffle=True)
+#     test_loader = DataLoader(test_data, batch_size=1, shuffle=True)
+#     validate_loader = DataLoader(val_data, batch_size=1, shuffle=True)
+
+#     return train_loader, test_loader, validate_loader
+
+
+# def get_train_test_validate_data_pickle(options: str):
+#     """
+#     Load the non-temporal data using the pickle file
+#     """
+#     if options == "DDINA":
+#         with open(path.join(PROJECT_ROOT, "data", "DDINA_data_T.pkl"), "rb") as file:
+#             data = pickle.load(file)
+
+#     elif options == "COSS":
+#         with open(path.join(PROJECT_ROOT, "data", "COSS_data_T.pkl"), "rb") as file:
+#             data = pickle.load(file)
+
+#     elif options == "DDM":
+#         with open(path.join(PROJECT_ROOT, "data", "DDM_data_T.pkl"), "rb") as file:
+#             data = pickle.load(file)
+
+#     train_loader = data[0]
+#     test_loader = data[1]
+#     validate_loader = data[2]
+
+#     return train_loader, test_loader, validate_loader
+
+
+# def get_train_test_validate_data_pickle_com(options: str):
+#     """
+#     Load the non-temporal data using the pickle file
+#     """
+#     if options == "DDINA":
+#         with open(
+#             path.join(PROJECT_ROOT, "data", "DDINA_data_com_T.pkl"), "rb"
+#         ) as file:
+#             data = pickle.load(file)
+
+#     elif options == "COSS":
+#         with open(path.join(PROJECT_ROOT, "data", "COSS_data_com_T.pkl"), "rb") as file:
+#             data = pickle.load(file)
+
+#     elif options == "DDM":
+#         with open(path.join(PROJECT_ROOT, "data", "DDM_data_com_T.pkl"), "rb") as file:
+#             data = pickle.load(file)
+
+#     train_loader = data[0]
+#     test_loader = data[1]
+#     validate_loader = data[2]
+
+#     return train_loader, test_loader, validate_loader
 
 
 if __name__ == "__main__":
 
-    # a = split_data("DDINA", loader=True)
-    # # save it in pickle
-    # with open(path.join(PROJECT_ROOT, "data", "DDINA_data_com.pkl"), "wb") as file:
-    #     pickle.dump(a, file)
-    # b = split_data("COSS", loader=True)
-    # # save it in pickle
-    # with open(path.join(PROJECT_ROOT, "data", "COSS_data_com.pkl"), "wb") as file:
-    #     pickle.dump(b, file)
-    # c = split_data("DDM", loader=True)
-    # # save it in pickle
-    # with open(path.join(PROJECT_ROOT, "data", "DDM_data_com.pkl"), "wb") as file:
-    #     pickle.dump(c, file)
+    a = split_data("DDINA", loader=True)
+    # save it in pickle
+    with open(path.join(PROJECT_ROOT, "data", "DDINA_data_e.pkl"), "wb") as file:
+        pickle.dump(a, file)
+    b = split_data("COSS", loader=True)
+    # save it in pickle
+    with open(path.join(PROJECT_ROOT, "data", "COSS_data_e.pkl"), "wb") as file:
+        pickle.dump(b, file)
+    c = split_data("DDM", loader=True)
+    # save it in pickle
+    with open(path.join(PROJECT_ROOT, "data", "DDM_data_e.pkl"), "wb") as file:
+        pickle.dump(c, file)
 
     # a = get_train_test_validate_data("DDINA")
-    # with open(path.join(PROJECT_ROOT, "data", "DDINA_data_com_T.pkl"), "wb") as file:
+    # with open(path.join(PROJECT_ROOT, "data", "DDINA_data_f_T.pkl"), "wb") as file:
     #     pickle.dump(a, file)
     # b = get_train_test_validate_data("COSS")
-    # with open(path.join(PROJECT_ROOT, "data", "COSS_data_com_T.pkl"), "wb") as file:
+    # with open(path.join(PROJECT_ROOT, "data", "COSS_data_f_T.pkl"), "wb") as file:
     #     pickle.dump(b, file)
     # c = get_train_test_validate_data("DDM")
-    # with open(path.join(PROJECT_ROOT, "data", "DDM_data_com_T.pkl"), "wb") as file:
+    # with open(path.join(PROJECT_ROOT, "data", "DDM_data_f_T.pkl"), "wb") as file:
     #     pickle.dump(c, file)
 
-    a = get_split_data_pickle_com("DDM")
-    get_train_test_validate_data_pickle_com("DDM")
+    # a = get_split_data_pickle_com("DDM")
+    # get_train_test_validate_data_pickle_com("DDM")

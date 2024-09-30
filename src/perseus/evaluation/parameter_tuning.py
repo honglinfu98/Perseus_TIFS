@@ -391,7 +391,9 @@ if __name__ == "__main__":
     # Your existing setup
     fig, axes = plt.subplots(1, 3, figsize=(35, 10), sharey=True)
     norm = plt.Normalize(global_min_auc, global_max_auc)
-    cmap = "inferno"
+    cmap = sns.light_palette(
+        "green", as_cmap=True
+    )  # viridis, plasma, coolwarm, cividis, magma
 
     captions = [
         "(a) AUC Scores for Directed Diffusion",
@@ -436,8 +438,8 @@ if __name__ == "__main__":
             num_rows = pivot_table.shape[0]
             row = num_rows - 2  # Second last row
             col = 0  # First column
-            ax.plot([col, col + 1], [row, row + 1], color="red", lw=3)
-            ax.plot([col, col + 1], [row + 1, row], color="red", lw=3)
+            ax.plot([col, col + 1], [row, row + 1], color="black", lw=3)
+            ax.plot([col, col + 1], [row + 1, row], color="black", lw=3)
 
         ax.text(
             0.5,

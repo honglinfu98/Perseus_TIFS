@@ -20,7 +20,7 @@ from perseus.settings import PROJECT_ROOT
 all_scored_sql_path = os.path.join(os.path.dirname(__file__), "all.sql")
 direct_link = os.path.join(os.path.dirname(__file__), "direct_link.sql")
 volume = os.path.join(os.path.dirname(__file__), "volume.sql")
-
+comparison = os.path.join(os.path.dirname(__file__), "timevscrowd.sql")
 
 with open(all_scored_sql_path, "r") as f:
     ALL_QUERY_SCORED_PUMPS = f.read()
@@ -28,6 +28,8 @@ with open(direct_link, "r") as f:
     QUERY_DIRECT_LINK = f.read()
 with open(volume, "r") as f:
     QUERY_VOLUME = f.read()
+with open(comparison, "r") as f:
+    QUERY_COMPARISON = f.read()
 
 
 def get_direct_link(query: str = QUERY_DIRECT_LINK):
@@ -80,7 +82,23 @@ def get_volumes(query: str = QUERY_VOLUME):
     return result
 
 
+def get_comparison(query: str = QUERY_COMPARISON):
+    """
+    Get volumes from the database for pre-pump scoring.
+    """
+
+    conn = psycopg2.connect(
+        f"dbname={GAIA_DB_DB} user={GAIA_DB_USER} password={GAIA_DB_PASSWORD} host={GAIA_DB_HOST} port={GAIA_DB_PORT}"
+    )
+
+    result = pd.read_sql(query, conn)  # type: ignore
+
+    conn.close()
+
+    return result
+
+
 if __name__ == "__main__":
-    all = get_all_scored_signals()
-    with open(path.join(PROJECT_ROOT, "data", "all_810.pkl"), "wb") as file:
+    all = get_comparison()
+    with open(path.join(PROJECT_ROOT, "data", "comparison.pkl"), "wb") as file:
         pickle.dump(all, file)

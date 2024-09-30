@@ -7,7 +7,11 @@ import json
 from collections import defaultdict
 import pandas as pd
 import networkx as nx
-from perseus.dataset.preprocess.train_test_validate import get_test_scored_signals
+from perseus.dataset.preprocess.train_test_validate import (
+    get_train_scored_signals,
+    get_test_scored_signals,
+    get_valid_scored_signals,
+)
 from perseus.dataset.preprocess.DANI import DANI
 
 
@@ -77,6 +81,9 @@ def graph_features(gs: dict):
         efficiencies = []
         density = []
         clustering_coeffs = []
+        closeness_centralities = []
+        betweenness_centrality = []
+        pagerank = []
 
         for i in gs[key].nodes():
             node_id = i
@@ -102,6 +109,15 @@ def graph_features(gs: dict):
             # Calculate clustering coefficient for the node
             clustering_coeff = nx.clustering(gs[key], node_id)
             clustering_coeffs.append(clustering_coeff)
+            # calcualte the cloness centrality
+            closeness_centrality = nx.closeness_centrality(gs[key], node_id)
+            closeness_centralities.append(closeness_centrality)
+            # calculate the betweenness centrality
+            # betweenness_centralit = nx.betweenness_centrality(gs[key], node_id)
+            # betweenness_centrality.append(betweenness_centralit)
+            # calculate the pagerank
+            # pr = nx.pagerank(gs[key], alpha=0.85)[node_id]
+            # pagerank.append(pr)
 
         # Creating a DataFrame for each key and storing it in the dfs dictionary
         dfs[key] = pd.DataFrame(
@@ -114,6 +130,8 @@ def graph_features(gs: dict):
                 "efficiency": efficiencies,
                 "density": density,
                 "clustering_coeff": clustering_coeffs,
+                "closeness_centrality": closeness_centralities,
+                # "betweenness_centrality": betweenness_centrality,
             }
         )
 
@@ -126,9 +144,15 @@ def compute_weighted_in_out_ratios(edge_weights: dict):
         # Build the graph
         G = nx.DiGraph()
         for k, w in edge_weights[key].items():
-            u = k[0]
-            v = k[1]
-            G.add_edge(u, v, weight=w)
+            if w != 0:
+                u = k[0]
+                v = k[1]
+                G.add_edge(u, v, weight=w)
+        g_distance_dict = {
+            (e1, e2): 1 / weight for e1, e2, weight in G.edges(data="weight")
+        }
+        nx.set_edge_attributes(G, g_distance_dict, "distance")
+        closeness_centrality_dict = nx.closeness_centrality(G, distance="distance")
 
         # Compute total edge weight W
         W = sum([w for w in edge_weights[key].values()])
@@ -141,6 +165,7 @@ def compute_weighted_in_out_ratios(edge_weights: dict):
         weighted_out_ratios = []
         weighted_in_degrees = []
         weighted_out_degrees = []
+        closeness_centrality = []
 
         # Calculate weighted degrees and ratios for each node
         for node in G.nodes():
@@ -151,6 +176,7 @@ def compute_weighted_in_out_ratios(edge_weights: dict):
             weighted_out_degrees.append(weighted_out_deg)
             weighted_in_ratios.append(weighted_in_deg / W)
             weighted_out_ratios.append(weighted_out_deg / W)
+            closeness_centrality.append(closeness_centrality_dict[node])
 
         # Create DataFrame
         dfs[key] = pd.DataFrame(
@@ -158,6 +184,7 @@ def compute_weighted_in_out_ratios(edge_weights: dict):
                 "telegram_chat_id": node_ids,
                 "weighted_in_ratio": weighted_in_ratios,
                 "weighted_out_ratio": weighted_out_ratios,
+                "weighted_closeness_centrality": closeness_centrality,
             }
         )
 
@@ -511,7 +538,7 @@ def get_graphs(cascade: dict, no_nodes: dict, id_mapping: dict):
 
 
 if __name__ == "__main__":
-    signals = get_test_scored_signals()
+    signals = get_train_scored_signals()
     processed_signals = process_dataframe(signals)
     ided_signals = assign_event_ids(processed_signals)
     cascade_buffer, no_nodes_buffer, id_mapping_buffer, cascade_labeling = (
