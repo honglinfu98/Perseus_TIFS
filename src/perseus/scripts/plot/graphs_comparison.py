@@ -4,33 +4,6 @@ import networkx as nx
 from perseus.settings import PROJECT_ROOT
 
 
-# # Function to draw custom edge labels
-# def draw_custom_edge_labels(G, pos, offset_factor=0.9, weight_font_size=12):
-#     """
-#     Draw edge labels with a custom offset from the edge midpoint
-#     """
-#     for u, v, data in G.edges(data=True):
-#         weight = data["weight"]
-#         x_midpoint, y_midpoint = (pos[u][0] + pos[v][0]) / 2, (
-#             pos[u][1] + pos[v][1]
-#         ) / 2
-#         dx, dy = pos[v][0] - pos[u][0], pos[v][1] - pos[u][1]
-#         norm = (dx**2 + dy**2) ** 0.5
-#         if norm == 0:
-#             norm = 1
-#         dx, dy = dx / norm, dy / norm
-#         offset_x, offset_y = dy * offset_factor, -dx * offset_factor
-
-
-#         plt.text(
-#             x_midpoint + offset_x,
-#             y_midpoint + offset_y,
-#             str(weight),
-#             horizontalalignment="center",
-#             verticalalignment="center",
-#             fontsize=weight_font_size,
-#             color="blue" if G.has_edge(v, u) else "red",
-#         )
 def draw_custom_edge_labels(G, pos, offset_factor=0.9, weight_font_size=12):
     """
     Draw edge labels with a custom offset from the edge midpoint

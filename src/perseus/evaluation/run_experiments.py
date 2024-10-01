@@ -153,33 +153,6 @@ def compute_metrics(model, loader):
         all_labels.append(data.y.cpu())
     probs = torch.cat(all_probs, dim=0).sigmoid().numpy()
     labels = torch.cat(all_labels, dim=0).numpy()
-    # preds = (probs > 0.5).astype(
-    #     int
-    # )  # Threshold probabilities to get binary predictions
-
-    # # Calculating metrics
-    # accuracy = calculate_accuracy(labels, preds)
-    # precision = calculate_precision(labels, preds)
-    # recall = calculate_recall(labels, preds)
-    # f1 = calculate_f1_score(labels, preds)
-    # balanced_acc = balanced_accuracy_score(labels, preds)  # Calculate balanced accuracy
-
-    # # Additional Metrics
-    # cm = confusion_matrix(labels, preds)
-    # specificity = np.mean(
-    #     [
-    #         cm[i][i] / (cm[i][i] + np.sum(cm[:, i]) - cm[i][i])
-    #         for i in range(cm.shape[0])
-    #         if np.sum(cm[:, i]) - cm[i][i] != 0
-    #     ]
-    # )
-    # prevalence = np.mean([np.sum(cm[i]) / np.sum(cm) for i in range(cm.shape[0])])
-    # detection_rate = np.mean(
-    #     [cm[i][i] / np.sum(cm[i]) for i in range(cm.shape[0]) if np.sum(cm[i]) != 0]
-    # )
-    # detection_prevalence = np.mean(
-    #     [np.sum(cm[:, i]) / np.sum(cm) for i in range(cm.shape[0])]
-    # )
 
     return {
         "probs": probs,
@@ -388,6 +361,7 @@ if __name__ == "__main__":
 
     # with open(path.join(PROJECT_ROOT, "data", "results_e.pkl"), "wb") as file:
     #     pickle.dump(results_e, file)
+
     # with open(path.join(PROJECT_ROOT, "data", "results_two.pkl"), "wb") as file:
     #     pickle.dump(results1, file)
     # Non time dimension related experiments
