@@ -8,7 +8,7 @@ python-coinmarketcap
 coverage==7.6.4
 langdetect==1.0.9
 matplotlib==3.7.1
-matplotlib-inline==0.1.6
+matplotlib-inline==0.1.7
 numpy
 phonenumbers==8.13.49
 plotly
