@@ -12,7 +12,7 @@ matplotlib-inline==0.1.6
 numpy
 phonenumbers==8.13.49
 plotly
-pycountry==23.12.11
+pycountry==24.6.1
 pytz==2023.3
 sshtunnel==0.4.0
 datetime
