@@ -5,7 +5,7 @@ pandas
 scikit-learn
 networkx
 python-coinmarketcap
-coverage==7.6.4
+coverage==7.6.10
 langdetect==1.0.9
 matplotlib==3.9.2
 matplotlib-inline==0.1.7
