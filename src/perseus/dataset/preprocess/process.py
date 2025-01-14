@@ -15,55 +15,6 @@ from perseus.dataset.preprocess.train_test_validate import (
 from perseus.dataset.preprocess.DANI import DANI
 
 
-def calculate_effsize_efficiency(G, ego):
-    """
-    This function is used to calculate the effective size and efficiency of a node in a graph
-    """
-    # Get the ego network
-    ego_net = nx.ego_graph(G, ego, undirected=False)
-
-    # Get alters in the ego network (excluding ego)
-    alters = set(ego_net.nodes()) - {ego}
-    num_alters = len(alters)
-    avg_degree = 0  # Default to 0
-    if num_alters > 0:
-        avg_degree = (
-            sum(
-                ego_net.degree(n) - (1 if ego_net.has_edge(n, ego) else 0)
-                for n in alters
-            )
-            / num_alters
-        )
-
-    # Calculate effective size
-    eff_size = num_alters - avg_degree
-
-    # Calculate efficiency
-    efficiency = eff_size / num_alters if num_alters > 0 else 0
-
-    return eff_size, efficiency
-
-
-def out_ego_graph(G, node, radius=1):
-    """
-    Extract the out-ego network of a specified node in a directed graph.
-    """
-    # Extract the out-ego network
-    out_ego = nx.ego_graph(G, node, radius=radius)
-    return out_ego
-
-
-def in_ego_graph(G, node, radius=1):
-    """
-    Extract the in-ego network of a specified node in a directed graph.
-    """
-    # Reverse the graph
-    G_reverse = G.reverse(copy=True)
-    # Extract the in-ego network
-    in_ego = nx.ego_graph(G_reverse, node, radius=radius)
-    return in_ego
-
-
 def graph_features(gs: dict):
     """
     This function is used to extract graph features from the graph
@@ -84,17 +35,20 @@ def graph_features(gs: dict):
         closeness_centralities = []
         betweenness_centrality = []
         pagerank = []
+        # degree_centrality = nx.degree_centrality(graph)
+        # closeness_centrality = nx.closeness_centrality(graph)
+        # pagerank = nx.pagerank(graph)
 
         for i in gs[key].nodes():
             node_id = i
             node_ids.append(node_id)
 
             # Calculating the in-ego ratio
-            inn = len(in_ego_graph(gs[key], node_id).nodes) / len(gs[key])
+            inn = len(in_ego_graph(gs[key], node_id).nodes) / len(gs[key].nodes)
             in_ratios.append(inn)
 
             # Calculating the out-ego ratio
-            outt = len(out_ego_graph(gs[key], node_id).nodes) / len(gs[key])
+            outt = len(out_ego_graph(gs[key], node_id).nodes) / len(gs[key].nodes)
             out_ratios.append(outt)
 
             out_nodes.append(len(out_ego_graph(gs[key], node_id).nodes))
@@ -113,111 +67,273 @@ def graph_features(gs: dict):
             closeness_centrality = nx.closeness_centrality(gs[key], node_id)
             closeness_centralities.append(closeness_centrality)
             # calculate the betweenness centrality
-            # betweenness_centralit = nx.betweenness_centrality(gs[key], node_id)
-            # betweenness_centrality.append(betweenness_centralit)
+            betweenness_centralit = nx.betweenness_centrality(gs[key])[node_id]
+            betweenness_centrality.append(betweenness_centralit)
             # calculate the pagerank
-            # pr = nx.pagerank(gs[key], alpha=0.85)[node_id]
-            # pagerank.append(pr)
+            pr = nx.pagerank(gs[key])[node_id]
+            pagerank.append(pr)
 
         # Creating a DataFrame for each key and storing it in the dfs dictionary
         dfs[key] = pd.DataFrame(
             {
                 "telegram_chat_id": node_ids,
-                "in_ratio": in_ratios,
-                "out_ratio": out_ratios,
-                "out_nodes": out_nodes,
+                "ego_in_ratio": in_ratios,
+                "ego_out_ratio": out_ratios,
+                "ego_out_nodes": out_nodes,
                 "eff_size": eff_sizes,
                 "efficiency": efficiencies,
                 "density": density,
                 "clustering_coeff": clustering_coeffs,
                 "closeness_centrality": closeness_centralities,
-                # "betweenness_centrality": betweenness_centrality,
+                "pagerank": pagerank,
+                "betweenness_centrality": betweenness_centrality,
             }
         )
 
     return dfs
 
 
-def compute_weighted_in_out_ratios(edge_weights: dict):
+def compute_weighted_graph_features(edge_weights: dict):
     dfs = {}
+
     for key in edge_weights.keys():
-        # Build the graph
+        # Build the weighted directed graph
         G = nx.DiGraph()
         for k, w in edge_weights[key].items():
             if w != 0:
                 u = k[0]
                 v = k[1]
                 G.add_edge(u, v, weight=w)
-        g_distance_dict = {
-            (e1, e2): 1 / weight for e1, e2, weight in G.edges(data="weight")
-        }
-        nx.set_edge_attributes(G, g_distance_dict, "distance")
-        closeness_centrality_dict = nx.closeness_centrality(G, distance="distance")
-
-        # Compute total edge weight W
-        W = sum([w for w in edge_weights[key].values()])
-        # if W == 0:
-        #     W = 1  # Avoid division by zero
 
         # Prepare lists to store results
         node_ids = []
+
         weighted_in_ratios = []
         weighted_out_ratios = []
-        weighted_in_degrees = []
-        weighted_out_degrees = []
+        out_weights = []
         closeness_centrality = []
+        betweenness_centrality = []
+        pagerank = []
+        efficiency = []
+        eff_size = []
+        clustering_coeffs = []
+        weighted_density = []
 
-        # Calculate weighted degrees and ratios for each node
+        # Compute total edge weight W
+        W = sum(edge_weights[key].values()) or 1  # Avoid division by zero
+
+        # Calculate closeness centrality with distance based on inverse weight
+        closeness_centrality_dict = nx.closeness_centrality(G, distance="weight")
+        betweenness_centrality_dict = nx.betweenness_centrality(G, weight="weight")
+        pagerank_dict = nx.pagerank(G, weight="weight")
+        clustering_coeff_dict = nx.clustering(G, weight="weight")
+
+        # Calculate metrics for each node
         for node in G.nodes():
             node_ids.append(node)
-            weighted_in_deg = G.in_degree(node, weight="weight")
-            weighted_out_deg = G.out_degree(node, weight="weight")
-            weighted_in_degrees.append(weighted_in_deg)
-            weighted_out_degrees.append(weighted_out_deg)
-            weighted_in_ratios.append(weighted_in_deg / W)
-            weighted_out_ratios.append(weighted_out_deg / W)
-            closeness_centrality.append(closeness_centrality_dict[node])
 
-        # Create DataFrame
+            # Append weighted in and out ratios using the in/out ego graph
+            weighted_in_ratio = in_ego_graph_weighted(G, node).size(weight="weight") / W
+            weighted_out_ratio = (
+                out_ego_graph_weighted(G, node).size(weight="weight") / W
+            )
+
+            weighted_in_ratios.append(weighted_in_ratio)
+            weighted_out_ratios.append(weighted_out_ratio)
+
+            out_weights.append(out_ego_graph_weighted(G, node).size(weight="weight"))
+
+            # Append closeness centrality
+            closeness_centrality.append(closeness_centrality_dict[node])
+            # Append betweenness centrality
+            betweenness_centrality.append(betweenness_centrality_dict[node])
+            # Append PageRank values
+            pagerank.append(pagerank_dict[node])
+            clustering_coeffs.append(clustering_coeff_dict[node])
+
+            # Calculate weighted density using the provided formula
+
+            # Ego networks: For clustering coefficient, effective size, efficiency, and density
+            ego_graph = nx.ego_graph(G, node, radius=1, center=True, undirected=False)
+            weighted_den = calculate_weighted_density(ego_graph)
+            weighted_density.append(weighted_den)
+
+            # Calculate effective size and efficiency
+            eff_size_val, efficiency_val = calculate_effsize_efficiency_weighted(
+                G, node
+            )
+            eff_size.append(eff_size_val)
+            efficiency.append(efficiency_val)
+
+        # Create DataFrame for the results
         dfs[key] = pd.DataFrame(
             {
                 "telegram_chat_id": node_ids,
-                "weighted_in_ratio": weighted_in_ratios,
-                "weighted_out_ratio": weighted_out_ratios,
+                "ego_weighted_in_ratio": weighted_in_ratios,
+                "ego_weighted_out_ratio": weighted_out_ratios,
+                "ego_out_weights": out_weights,
                 "weighted_closeness_centrality": closeness_centrality,
+                "weighted_betweenness_centrality": betweenness_centrality,
+                "weighted_pagerank": pagerank,
+                "ego_weighted_eff_size": eff_size,
+                "ego_weighted_efficiency": efficiency,
+                "weighted_clustering_coefficient": clustering_coeffs,
+                "ego_weighted_density": weighted_density,
             }
         )
 
     return dfs
 
 
-# def combine_features(market_features: dict, graph_features: dict, weighted_features: dict):
+# def calculate_effsize_efficiency(G, ego):
 #     """
-#     This function is used to combine the market and graph features
+#     This function is used to calculate the effective size and efficiency of a node in a graph
 #     """
-#     combined_data = {}
+#     # Get the ego network
+#     ego_net = nx.ego_graph(G, ego, undirected=False)
 
-#     for key in market_features.keys():
-#         # Check if the key exists in dfs and 'telegram_chat_id' exists in both DataFrames
-#         if (
-#             key in graph_features
-#             and "telegram_chat_id" in market_features[key].columns
-#             and "telegram_chat_id" in graph_features[key].columns
-#         ):
-#             # Perform an inner join on 'telegram_chat_id'
-#             combined_df = pd.merge(
-#                 market_features[key],
-#                 graph_features[key],
-#                 on="telegram_chat_id",
-#                 how="inner",
+#     # Get alters in the ego network (excluding ego)
+#     alters = set(ego_net.nodes()) - {ego}
+#     num_alters = len(alters)
+#     avg_degree = 0  # Default to 0
+#     if num_alters > 0:
+#         avg_degree = (
+#             sum(
+#                 ego_net.degree(n) - (1 if ego_net.has_edge(ego, n) else 0)
+#                 for n in alters
 #             )
-#         else:
-#             # If key is not in dfs or 'telegram_chat_id' is missing in either DataFrame, use an empty DataFrame
-#             combined_df = pd.DataFrame()
+#             / num_alters
+#         )
 
-#         combined_data[key] = combined_df
+#     # Calculate effective size
+#     eff_size = num_alters - avg_degree
+#     # Calculate efficiency
+#     efficiency = eff_size / num_alters if num_alters > 0 else 0
 
-#     return combined_data
+#     return eff_size, efficiency
+
+
+def calculate_effsize_efficiency(G, ego):
+    """
+    This function is used to calculate the effective size and efficiency of a node in a graph
+    """
+    # Get the ego network
+    ego_net = nx.ego_graph(G, ego, undirected=False)
+
+    # Get alters in the ego network (excluding ego)
+    alters = set(ego_net.nodes()) - {ego}
+    num_alters = len(alters)
+    avg_degree = 0  # Default to 0
+    if num_alters > 0:
+        avg_degree = (
+            sum(
+                [1 for i in alters for j in alters if i != j and ego_net.has_edge(i, j)]
+            )
+            / num_alters
+        )
+
+    # Calculate effective size
+    eff_size = num_alters - avg_degree
+    # Calculate efficiency
+    efficiency = eff_size / num_alters if num_alters > 0 else 0
+
+    return eff_size, efficiency
+
+
+def calculate_effsize_efficiency_weighted(G, ego):
+    """
+    This function calculates the effective size and efficiency of a node in a weighted directed graph.
+    Effective size measures the number of alters ego has that are not connected to each other, weighted by the strength of the connections.
+    Efficiency is the ratio of the effective size to the number of alters, indicating how directly connected the ego is to its alters.
+    """
+    # Get the ego network, considering it as directed and including edge weights
+    ego_net = nx.ego_graph(G, ego, undirected=False)
+
+    # Get alters in the ego network, excluding the ego itself
+    alters = set(ego_net.nodes()) - {ego}
+    num_alters = len(alters)
+
+    # Initialize average degree, considering weights
+    avg_degree = 0
+    if num_alters > 0:
+        total_weighted_degree = 0
+        for n in alters:
+            # Sum weights of outgoing edges from each alter, excluding any edges pointing back to ego
+            node_weighted_degree = sum(
+                weight for _, _, weight in ego_net.edges(n, data="weight") if _ != ego
+            )
+            # Subtract the weight of any edge from ego to this alter, if it exists
+            if ego_net.has_edge(ego, n):
+                node_weighted_degree -= ego_net[ego][n].get("weight", 0)
+            total_weighted_degree += node_weighted_degree
+
+        avg_degree = total_weighted_degree / num_alters
+
+    # Calculate effective size as the difference between the number of alters and the average weighted degree
+    eff_size = num_alters - avg_degree
+    # Calculate efficiency as the ratio of the effective size to the number of alters
+    efficiency = eff_size / num_alters if num_alters > 0 else 0
+
+    return eff_size, efficiency
+
+
+# Function to calculate weighted density
+def calculate_weighted_density(G):
+    """
+    Calculate the weighted density of a graph, which is defined as the sum of the weights of all edges
+    divided by the number of possible edges in the graph (|V| * (|V| - 1)).
+    """
+    total_weight = G.size(weight="weight")  # Sum of the weights of all edges
+    num_nodes = len(G.nodes())
+
+    # Number of possible directed edges between nodes (no self-loops)
+    possible_edges = num_nodes * (num_nodes - 1)
+
+    # Weighted density is the total edge weight divided by the number of possible edges
+    return total_weight / possible_edges if possible_edges > 0 else 0
+
+
+# Function to extract the out-ego network for weighted graphs
+def out_ego_graph_weighted(G, node, radius=1):
+    """
+    Extract the out-ego network of a specified node in a directed weighted graph.
+    """
+    # Extract the out-ego network, preserving weights
+    out_ego = nx.ego_graph(G, node, radius=radius, undirected=False, distance="weight")
+    return out_ego
+
+
+# Function to extract the in-ego network for weighted graphs
+def in_ego_graph_weighted(G, node, radius=1):
+    """
+    Extract the in-ego network of a specified node in a directed weighted graph.
+    """
+    # Reverse the graph to get the in-ego network, preserving weights
+    G_reverse = G.reverse(copy=True)
+    in_ego = nx.ego_graph(
+        G_reverse, node, radius=radius, undirected=False, distance="weight"
+    )
+    return in_ego
+
+
+def out_ego_graph(G, node, radius=1):
+    """
+    Extract the out-ego network of a specified node in a directed graph.
+    """
+    # Extract the out-ego network
+    out_ego = nx.ego_graph(G, node, radius=radius)
+    return out_ego
+
+
+def in_ego_graph(G, node, radius=1):
+    """
+    Extract the in-ego network of a specified node in a directed graph.
+    """
+    # Reverse the graph
+    G_reverse = G.reverse(copy=True)
+    # Extract the in-ego network
+    in_ego = nx.ego_graph(G_reverse, node, radius=radius)
+    return in_ego
 
 
 # merge three dfs market_features: dict, graph_features: dict, weighted_features: dict like combine_features
@@ -538,7 +654,7 @@ def get_graphs(cascade: dict, no_nodes: dict, id_mapping: dict):
 
 
 if __name__ == "__main__":
-    signals = get_train_scored_signals()
+    signals = get_test_scored_signals()
     processed_signals = process_dataframe(signals)
     ided_signals = assign_event_ids(processed_signals)
     cascade_buffer, no_nodes_buffer, id_mapping_buffer, cascade_labeling = (
@@ -549,5 +665,5 @@ if __name__ == "__main__":
     )
     graph_feature = graph_features(gs)
     market_feature = features_engineer(processed_signals)
-    weighted_feature = compute_weighted_in_out_ratios(P_com)
+    weighted_feature = compute_weighted_graph_features(P_com)
     combine_feature = combine_features(market_feature, graph_feature, weighted_feature)

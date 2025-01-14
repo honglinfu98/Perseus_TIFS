@@ -5,7 +5,7 @@ This script is used to plot the number of nodes and edges in the graphs for the 
 from os import path
 import numpy as np
 import matplotlib.pyplot as plt
-from perseus.dataset.dataset_preparation import split_data
+from perseus.dataset.dataset_preparation import split_data, get_split_data_pickle_l
 from perseus.settings import PROJECT_ROOT
 
 
@@ -100,33 +100,37 @@ def plot_graph_summary(
 
 if __name__ == "__main__":
     # List of models
-    model = ["DDINA", "COSS", "DDM"]
+    model = ["DDINA", "DDM"]
 
     # Collecting results
     results = []
     for i in model:
-        a, b, c = split_data(i, loader=False)
-        results.append((a, b, c))
+        a, b, c = get_split_data_pickle_l(i)
+        aa = [i for i in a]
+        bb = [i for i in b]
+        cc = [i for i in c]
+
+        results.append((aa, bb, cc))
 
     # Sample graphs data would be needed here.
     directed_dani = results[0][0] + results[0][1] + results[0][2]
-    cosine = results[1][0] + results[1][1] + results[1][2]
-    weighted_dani = results[2][0] + results[2][1] + results[2][2]
+    # cosine = results[1][0] + results[1][1] + results[1][2]
+    weighted_dani = results[1][0] + results[1][1] + results[1][2]
 
     # Extracting data
     node_counts = extract_counts(directed_dani, "nodes")
     edge_counts_directed_dani = extract_counts(directed_dani, "edges")
-    edge_counts_cosine = extract_counts(cosine, "edges")
+    # edge_counts_cosine = extract_counts(cosine, "edges")
     edge_counts_weighted_dani = extract_counts(weighted_dani, "edges")
 
     # Plotting the graph with customizable text sizes
-    plot_graph_summary(
-        node_counts,
-        edge_counts_directed_dani,
-        edge_counts_weighted_dani,
-        edge_counts_cosine,
-        title_size=20,
-        label_size=20,
-        tick_size=20,
-        legend_size=20,
-    )
+    # plot_graph_summary(
+    #     node_counts,
+    #     edge_counts_directed_dani,
+    #     edge_counts_weighted_dani,
+    #     # edge_counts_cosine,
+    #     title_size=20,
+    #     label_size=20,
+    #     tick_size=20,
+    #     legend_size=20,
+    # )

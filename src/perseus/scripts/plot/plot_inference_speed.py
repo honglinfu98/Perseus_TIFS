@@ -5,9 +5,9 @@ import numpy as np
 from scipy.interpolate import make_interp_spline
 from perseus.settings import PROJECT_ROOT
 
-datasets = ["DDINA", "COSS", "DDM"]
-dataset_colors = {"DDINA": "blue", "COSS": "green", "DDM": "red"}
-models = ["GCN", "GAT", "GraphSAGE"]
+datasets = ["DDINA", "DDM"]
+dataset_colors = {"DDINA": "blue", "DDM": "red"}
+models = ["GAT", "GraphSAGE"]
 label = 1
 dataset_labels = {
     "DDINA": "Directed Diffusion",
@@ -15,118 +15,117 @@ dataset_labels = {
     "DDM": "Weighted Diffusion",
 }
 
-with open(path.join(PROJECT_ROOT, "data", "results_com.pkl"), "rb") as file:
-    results = pickle.load(file)
 
-with open(path.join(PROJECT_ROOT, "data", "results1_com.pkl"), "rb") as file:
-    results1 = pickle.load(file)
+with open(path.join(PROJECT_ROOT, "data", "saved", "results_l.pkl"), "rb") as file:
+    results_m = pickle.load(file)
+
+from matplotlib.ticker import MaxNLocator, ScalarFormatter
 
 
-def plot_batch_time_vs_nodes(
+def plot_combined_batch_time_vs_nodes(
     results,
     ax,
-    model_name,
-    dataset_colors,
+    models,
     title,
     show_legend=True,
     show_ylabel=True,
     show_xlabel=True,
+    fontsize=12,
+    ticksize=10,
 ):
-    """
-    Plot batch time versus number of nodes for each dataset using line plots with spline interpolation,
-    handling duplicates by averaging batch times for the same number of nodes.
-    """
-    for (
-        dataset
-    ) in results:  # This should reference the keys of 'results', which was missing
-        batch_times = np.array(results[dataset][model_name]["batch_times"])
-        num_nodes = np.array(results[dataset][model_name]["num_nodes"])
-        unique_nodes, indices = np.unique(num_nodes, return_inverse=True)
-        average_batch_times = np.zeros_like(unique_nodes, dtype=float)
-        for i, node in enumerate(unique_nodes):
-            average_batch_times[i] = np.mean(batch_times[indices == i])
-        if len(unique_nodes) > 3:
-            spline = make_interp_spline(unique_nodes, average_batch_times, k=3)
-            fine_x = np.linspace(unique_nodes.min(), unique_nodes.max(), 500)
-            fine_y = spline(fine_x)
-            ax.plot(
-                fine_x,
-                fine_y,
-                label=dataset_labels[dataset],  # Ensure 'dataset_labels' is defined
-                color=dataset_colors[dataset],
-            )
-        else:
-            ax.plot(
-                unique_nodes,
-                average_batch_times,
-                "o-",
-                label=dataset_labels[dataset],  # Ensure 'dataset_labels' is defined
-                color=dataset_colors[dataset],
-            )
-    ax.set_title(title, fontsize=fontsize_title)
+    line_styles = {"Directed": "dashed", "Weighted": "solid"}
+    model_colors = {"GAT": "blue", "GraphSAGE": "red"}
+    dataset_name_mapping = {"DDINA": "Directed", "DDM": "Weighted"}
+
+    combined_handles = {}  # To store combined handles for legend
+
+    # Plot each dataset and model combination
+    for model_name in models:
+        for dataset_key in dataset_name_mapping:
+            dataset = dataset_name_mapping[dataset_key]
+            if model_name in results[dataset_key]:
+                batch_times = np.array(results[dataset_key][model_name]["batch_times"])
+                num_nodes = np.array(results[dataset_key][model_name]["num_nodes"])
+                unique_nodes, indices = np.unique(num_nodes, return_inverse=True)
+                average_batch_times = np.zeros_like(unique_nodes, dtype=float)
+                for i, node in enumerate(unique_nodes):
+                    average_batch_times[i] = np.mean(batch_times[indices == i])
+
+                # Check if enough points for spline interpolation
+                if len(unique_nodes) > 3:
+                    spline = make_interp_spline(unique_nodes, average_batch_times, k=3)
+                    fine_x = np.linspace(unique_nodes.min(), unique_nodes.max(), 500)
+                    fine_y = spline(fine_x)
+                    ax.plot(
+                        fine_x,
+                        fine_y,
+                        color=model_colors[model_name],
+                        linestyle=line_styles[dataset],
+                    )
+                else:
+                    ax.plot(
+                        unique_nodes,
+                        average_batch_times,
+                        "o-",
+                        color=model_colors[model_name],
+                        linestyle=line_styles[dataset],
+                    )
+
+                # Combine dataset and model in one label
+                combined_label = f"{dataset} ({model_name})"
+
+                # Create and store unique combined handles for legend
+                if combined_label not in combined_handles:
+                    combined_handles[combined_label] = plt.Line2D(
+                        [0],
+                        [0],
+                        color=model_colors[model_name],
+                        linestyle=line_styles[dataset],
+                        label=combined_label,
+                    )
+
+    # Set labels with fontsize
     if show_xlabel:
-        ax.set_xlabel("Number of Nodes", fontsize=fontsize_labels)
+        ax.set_xlabel("Number of Nodes", fontsize=fontsize)
     if show_ylabel:
-        ax.set_ylabel("Inference Speed (sec)", fontsize=fontsize_labels)
-    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.5f}"))
+        ax.set_ylabel("Inference Speed (sec)", fontsize=fontsize)
+
+    # Set y-axis to scientific notation
+    ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+    ax.ticklabel_format(style="sci", axis="y", scilimits=(0, 0))
+    ax.yaxis.get_offset_text().set_fontsize(ticksize)
+    ax.yaxis.set_major_locator(MaxNLocator(nbins=6))
+
+    # Add combined legend if requested
     if show_legend:
         ax.legend(
-            fontsize=fontsize_legend, title_fontsize=fontsize_legend, loc="lower right"
+            handles=list(combined_handles.values()),
+            fontsize=fontsize,
+            title_fontsize=fontsize,
+            loc="center left",
         )
-    ax.tick_params(axis="both", which="major", labelsize=fontsize_ticks)
+
+    # Set tick parameters
+    ax.tick_params(axis="both", which="major", labelsize=ticksize)
+    ax.grid(True, which="major", axis="both", linestyle="--", linewidth=0.5)
 
 
-def save_batch_time_vs_nodes_plot(
-    fontsize_title, fontsize_labels, fontsize_legend, fontsize_ticks
-):
-    fig, axs = plt.subplots(
-        len(models), 1, figsize=(12, 24)
-    )  # Adjusted to vertical layout
-    for i, model_name in enumerate(models):
-        plot_batch_time_vs_nodes(
-            results,
-            axs[i],
-            model_name,
-            dataset_colors,
-            title=f"{model_name}",
-            show_legend=False,  # Legend only on the last plot
-            show_ylabel=True,  # Include Y-axis label for 'results'
-            show_xlabel=(i == len(models) - 1),  # X-axis label only on the last plot
-        )
-    plt.tight_layout()
-    plt.savefig(path.join(PROJECT_ROOT, "data", "batch_time_vs_nodes_results.pdf"))
-    plt.show()
-    plt.close(fig)
-
-    fig, axs = plt.subplots(
-        len(models), 1, figsize=(12, 24)
-    )  # Adjusted to vertical layout
-    for i, model_name in enumerate(models):
-        plot_batch_time_vs_nodes(
-            results1,
-            axs[i],
-            model_name,
-            dataset_colors,
-            title=f"{model_name}",
-            show_legend=(i == len(models) - 1),
-            show_ylabel=False,  # Remove Y-axis label for 'results1'
-            show_xlabel=(i == len(models) - 1),  # X-axis label only on the last plot
-        )
-    plt.tight_layout()
-    plt.savefig(path.join(PROJECT_ROOT, "data", "batch_time_vs_nodes_results1.pdf"))
-    plt.show()
-    plt.close(fig)
-
-
-# Example usage:
-fontsize_title = 50
-fontsize_labels = 45
-fontsize_legend = 35
-fontsize_ticks = 35
-
-save_batch_time_vs_nodes_plot(
-    fontsize_title=fontsize_title,
-    fontsize_labels=fontsize_labels,
-    fontsize_legend=fontsize_legend,
-    fontsize_ticks=fontsize_ticks,
+# Example usage for the combined plot:
+fig, ax = plt.subplots(figsize=(8, 8))  # Single plot for all results
+plot_combined_batch_time_vs_nodes(
+    results_m,  # Assuming results_m is the relevant dataset
+    ax,
+    models,
+    title="Batch Time vs Nodes for Directed Diffusion and Weighted Diffusion (GAT vs GraphSAGE)",
+    show_legend=True,
+    show_ylabel=True,
+    show_xlabel=True,
+    fontsize=22,  # Set the fontsize as desired
+    ticksize=22,  # Set the ticksize as desired
 )
+plt.tight_layout()
+plt.savefig(
+    path.join(PROJECT_ROOT, "data", "oct_combined_batch_time_vs_nodes_results.pdf")
+)
+plt.show()
+plt.close(fig)

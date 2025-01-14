@@ -1,0 +1,1 @@
+SELECT username FROM community_data_telegramchat

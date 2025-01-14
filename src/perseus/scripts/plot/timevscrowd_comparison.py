@@ -46,7 +46,7 @@ plt.legend(
     title="Fraud Type",
     title_fontsize="18",
     fontsize="18",
-    labels=["Time Pump", "Crowd Pump"],
+    labels=["Crowd Pump", "Time Pump"],
     loc="lower right",
 )  # Larger legend
 plt.savefig(path.join(PROJECT_ROOT, "data", "comparison_plot.pdf"))

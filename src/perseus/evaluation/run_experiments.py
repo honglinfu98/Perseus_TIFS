@@ -26,9 +26,14 @@ from perseus.dataset.dataset_preparation import (
     get_split_data_pickle_fv,
     get_split_data_pickle_tr,
     get_split_data_pickle_e,
+    get_split_data_pickle_m,
+    get_split_data_pickle_s,
+    get_split_data_pickle_l,
+    get_split_data_pickle_l_wc,
 )
 from perseus.model.gnn_model import GCNNet, Net, GraphSAGENet
 from perseus.settings import PROJECT_ROOT
+
 
 # Set a seed value
 seed = 42
@@ -44,7 +49,7 @@ def run_experiment(model, train_loader, test_loader, num_epochs=100):
     """
 
     model = model.to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.00005)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.0005)
     # loss_op = torch.nn.BCEWithLogitsLoss()
     loss_op = torch.nn.BCELoss()
 
@@ -171,7 +176,7 @@ def experiment_pipeline(
     num_classes = 1  # Set this according to your dataset
     hidden_channels = 8
     if dataset == "COSS":
-        num_features = 2
+        num_features = 14
     else:
         num_features = features
 
@@ -211,16 +216,13 @@ if __name__ == "__main__":
     dataset_colors = {"DDINA": "blue", "COSS": "green", "DDM": "red"}
 
     # Non time dimension related experiments
-    results_t = {"DDINA": {}, "COSS": {}, "DDM": {}}
-    results_f = {"DDINA": {}, "COSS": {}, "DDM": {}}
-    results_fv = {"DDINA": {}, "COSS": {}, "DDM": {}}
-    results_tr = {"DDINA": {}, "COSS": {}, "DDM": {}}
-    results_e = {"DDINA": {}, "COSS": {}, "DDM": {}}
+    results_l = {"DDINA": {}, "COSS": {}, "DDM": {}}
+    results_l_wc = {"DDINA": {}, "COSS": {}, "DDM": {}}
 
     with ProcessPoolExecutor(max_workers=12) as executor:
         future_to_model = {}
         for dataset in datasets:
-            train_loader, test_loader, _ = get_split_data_pickle_t(dataset)
+            train_loader, test_loader, _ = get_split_data_pickle_l(dataset)
             for model_name in models:
                 future = executor.submit(
                     experiment_pipeline,
@@ -228,7 +230,7 @@ if __name__ == "__main__":
                     dataset,
                     train_loader,
                     test_loader,
-                    features=2,
+                    features=14,
                 )
                 future_to_model[future] = (dataset, model_name)
 
@@ -236,132 +238,41 @@ if __name__ == "__main__":
             dataset, model_name = future_to_model[future]
             try:
                 result = future.result()
-                results_t[dataset][model_name] = result
+                results_l[dataset][model_name] = result
                 print(f"Completed {model_name} Experiment on {dataset}")
             except Exception as exc:
                 print(
                     f"{model_name} experiment on {dataset} generated an exception: {exc}"
                 )
 
-    # with ProcessPoolExecutor(max_workers=12) as executor:
-    #     future_to_model = {}
-    #     for dataset in datasets:
-    #         train_loader, test_loader, _ = get_split_data_pickle_f(dataset)
-    #         for model_name in models:
-    #             future = executor.submit(
-    #                 experiment_pipeline,
-    #                 model_name,
-    #                 dataset,
-    #                 train_loader,
-    #                 test_loader,
-    #                 features=4,
-    #             )
-    #             future_to_model[future] = (dataset, model_name)
+    with ProcessPoolExecutor(max_workers=12) as executor:
+        future_to_model = {}
+        for dataset in datasets:
+            train_loader, test_loader, _ = get_split_data_pickle_l_wc(dataset)
+            for model_name in models:
+                future = executor.submit(
+                    experiment_pipeline,
+                    model_name,
+                    dataset,
+                    train_loader,
+                    test_loader,
+                    features=14,
+                )
+                future_to_model[future] = (dataset, model_name)
 
-    #     for future in as_completed(future_to_model):
-    #         dataset, model_name = future_to_model[future]
-    #         try:
-    #             result = future.result()
-    #             results_f[dataset][model_name] = result
-    #             print(f"Completed {model_name} Experiment on {dataset}")
-    #         except Exception as exc:
-    #             print(
-    #                 f"{model_name} experiment on {dataset} generated an exception: {exc}"
-    #             )
+        for future in as_completed(future_to_model):
+            dataset, model_name = future_to_model[future]
+            try:
+                result = future.result()
+                results_l_wc[dataset][model_name] = result
+                print(f"Completed {model_name} Experiment on {dataset}")
+            except Exception as exc:
+                print(
+                    f"{model_name} experiment on {dataset} generated an exception: {exc}"
+                )
 
-    # with ProcessPoolExecutor(max_workers=12) as executor:
-    #     future_to_model = {}
-    #     for dataset in datasets:
-    #         train_loader, test_loader, _ = get_split_data_pickle_fv(dataset)
-    #         for model_name in models:
-    #             future = executor.submit(
-    #                 experiment_pipeline,
-    #                 model_name,
-    #                 dataset,
-    #                 train_loader,
-    #                 test_loader,
-    #                 features=5,
-    #             )
-    #             future_to_model[future] = (dataset, model_name)
+    with open(path.join(PROJECT_ROOT, "data", "results_l.pkl"), "wb") as file:
+        pickle.dump(results_l, file)
 
-    #     for future in as_completed(future_to_model):
-    #         dataset, model_name = future_to_model[future]
-    #         try:
-    #             result = future.result()
-    #             results_fv[dataset][model_name] = result
-    #             print(f"Completed {model_name} Experiment on {dataset}")
-    #         except Exception as exc:
-    #             print(
-    #                 f"{model_name} experiment on {dataset} generated an exception: {exc}"
-    #             )
-
-    # with ProcessPoolExecutor(max_workers=12) as executor:
-    #     future_to_model = {}
-    #     for dataset in datasets:
-    #         train_loader, test_loader, _ = get_split_data_pickle_tr(dataset)
-    #         for model_name in models:
-    #             future = executor.submit(
-    #                 experiment_pipeline,
-    #                 model_name,
-    #                 dataset,
-    #                 train_loader,
-    #                 test_loader,
-    #                 features=3,
-    #             )
-    #             future_to_model[future] = (dataset, model_name)
-
-    #     for future in as_completed(future_to_model):
-    #         dataset, model_name = future_to_model[future]
-    #         try:
-    #             result = future.result()
-    #             results_tr[dataset][model_name] = result
-    #             print(f"Completed {model_name} Experiment on {dataset}")
-    #         except Exception as exc:
-    #             print(
-    #                 f"{model_name} experiment on {dataset} generated an exception: {exc}"
-    #             )
-
-    # with ProcessPoolExecutor(max_workers=12) as executor:
-    #     future_to_model = {}
-    #     for dataset in datasets:
-    #         train_loader, test_loader, _ = get_split_data_pickle_e(dataset)
-    #         for model_name in models:
-    #             future = executor.submit(
-    #                 experiment_pipeline,
-    #                 model_name,
-    #                 dataset,
-    #                 train_loader,
-    #                 test_loader,
-    #                 features=8,
-    #             )
-    #             future_to_model[future] = (dataset, model_name)
-
-    #     for future in as_completed(future_to_model):
-    #         dataset, model_name = future_to_model[future]
-    #         try:
-    #             result = future.result()
-    #             results_e[dataset][model_name] = result
-    #             print(f"Completed {model_name} Experiment on {dataset}")
-    #         except Exception as exc:
-    #             print(
-    #                 f"{model_name} experiment on {dataset} generated an exception: {exc}"
-    #             )
-
-    with open(path.join(PROJECT_ROOT, "data", "results_t.pkl"), "wb") as file:
-        pickle.dump(results_t, file)
-
-    # with open(path.join(PROJECT_ROOT, "data", "results_f.pkl"), "wb") as file:
-    #     pickle.dump(results_f, file)
-
-    # with open(path.join(PROJECT_ROOT, "data", "results_fv.pkl"), "wb") as file:
-    #     pickle.dump(results_fv, file)
-
-    # with open(path.join(PROJECT_ROOT, "data", "results_tr.pkl"), "wb") as file:
-    #     pickle.dump(results_tr, file)
-
-    # with open(path.join(PROJECT_ROOT, "data", "results_e.pkl"), "wb") as file:
-    #     pickle.dump(results_e, file)
-
-    # with open(path.join(PROJECT_ROOT, "data", "results_two.pkl"), "wb") as file:
-    #     pickle.dump(results1, file)
-    # Non time dimension related experiments
+    with open(path.join(PROJECT_ROOT, "data", "results_l_wc.pkl"), "wb") as file:
+        pickle.dump(results_l_wc, file)

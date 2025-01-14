@@ -8,7 +8,11 @@ import torch
 from torch_geometric.data import Data
 from torch_geometric.nn import GATConv
 import torch.nn.functional as F
-from perseus.dataset.dataset_preparation import combine_features, graph_features
+from perseus.dataset.preprocess.process import (
+    combine_features,
+    graph_features,
+    compute_weighted_graph_features,
+)
 from perseus.dataset.preprocess.groudtruth_labeling import (
     read_labeling_csv_back_to_dict,
 )
@@ -30,10 +34,11 @@ train_signals = get_train_scored_signals()
 processed_signals = process_dataframe(train_signals)
 ided_signals = assign_event_ids(processed_signals)
 cascade, no_nodes, id_mapping, cascade_labeling = aggregate_data(ided_signals)
-gs, results, As, P_dict = get_graphs(cascade, no_nodes, id_mapping)
+gs, results, As, P_dict, P_com = get_graphs(cascade, no_nodes, id_mapping)
 graph_feature = graph_features(gs)
 market_feature = features_engineer(processed_signals)
-combine_feature = combine_features(market_feature, graph_feature)
+weighted_feature = compute_weighted_graph_features(P_com)
+combine_feature = combine_features(market_feature, graph_feature, weighted_feature)
 label_mapping = read_labeling_csv_back_to_dict("train")
 all_predictions = {}
 
@@ -162,5 +167,5 @@ for k, v in gs.items():
 
 
 # Save the predictions to a pickle file in data
-with open(path.join(PROJECT_ROOT, "data", "predictions.pkl"), "wb") as file:
+with open(path.join(PROJECT_ROOT, "data", "buffer", "predictions.pkl"), "wb") as file:
     pickle.dump(all_predictions, file)

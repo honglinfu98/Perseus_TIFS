@@ -25,7 +25,7 @@ from perseus.dataset.preprocess.train_test_validate import (
     get_valid_scored_signals,
 )
 from perseus.dataset.preprocess.process import (
-    compute_weighted_in_out_ratios,
+    compute_weighted_graph_features,
     features_engineer,
     get_graphs,
     process_dataframe,
@@ -52,26 +52,61 @@ def prepare_data(graphs: dict, features: dict, label_mapping: dict):
             features_buffer["telegram_chat_id"].isin(graph.nodes)
         ]
 
-        # Specify feature columns and normalize them
+        # Selecting feature columns for normalization
         feature_columns = [
-            "average_increase_percentage",
-            "number_of_signals",
-            # "average_speed",
-            # "sum_targets_achieved",
-            # "rating",
-            "in_ratio",
-            "out_ratio",
-            # "weighted_in_ratio",
-            # "weighted_out_ratio",
+            # "average_speed",  # market
+            # "sum_total_targets",  # osn
+            "average_increase_percentage",  # market
+            "number_of_signals",  # osn
+            "sum_targets_achieved",  # osn
+            "rating",  # topological
+            # "in_ratio",  # topological
+            # "out_ratio",  # topological
+            # "out_nodes",  # topological
+            # "density",  # topological
+            # "clustering_coeff",  # topological
+            # "closeness_centrality",  # topological
+            # "eff_size",  # topological
+            # "efficiency",  # topological
+            # "betweenness_centrality",
+            # "pagerank",
+            "ego_in_ratio",
+            "ego_out_ratio",
+            "ego_out_nodes",
+            "eff_size",
+            "efficiency",
+            "density",
+            "clustering_coeff",
             "closeness_centrality",
+            "pagerank",
+            "betweenness_centrality",
+            # "ego_weighted_in_ratio",
+            # "ego_weighted_out_ratio",
+            # "ego_out_weights",
             # "weighted_closeness_centrality",
-            # "eff_size",
-            # "efficiency",
+            # "weighted_betweenness_centrality",
+            # "weighted_pagerank",
+            # "ego_weighted_eff_size",
+            # "ego_weighted_efficiency",
+            # "weighted_clustering_coefficient",
+            # "ego_weighted_density",
         ]
+
         features_to_normalize = features_buffer[feature_columns]
-        normalized_features = (
-            features_to_normalize - features_to_normalize.mean()
-        ) / features_to_normalize.std()
+        std = features_to_normalize.std()
+        mean = features_to_normalize.mean()
+
+        # Normalize, but handle cases where std is zero
+        normalized_features = features_to_normalize.copy()
+
+        # Only normalize features where std is non-zero
+        non_zero_std = std != 0
+        normalized_features.loc[:, non_zero_std] = (
+            features_to_normalize.loc[:, non_zero_std] - mean[non_zero_std]
+        ) / std[non_zero_std]
+
+        # For features with zero std, assign them a constant value (like 0)
+        normalized_features.loc[:, ~non_zero_std] = 0
 
         nan_columns = normalized_features.columns[
             normalized_features.isnull().any()
@@ -124,26 +159,63 @@ def prepare_ddm_data(graphs: dict, features: dict, label_mapping: dict, P_dict: 
         features_buffer = features_buffer[
             features_buffer["telegram_chat_id"].isin(graph.nodes)
         ]
-        # Specify feature columns and normalize them
+        # Selecting feature columns for normalization
         feature_columns = [
-            "average_increase_percentage",
-            "number_of_signals",
-            # "average_speed",
-            # "sum_targets_achieved",
-            # "rating",
-            # "in_ratio",
-            # "out_ratio",
-            "weighted_in_ratio",
-            "weighted_out_ratio",
-            # "closeness_centrality",
+            # "average_speed",  # market
+            # "sum_total_targets",  # osn
+            "average_increase_percentage",  # market
+            "number_of_signals",  # osn
+            "sum_targets_achieved",  # osn
+            "rating",  # topological
+            # "weighted_in_ratio",
+            # "weighted_out_ratio",
+            # "weighted_out_degree",
+            # "weighted_closeness_centrality",
+            # "weighted_betweenness_centrality",
+            # "weighted_pagerank",
+            # "weighted_eff_size",
+            # "weighted_efficiency",
+            # "weighted_clustering_coefficient",
+            # "weighted_density",
+            "ego_weighted_in_ratio",
+            "ego_weighted_out_ratio",
+            "ego_out_weights",
             "weighted_closeness_centrality",
+            "weighted_betweenness_centrality",
+            "weighted_pagerank",
+            "ego_weighted_eff_size",
+            "ego_weighted_efficiency",
+            "weighted_clustering_coefficient",
+            "ego_weighted_density",
+            # "ego_in_ratio",
+            # "ego_out_ratio",
+            # "ego_out_nodes",
             # "eff_size",
             # "efficiency",
+            # "density",
+            # "clustering_coeff",
+            # "closeness_centrality",
+            # "pagerank",
+            # "betweenness_centrality",
         ]
+
         features_to_process = features_buffer[feature_columns]
-        normalized_features = (
-            features_to_process - features_to_process.mean()
-        ) / features_to_process.std()
+
+        std = features_to_process.std()
+        mean = features_to_process.mean()
+
+        # Normalize, but handle cases where std is zero
+        normalized_features = features_to_process.copy()
+
+        # Only normalize features where std is non-zero
+        non_zero_std = std != 0
+        normalized_features.loc[:, non_zero_std] = (
+            features_to_process.loc[:, non_zero_std] - mean[non_zero_std]
+        ) / std[non_zero_std]
+
+        # For features with zero std, assign them a constant value (like 0)
+        normalized_features.loc[:, ~non_zero_std] = 0
+
         nan_columns = normalized_features.columns[
             normalized_features.isnull().any()
         ].tolist()
@@ -205,13 +277,61 @@ def prepare_cos_data(graphs: dict, features: dict, label_mapping: dict):
         ]
         # Specify feature columns and normalize them
         feature_columns = [
-            "average_increase_percentage",
-            "number_of_signals",
+            # "average_speed",  # market
+            # "sum_total_targets",  # osn
+            "average_increase_percentage",  # market
+            "number_of_signals",  # osn
+            "sum_targets_achieved",  # osn
+            "rating",  # topological
+            # "weighted_in_ratio",
+            # "weighted_out_ratio",
+            # "weighted_out_degree",
+            # "weighted_closeness_centrality",
+            # "weighted_betweenness_centrality",
+            # "weighted_pagerank",
+            # "weighted_eff_size",
+            # "weighted_efficiency",
+            # "weighted_clustering_coefficient",
+            # "weighted_density",
+            "ego_weighted_in_ratio",
+            "ego_weighted_out_ratio",
+            "ego_out_weights",
+            "weighted_closeness_centrality",
+            "weighted_betweenness_centrality",
+            "weighted_pagerank",
+            "ego_weighted_eff_size",
+            "ego_weighted_efficiency",
+            "weighted_clustering_coefficient",
+            "ego_weighted_density",
+            # "ego_in_ratio",
+            # "ego_out_ratio",
+            # "ego_out_nodes",
+            # "eff_size",
+            # "efficiency",
+            # "density",
+            # "clustering_coeff",
+            # "closeness_centrality",
+            # "pagerank",
+            # "betweenness_centrality",
         ]
+
         features_to_process = features_buffer[feature_columns]
-        normalized_features = (
-            features_to_process - features_to_process.mean()
-        ) / features_to_process.std()
+
+        std = features_to_process.std()
+        mean = features_to_process.mean()
+
+        # Normalize, but handle cases where std is zero
+        normalized_features = features_to_process.copy()
+
+        # Only normalize features where std is non-zero
+        non_zero_std = std != 0
+        normalized_features.loc[:, non_zero_std] = (
+            features_to_process.loc[:, non_zero_std] - mean[non_zero_std]
+        ) / std[non_zero_std]
+
+        # For features with zero std, assign them a constant value (like 0)
+        normalized_features.loc[:, ~non_zero_std] = 0
+
         nan_columns = normalized_features.columns[
             normalized_features.isnull().any()
         ].tolist()
@@ -316,7 +436,7 @@ def split_data(options: str, loader: bool = True):
         gs, results, As, P_dict, P_com = get_graphs(cascade, no_nodes, id_mapping)
         graph_feature = graph_features(gs)
         market_feature = features_engineer(processed_signals)
-        weighted_feature = compute_weighted_in_out_ratios(P_com)
+        weighted_feature = compute_weighted_graph_features(P_com)
 
         combine_feature = combine_features(
             market_feature, graph_feature, weighted_feature
@@ -360,15 +480,9 @@ def split_data(options: str, loader: bool = True):
         validate_data = prepare_data(gs_ls[2], features_ls[2], label_mapping_ls[2])
 
     elif options == "COSS":
-        train_data = prepare_cos_data(
-            gs_ls[0], market_features_ls[0], label_mapping_ls[0]
-        )
-        test_data = prepare_cos_data(
-            gs_ls[1], market_features_ls[1], label_mapping_ls[1]
-        )
-        validate_data = prepare_cos_data(
-            gs_ls[2], market_features_ls[2], label_mapping_ls[2]
-        )
+        train_data = prepare_cos_data(gs_ls[0], features_ls[0], label_mapping_ls[0])
+        test_data = prepare_cos_data(gs_ls[1], features_ls[1], label_mapping_ls[1])
+        validate_data = prepare_cos_data(gs_ls[2], features_ls[2], label_mapping_ls[2])
     elif options == "DDM":
         train_data = prepare_ddm_data(
             gs_ls[0], features_ls[0], label_mapping_ls[0], P_com_ls[0]
@@ -530,113 +644,96 @@ def get_split_data_pickle_e(options: str):
     return train_loader, test_loader, validate_loader
 
 
-# def distribute_evenly_with_redistribution(data, sizes):
-#     # Create initial 3 chunks
-#     chunks = [data[i::3] for i in range(3)]
+def get_split_data_pickle_s(options: str):
+    """
+    Load the data for temporal tasks using the pickle file
+    """
+    if options == "DDINA":
+        with open(path.join(PROJECT_ROOT, "data", "DDINA_data_s.pkl"), "rb") as file:
+            data = pickle.load(file)
 
-#     # If initial chunk sizes don't match required sizes, borrow elements from other chunks
-#     for i in range(3):
-#         while len(chunks[i]) < sizes[i]:
-#             # Try to borrow from next chunks cyclically
-#             for j in range(1, 3):
-#                 donor_index = (i + j) % 3
-#                 if len(chunks[donor_index]) > sizes[donor_index]:
-#                     # Move elements from donor to current chunk
-#                     chunks[i].append(chunks[donor_index].pop())
-#                     break
+    elif options == "COSS":
+        with open(path.join(PROJECT_ROOT, "data", "COSS_data_s.pkl"), "rb") as file:
+            data = pickle.load(file)
 
-#     return [chunks[i][: sizes[i]] for i in range(3)]
+    elif options == "DDM":
+        with open(path.join(PROJECT_ROOT, "data", "DDM_data_s.pkl"), "rb") as file:
+            data = pickle.load(file)
 
+    train_loader = data[0]
+    test_loader = data[1]
+    validate_loader = data[2]
 
-# def get_train_test_validate_data(options: str):
-#     # Assume split_data loads and optionally preprocesses data
-#     if options == "DDINA":
-#         # with open(path.join(PROJECT_ROOT, "data", "DDINA_data_no.pkl"), "rb") as file:
-#         #     data = pickle.load(file)
-#         data = split_data("DDINA", loader=False)
-#     elif options == "COSS":
-#         # with open(path.join(PROJECT_ROOT, "data", "COSS_data_no.pkl"), "rb") as file:
-#         #     data = pickle.load(file)
-#         data = split_data("COSS", loader=False)
-#     elif options == "DDM":
-#         # with open(path.join(PROJECT_ROOT, "data", "DDM_data_no.pkl"), "rb") as file:
-#         #     data = pickle.load(file)
-#         data = split_data("DDM", loader=False)
-
-#     dataset = data[0] + data[1] + data[2]
-
-#     data_sorted = sorted(dataset, key=lambda i: len(i.x), reverse=True)
-
-#     # Calculate the size of each set
-#     total_size = len(data_sorted)
-#     train_size = int(0.7 * total_size)
-#     val_size = int(0.15 * total_size)
-#     test_size = total_size - train_size - val_size
-
-#     # Distribute data among train, validate, test
-#     train_data, val_data, test_data = distribute_evenly_with_redistribution(
-#         data_sorted, [train_size, val_size, test_size]
-#     )
-
-#     # random shuffle train_data, val_data, test_data
-#     random.shuffle(train_data)
-#     random.shuffle(val_data)
-#     random.shuffle(test_data)
-
-#     # Create DataLoaders
-#     train_loader = DataLoader(train_data, batch_size=1, shuffle=True)
-#     test_loader = DataLoader(test_data, batch_size=1, shuffle=True)
-#     validate_loader = DataLoader(val_data, batch_size=1, shuffle=True)
-
-#     return train_loader, test_loader, validate_loader
+    return train_loader, test_loader, validate_loader
 
 
-# def get_train_test_validate_data_pickle(options: str):
-#     """
-#     Load the non-temporal data using the pickle file
-#     """
-#     if options == "DDINA":
-#         with open(path.join(PROJECT_ROOT, "data", "DDINA_data_T.pkl"), "rb") as file:
-#             data = pickle.load(file)
+def get_split_data_pickle_m(options: str):
+    """
+    Load the data for temporal tasks using the pickle file
+    """
+    if options == "DDINA":
+        with open(path.join(PROJECT_ROOT, "data", "DDINA_data_m.pkl"), "rb") as file:
+            data = pickle.load(file)
 
-#     elif options == "COSS":
-#         with open(path.join(PROJECT_ROOT, "data", "COSS_data_T.pkl"), "rb") as file:
-#             data = pickle.load(file)
+    elif options == "COSS":
+        with open(path.join(PROJECT_ROOT, "data", "COSS_data_m.pkl"), "rb") as file:
+            data = pickle.load(file)
 
-#     elif options == "DDM":
-#         with open(path.join(PROJECT_ROOT, "data", "DDM_data_T.pkl"), "rb") as file:
-#             data = pickle.load(file)
+    elif options == "DDM":
+        with open(path.join(PROJECT_ROOT, "data", "DDM_data_m.pkl"), "rb") as file:
+            data = pickle.load(file)
 
-#     train_loader = data[0]
-#     test_loader = data[1]
-#     validate_loader = data[2]
+    train_loader = data[0]
+    test_loader = data[1]
+    validate_loader = data[2]
 
-#     return train_loader, test_loader, validate_loader
+    return train_loader, test_loader, validate_loader
 
 
-# def get_train_test_validate_data_pickle_com(options: str):
-#     """
-#     Load the non-temporal data using the pickle file
-#     """
-#     if options == "DDINA":
-#         with open(
-#             path.join(PROJECT_ROOT, "data", "DDINA_data_com_T.pkl"), "rb"
-#         ) as file:
-#             data = pickle.load(file)
+def get_split_data_pickle_l(options: str):
+    """
+    Load the data for temporal tasks using the pickle file
+    """
+    if options == "DDINA":
+        with open(path.join(PROJECT_ROOT, "data", "DDINA_data_l.pkl"), "rb") as file:
+            data = pickle.load(file)
 
-#     elif options == "COSS":
-#         with open(path.join(PROJECT_ROOT, "data", "COSS_data_com_T.pkl"), "rb") as file:
-#             data = pickle.load(file)
+    elif options == "COSS":
+        with open(path.join(PROJECT_ROOT, "data", "COSS_data_l.pkl"), "rb") as file:
+            data = pickle.load(file)
 
-#     elif options == "DDM":
-#         with open(path.join(PROJECT_ROOT, "data", "DDM_data_com_T.pkl"), "rb") as file:
-#             data = pickle.load(file)
+    elif options == "DDM":
+        with open(path.join(PROJECT_ROOT, "data", "DDM_data_l.pkl"), "rb") as file:
+            data = pickle.load(file)
 
-#     train_loader = data[0]
-#     test_loader = data[1]
-#     validate_loader = data[2]
+    train_loader = data[0]
+    test_loader = data[1]
+    validate_loader = data[2]
 
-#     return train_loader, test_loader, validate_loader
+    return train_loader, test_loader, validate_loader
+
+
+def get_split_data_pickle_l_wc(options: str):
+    """
+    Load the data for temporal tasks using the pickle file
+    """
+    if options == "DDINA":
+        with open(path.join(PROJECT_ROOT, "data", "DDINA_data_l_wc.pkl"), "rb") as file:
+            data = pickle.load(file)
+
+    elif options == "COSS":
+        with open(path.join(PROJECT_ROOT, "data", "COSS_data_l_wc.pkl"), "rb") as file:
+            data = pickle.load(file)
+
+    elif options == "DDM":
+        with open(path.join(PROJECT_ROOT, "data", "DDM_data_l_wc.pkl"), "rb") as file:
+            data = pickle.load(file)
+
+    train_loader = data[0]
+    test_loader = data[1]
+    validate_loader = data[2]
+
+    return train_loader, test_loader, validate_loader
 
 
 if __name__ == "__main__":
@@ -644,26 +741,13 @@ if __name__ == "__main__":
 
     a = split_data("DDINA", loader=True)
     # save it in pickle
-    with open(path.join(PROJECT_ROOT, "data", "DDINA_data_fv.pkl"), "wb") as file:
+    with open(path.join(PROJECT_ROOT, "data", "DDINA_data_l_wc.pkl"), "wb") as file:
         pickle.dump(a, file)
     b = split_data("COSS", loader=True)
     # save it in pickle
-    with open(path.join(PROJECT_ROOT, "data", "COSS_data_fv.pkl"), "wb") as file:
+    with open(path.join(PROJECT_ROOT, "data", "COSS_data_l_wc.pkl"), "wb") as file:
         pickle.dump(b, file)
     c = split_data("DDM", loader=True)
     # save it in pickle
-    with open(path.join(PROJECT_ROOT, "data", "DDM_data_fv.pkl"), "wb") as file:
+    with open(path.join(PROJECT_ROOT, "data", "DDM_data_l_wc.pkl"), "wb") as file:
         pickle.dump(c, file)
-
-    # a = get_train_test_validate_data("DDINA")
-    # with open(path.join(PROJECT_ROOT, "data", "DDINA_data_f_T.pkl"), "wb") as file:
-    #     pickle.dump(a, file)
-    # b = get_train_test_validate_data("COSS")
-    # with open(path.join(PROJECT_ROOT, "data", "COSS_data_f_T.pkl"), "wb") as file:
-    #     pickle.dump(b, file)
-    # c = get_train_test_validate_data("DDM")
-    # with open(path.join(PROJECT_ROOT, "data", "DDM_data_f_T.pkl"), "wb") as file:
-    #     pickle.dump(c, file)
-
-    # a = get_split_data_pickle_com("DDM")
-    # get_train_test_validate_data_pickle_com("DDM")

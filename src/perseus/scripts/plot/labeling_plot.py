@@ -18,6 +18,7 @@ from perseus.dataset.preprocess.process import (
     get_graphs,
     process_dataframe,
     features_engineer,
+    compute_weighted_graph_features,
 )
 from perseus.dataset.preprocess.train_test_validate import (
     get_test_scored_signals,
@@ -260,9 +261,9 @@ def draw_graph_with_communities_wrong_case(
         )
         node_sizes.append(size)
         if prediction == (1, 0):
-            node_shapes[node] = "s"  # Triangle
+            node_shapes[node] = "s"  # Triangle false positive
         elif prediction == (0, 1):
-            node_shapes[node] = "^"  # Square
+            node_shapes[node] = "^"  # Square false negative
         else:
             node_shapes[node] = "o"  # Circle
 
@@ -340,11 +341,17 @@ if __name__ == "__main__":
     signals = get_train_scored_signals()
     processed_signals = process_dataframe(signals)
     ided_signals = assign_event_ids(processed_signals)
-    cascade, no_nodes, id_mapping, cascade_labeling = aggregate_data(ided_signals)
-    gs, results, As, P_dict = get_graphs(cascade, no_nodes, id_mapping)
+    cascade_buffer, no_nodes_buffer, id_mapping_buffer, cascade_labeling = (
+        aggregate_data(ided_signals)
+    )
+    gs, results, As, P_dict, P_com = get_graphs(
+        cascade_buffer, no_nodes_buffer, id_mapping_buffer
+    )
     graph_feature = graph_features(gs)
     market_feature = features_engineer(processed_signals)
-    combine_feature = combine_features(market_feature, graph_feature)
+    weighted_feature = compute_weighted_graph_features(P_com)
+    combine_feature = combine_features(market_feature, graph_feature, weighted_feature)
+
     communities_dict = community_detection_weighted(P_dict)
     # Assume id_to_username is available here
 
@@ -395,6 +402,28 @@ if __name__ == "__main__":
     #     draw_graph_with_communities_prediction(gs, k, communities_dict, id_to_username, predictions[k])
 
     coin = "DIA"
+
+    true_false_labels = {}
+
+    for coin in labels.keys():
+        true_false_labels[coin] = {}  # Initialize dictionary for each coin
+        for i in labels[coin].keys():
+            try:
+                true_false_labels[coin][i] = (labels[coin][i], predictions[coin][i][0])
+            except KeyError:
+                # Skip if prediction for this label doesn't exist
+                pass
+
+    # go over each coin and node in each coin and output the key with at least (1,0) and (0,1) and (1,1)
+    for coin in true_false_labels.keys():
+        # for node in true_false_labels[coin].keys():
+        # Convert true_false_labels[coin][node] to a set for easy checking
+        label_set = set(v for i, v in true_false_labels[coin].items())
+
+        # Check if all required tuples are in the set
+        if {(1, 0), (0, 1), (1, 1)}.issubset(label_set):
+            print(coin)
+
     draw_graph_with_communities_wrong_case(
-        gs, coin, communities_dict, id_to_username, predictions[coin]
+        gs, coin, communities_dict, id_to_username, true_false_labels
     )

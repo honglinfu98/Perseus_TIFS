@@ -135,8 +135,20 @@ def get_valid_scored_signals():
     return result
 
 
+def get_new_detection():
+    """
+    Get signals from the database for pre-pump scoring.
+    """
+
+    with open(path.join(PROJECT_ROOT, "data", "new_detection.pkl"), "rb") as file:
+        signals = pickle.load(file)
+    result = signals[~signals["telegram_chat_id"].isna()]
+
+    return result
+
+
 if __name__ == "__main__":
-    a, b, c = seperate_dataset()
+    a = get_new_detection()
     # a = get_train_scored_signals()
     # b = get_test_scored_signals()
     # c = get_valid_scored_signals()

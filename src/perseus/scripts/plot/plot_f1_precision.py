@@ -1,147 +1,113 @@
-"""
-This function is used to get the global minimum and maximum training times
-"""
-
 from os import path
 import pickle
 import numpy as np
 from matplotlib import pyplot as plt
 import pandas as pd
-import seaborn as sns
-import matplotlib.ticker as ticker
-
-
-import matplotlib.pyplot as plt
-import numpy as np
 from sklearn.metrics import precision_score, f1_score
-
 from perseus.settings import PROJECT_ROOT
 
-datasets = ["DDINA", "COSS", "DDM"]
-dataset_colors = {"DDINA": "blue", "COSS": "green", "DDM": "red"}
-models = ["GCN", "GAT", "GraphSAGE"]
+datasets = ["DDINA", "DDM"]
+dataset_colors = {"DDINA": "blue", "DDM": "red"}
+models = ["GAT", "GraphSAGE"]
 
 
-# open the results files
-with open(path.join(PROJECT_ROOT, "data", "results_tr.pkl"), "rb") as file:
-    results_tr = pickle.load(file)
+with open(path.join(PROJECT_ROOT, "data", "saved", "results_l.pkl"), "rb") as file:
+    results_m = pickle.load(file)
 
-with open(path.join(PROJECT_ROOT, "data", "results_f.pkl"), "rb") as file:
-    results_f = pickle.load(file)
-
-with open(path.join(PROJECT_ROOT, "data", "results_t.pkl"), "rb") as file:
-    results_t = pickle.load(file)
-
-with open(path.join(PROJECT_ROOT, "data", "results_fv.pkl"), "rb") as file:
-    results_fv = pickle.load(file)
-
-with open(path.join(PROJECT_ROOT, "data", "results_e.pkl"), "rb") as file:
-    results_e = pickle.load(file)
+from matplotlib.lines import Line2D
 
 
-# # Define thresholds
-# thresholds = np.linspace(0, 1, 100)
+def plot_precision_f1_separately(
+    results_t,
+    models,
+    datasets,
+    thresholds=np.linspace(0, 1, 100),
+    fontsize=10,
+    ticksize=10,
+    save_plots=True,
+):
+    # Color and linestyle for clarity
+    colors = ["b", "r"]
+    linestyles = ["dashed", "-"]
 
-# fig, ax = plt.subplots(figsize=(10, 6))
+    # Label map for datasets
+    label_map = {
+        "DDINA": "Directed",
+        "DDM": "Weighted",
+    }
 
-# # Color and linestyle management for clarity in the plot
-# colors = ["r", "g", "b"]
-# linestyles = ["-", "--", ":"]
+    # Combined handles for legend
+    combined_handles = {}
 
-# # Enumerate over all datasets and models
-# for i, dataset in enumerate(datasets):
-#     for j, model in enumerate(models):
-#         # Calculate precision and F1 scores for each dataset-model combination
-#         labels = results_t[dataset][model]["metrics"]["labels"]
-#         probs = results_t[dataset][model]["metrics"]["probs"]
-#         precision_scores = [
-#             precision_score(labels, probs > threshold, zero_division=0)
-#             for threshold in thresholds
-#         ]
-#         f1_scores = [
-#             f1_score(labels, probs > threshold, zero_division=0)
-#             for threshold in thresholds
-#         ]
+    # Function to plot a specific metric
+    def plot_metric(metric_name, ylabel, file_suffix):
+        plt.figure(figsize=(8, 8))
 
-#         # Plot each model as a different line in the plot
-#         ax.plot(
-#             thresholds,
-#             precision_scores,
-#             linestyle=linestyles[j],
-#             color=colors[i],
-#             label=f"{dataset} {model} Precision",
-#         )
-#         ax.plot(
-#             thresholds,
-#             f1_scores,
-#             linestyle=linestyles[j],
-#             color=colors[i],
-#             alpha=0.5,
-#             label=f"{dataset} {model} F1 Score",
-#         )
+        # Plotting precision or F1 score for each model and dataset
+        for i, model in enumerate(models):
+            for j, dataset in enumerate(datasets):
+                labels = results_m[dataset][model]["metrics"]["labels"]
+                probs = results_m[dataset][model]["metrics"]["probs"]
 
-# ax.set_title("Performance Across Datasets and Models")
-# ax.set_xlabel("Threshold")
-# ax.set_ylabel("Measure")
-# ax.legend(loc="best", fontsize="small")
-# plt.show()
+                # Calculate scores based on the metric type
+                if metric_name == "Precision":
+                    scores = [
+                        precision_score(labels, probs > threshold, zero_division=0)
+                        for threshold in thresholds
+                    ]
+                elif metric_name == "F1 Score":
+                    scores = [
+                        f1_score(labels, probs > threshold, zero_division=0)
+                        for threshold in thresholds
+                    ]
 
+                # Plot scores against thresholds
+                plt.plot(thresholds, scores, color=colors[i], linestyle=linestyles[j])
 
-# Define thresholds
-thresholds = np.linspace(0, 1, 100)
+                # Create combined label for each dataset-model pair
+                combined_label = f"{label_map[dataset]} {model}"
 
-# Color and linestyle management for clarity in the plot
-colors = ["r", "g", "b"]  # Different colors for different models
-linestyles = ["-", "--", ":"]  # Different linestyles for different datasets
+                # Create and store unique combined handles for legend
+                if combined_label not in combined_handles:
+                    combined_handles[combined_label] = Line2D(
+                        [0],
+                        [0],
+                        color=colors[i],
+                        linestyle=linestyles[j],
+                        label=combined_label,
+                    )
 
-# Set up the plots with shared x-axis
-fig, axs = plt.subplots(2, 1, figsize=(12, 12), sharex=True)
+        # Configure axis labels and title
+        plt.xlabel("Threshold", fontsize=fontsize)
+        plt.ylabel(ylabel, fontsize=fontsize)
+        plt.grid(True)
+        plt.tick_params(axis="both", which="major", labelsize=ticksize)
 
-# Assuming 'datasets' and 'models' are defined and 'results_t' contains the necessary data
-for i, model in enumerate(models):
-    for j, dataset in enumerate(datasets):
-        labels = results_t[dataset][model]["metrics"]["labels"]
-        probs = results_t[dataset][model]["metrics"]["probs"]
-
-        # Calculate Precision and F1 scores for each threshold
-        precision_scores = [
-            precision_score(labels, probs > threshold, zero_division=0)
-            for threshold in thresholds
-        ]
-        f1_scores = [
-            f1_score(labels, probs > threshold, zero_division=0)
-            for threshold in thresholds
-        ]
-
-        # Plot Precision
-        axs[0].plot(
-            thresholds,
-            precision_scores,
-            color=colors[i],
-            linestyle=linestyles[j],
-            label=f"{model} {dataset} Precision",
+        # Add combined legend with dataset-model pairs
+        plt.legend(
+            handles=list(combined_handles.values()),
+            fontsize=fontsize - 2,
+            # title="Models and Graphs",
+            title_fontsize=fontsize,
+            loc="lower left",
         )
 
-        # Plot F1 Score
-        axs[1].plot(
-            thresholds,
-            f1_scores,
-            color=colors[i],
-            linestyle=linestyles[j],
-            label=f"{model} {dataset} F1 Score",
-        )
+        # Save the plot if requested
+        if save_plots:
+            plt.savefig(
+                path.join(PROJECT_ROOT, "data", f"nov_{file_suffix}_plot.pdf"),
+                bbox_inches="tight",
+                format="pdf",
+            )
 
-# Precision subplot settings
-axs[0].set_title("Precision Across Models and Datasets")
-axs[0].set_ylabel("Precision")
-axs[0].legend(loc="best", fontsize="small")
-axs[0].grid(True)
+        plt.show()
 
-# F1 Score subplot settings
-axs[1].set_title("F1 Score Across Models and Datasets")
-axs[1].set_xlabel("Threshold")
-axs[1].set_ylabel("F1 Score")
-axs[1].legend(loc="best", fontsize="small")
-axs[1].grid(True)
+    # Plot Precision
+    plot_metric("Precision", "Precision", "precision")
 
-plt.show()
+    # Plot F1 Score
+    plot_metric("F1 Score", "F1 Score", "f1")
+
+
+# Call the function with desired parameters
+plot_precision_f1_separately(results_m, models, datasets, fontsize=22, ticksize=22)
