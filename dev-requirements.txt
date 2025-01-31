@@ -2,7 +2,7 @@ bandit
 black==24.10.0
 flake8==6.0.0
 jupyter
-pre-commit==4.0.1
+pre-commit==4.1.0
 py2neo
 pytest
 pytest-cov
