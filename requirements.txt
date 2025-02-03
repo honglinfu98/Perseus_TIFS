@@ -13,7 +13,7 @@ numpy
 phonenumbers==8.13.53
 plotly
 pycountry==24.6.1
-pytz==2023.3
+pytz==2025.1
 sshtunnel==0.4.0
 datetime
 pyvis
