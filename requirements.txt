@@ -10,7 +10,7 @@ langdetect==1.0.9
 matplotlib==3.10.0
 matplotlib-inline==0.1.7
 numpy
-phonenumbers==8.13.53
+phonenumbers==8.13.54
 plotly
 pycountry==24.6.1
 pytz==2025.1
