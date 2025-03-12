@@ -25,7 +25,6 @@ from sklearn.metrics import (
 from perseus.settings import PROJECT_ROOT
 from perseus.dataset.dataset_preparation import get_split_data_pickle, split_data
 
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 

@@ -1,113 +1,399 @@
 from os import path
 import pickle
 import numpy as np
+import matplotlib.ticker as ticker
 from matplotlib import pyplot as plt
-import pandas as pd
-from sklearn.metrics import precision_score, f1_score
+from matplotlib.lines import Line2D
+from sklearn.metrics import precision_score, f1_score, auc
+from scipy.interpolate import make_interp_spline
+from matplotlib.ticker import MaxNLocator, ScalarFormatter
 from perseus.settings import PROJECT_ROOT
 
-datasets = ["DDINA", "DDM"]
-dataset_colors = {"DDINA": "blue", "DDM": "red"}
-models = ["GAT", "GraphSAGE"]
-
-
-with open(path.join(PROJECT_ROOT, "data", "saved", "results_l.pkl"), "rb") as file:
+# Load results
+with open(path.join(PROJECT_ROOT, "data", "results_wn.pkl"), "rb") as file:
     results_m = pickle.load(file)
 
-from matplotlib.lines import Line2D
+# Global style settings
+bold_linewidth = 5  # Line width for curves
+size = 36  # Font size for plots
+
+# Global legend settings
+LEGEND_SIZE = size - 2
+LEGEND_TITLE_SIZE = size
+LEGEND_HANDLELENGTH = 2  # Adjust handle length if needed
+
+# Mapping dictionaries for styling
+line_styles = {"Directed": (0, (4, 4)), "Weighted": "solid"}  # Custom dash: 4 on, 4 off
+model_colors = {"GAT": "#1f77b4", "GraphSAGE": "#ff7f0e"}
+label_map = {"DDINA": "Directed", "DDM": "Weighted"}
+legend_map = {"Directed": "D", "Weighted": "W"}
+model_legend_map = {"GAT": "A", "GraphSAGE": "S"}
 
 
-def plot_precision_f1_separately(
-    results_t,
-    models,
-    datasets,
-    thresholds=np.linspace(0, 1, 100),
-    fontsize=10,
-    ticksize=10,
-    save_plots=True,
-):
-    # Color and linestyle for clarity
-    colors = ["b", "r"]
-    linestyles = ["dashed", "-"]
+# Helper: Create a figure and axis with common size
+def get_common_ax(figsize=(8, 8)):
+    fig, ax = plt.subplots(figsize=figsize)
+    return fig, ax
 
-    # Label map for datasets
-    label_map = {
-        "DDINA": "Directed",
-        "DDM": "Weighted",
-    }
 
-    # Combined handles for legend
+# Precision Plot
+def plot_precision_common_ax(ax, results, colors, linestyles, label_map, fontsize=10):
+    thresholds = np.linspace(0, 1, 100)
     combined_handles = {}
+    # Plot precision curves for each model and dataset
+    for model in model_colors.keys():
+        for dataset in label_map.keys():
+            labels = results[dataset][model]["metrics"]["labels"]
+            probs = results[dataset][model]["metrics"]["probs"]
+            scores = [
+                precision_score(labels, probs > threshold, zero_division=0)
+                for threshold in thresholds
+            ]
+            ax.plot(
+                thresholds,
+                scores,
+                color=colors[model],
+                linestyle=linestyles[label_map[dataset]],
+                linewidth=bold_linewidth,
+            )
+            combined_label = (
+                f"{legend_map[label_map[dataset]]} {model_legend_map[model]}"
+            )
+            if combined_label not in combined_handles:
+                combined_handles[combined_label] = Line2D(
+                    [0],
+                    [0],
+                    color=colors[model],
+                    linestyle=linestyles[label_map[dataset]],
+                    linewidth=bold_linewidth,
+                    label=combined_label,
+                )
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1.1)
+    ax.set_xlabel("Threshold", fontsize=fontsize)
+    ax.set_ylabel("Precision", fontsize=fontsize)
+    ax.grid(True)
+    ax.tick_params(axis="both", which="major", labelsize=fontsize)
+    legend = ax.legend(
+        handles=list(combined_handles.values()),
+        fontsize=LEGEND_SIZE,
+        title_fontsize=LEGEND_TITLE_SIZE,
+        loc="upper left",
+        handlelength=LEGEND_HANDLELENGTH,
+    )
+    plt.setp(legend.get_texts(), fontsize=LEGEND_SIZE)
+    legend.get_title().set_fontsize(LEGEND_TITLE_SIZE)
 
-    # Function to plot a specific metric
-    def plot_metric(metric_name, ylabel, file_suffix):
-        plt.figure(figsize=(8, 8))
 
-        # Plotting precision or F1 score for each model and dataset
-        for i, model in enumerate(models):
-            for j, dataset in enumerate(datasets):
-                labels = results_m[dataset][model]["metrics"]["labels"]
-                probs = results_m[dataset][model]["metrics"]["probs"]
+# F1 Plot
+def plot_f1_common_ax(ax, results, colors, linestyles, label_map, fontsize=10):
+    thresholds = np.linspace(0, 1, 100)
+    combined_handles = {}
+    for model in model_colors.keys():
+        for dataset in label_map.keys():
+            labels = results[dataset][model]["metrics"]["labels"]
+            probs = results[dataset][model]["metrics"]["probs"]
+            scores = [
+                f1_score(labels, probs > threshold, zero_division=0)
+                for threshold in thresholds
+            ]
+            ax.plot(
+                thresholds,
+                scores,
+                color=colors[model],
+                linestyle=linestyles[label_map[dataset]],
+                linewidth=bold_linewidth,
+            )
+            combined_label = (
+                f"{legend_map[label_map[dataset]]} {model_legend_map[model]}"
+            )
+            if combined_label not in combined_handles:
+                combined_handles[combined_label] = Line2D(
+                    [0],
+                    [0],
+                    color=colors[model],
+                    linestyle=linestyles[label_map[dataset]],
+                    linewidth=bold_linewidth,
+                    label=combined_label,
+                )
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1.1)
+    ax.set_xlabel("Threshold", fontsize=fontsize)
+    ax.set_ylabel("F1", fontsize=fontsize)
+    ax.grid(True)
+    ax.tick_params(axis="both", which="major", labelsize=fontsize)
+    legend = ax.legend(
+        handles=list(combined_handles.values()),
+        fontsize=LEGEND_SIZE,
+        title_fontsize=LEGEND_TITLE_SIZE,
+        loc="upper left",
+        handlelength=LEGEND_HANDLELENGTH,
+    )
+    plt.setp(legend.get_texts(), fontsize=LEGEND_SIZE)
+    legend.get_title().set_fontsize(LEGEND_TITLE_SIZE)
 
-                # Calculate scores based on the metric type
-                if metric_name == "Precision":
-                    scores = [
-                        precision_score(labels, probs > threshold, zero_division=0)
-                        for threshold in thresholds
-                    ]
-                elif metric_name == "F1 Score":
-                    scores = [
-                        f1_score(labels, probs > threshold, zero_division=0)
-                        for threshold in thresholds
-                    ]
 
-                # Plot scores against thresholds
-                plt.plot(thresholds, scores, color=colors[i], linestyle=linestyles[j])
-
-                # Create combined label for each dataset-model pair
-                combined_label = f"{label_map[dataset]} {model}"
-
-                # Create and store unique combined handles for legend
+# Inference Plot
+def plot_infer_common_ax(
+    ax,
+    results,
+    label_map,
+    fontsize=12,
+    model_colors=model_colors,
+    line_styles=line_styles,
+):
+    combined_handles = {}
+    for model_name in model_colors.keys():
+        for dataset_key, dataset in label_map.items():
+            if model_name in results[dataset_key]:
+                batch_times = np.array(results[dataset_key][model_name]["batch_times"])
+                num_nodes = np.array(results[dataset_key][model_name]["num_nodes"])
+                unique_nodes, indices = np.unique(num_nodes, return_inverse=True)
+                average_batch_times = np.zeros_like(unique_nodes, dtype=float)
+                for i in range(len(unique_nodes)):
+                    average_batch_times[i] = np.mean(batch_times[indices == i])
+                if len(unique_nodes) > 3:
+                    spline = make_interp_spline(unique_nodes, average_batch_times, k=3)
+                    fine_x = np.linspace(unique_nodes.min(), unique_nodes.max(), 500)
+                    fine_y = spline(fine_x)
+                    ax.plot(
+                        fine_x,
+                        fine_y,
+                        color=model_colors[model_name],
+                        linestyle=line_styles[dataset],
+                        linewidth=bold_linewidth,
+                    )
+                else:
+                    ax.plot(
+                        unique_nodes,
+                        average_batch_times,
+                        "o-",
+                        color=model_colors[model_name],
+                        linestyle=line_styles[dataset],
+                        linewidth=bold_linewidth,
+                    )
+                combined_label = f"{legend_map[dataset]} {model_legend_map[model_name]}"
                 if combined_label not in combined_handles:
                     combined_handles[combined_label] = Line2D(
                         [0],
                         [0],
-                        color=colors[i],
-                        linestyle=linestyles[j],
+                        color=model_colors[model_name],
+                        linestyle=line_styles[dataset],
+                        linewidth=bold_linewidth,
                         label=combined_label,
                     )
+    ax.set_xlim(3, 15)
+    ax.set_ylim(0.00009, 0.00026)
+    ax.set_xlabel("Number of Nodes", fontsize=fontsize)
+    ax.set_ylabel("Inference Speed (sec)", fontsize=fontsize)
+    ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+    ax.ticklabel_format(style="sci", axis="y", scilimits=(0, 0))
+    ax.yaxis.get_offset_text().set_fontsize(fontsize)
+    ax.yaxis.set_major_locator(MaxNLocator(nbins=6))
+    ax.tick_params(axis="both", which="major", labelsize=fontsize)
+    ax.grid(True, which="major", axis="both", linestyle="--", linewidth=0.5)
+    legend = ax.legend(
+        handles=list(combined_handles.values()),
+        fontsize=LEGEND_SIZE,
+        title_fontsize=LEGEND_TITLE_SIZE,
+        loc="center left",
+        handlelength=LEGEND_HANDLELENGTH,
+    )
+    plt.setp(legend.get_texts(), fontsize=LEGEND_SIZE)
+    legend.get_title().set_fontsize(LEGEND_TITLE_SIZE)
+    ax.set_box_aspect(1)  # For Matplotlib 3.3+.
 
-        # Configure axis labels and title
-        plt.xlabel("Threshold", fontsize=fontsize)
-        plt.ylabel(ylabel, fontsize=fontsize)
-        plt.grid(True)
-        plt.tick_params(axis="both", which="major", labelsize=ticksize)
 
-        # Add combined legend with dataset-model pairs
-        plt.legend(
-            handles=list(combined_handles.values()),
-            fontsize=fontsize - 2,
-            # title="Models and Graphs",
-            title_fontsize=fontsize,
-            loc="lower left",
-        )
-
-        # Save the plot if requested
-        if save_plots:
-            plt.savefig(
-                path.join(PROJECT_ROOT, "data", f"nov_{file_suffix}_plot.pdf"),
-                bbox_inches="tight",
-                format="pdf",
+# Combined CDF Plot
+def plot_combined_cdf_common_ax(
+    ax, results_t, fontsize, label_map, line_styles, model_colors
+):
+    # Collect data for all methods and datasets
+    data = {
+        method: {
+            dataset: results_t[dataset][method]["train_times"]
+            for dataset in label_map.keys()
+        }
+        for method in model_colors.keys()
+    }
+    all_times = []
+    for method in model_colors.keys():
+        for dataset in label_map.keys():
+            all_times.extend(results_t[dataset][method]["train_times"])
+    global_min = min(all_times)
+    global_max = max(all_times)
+    combined_handles = {}
+    for method in data:
+        for dataset in data[method]:
+            sorted_times = np.sort(data[method][dataset])
+            cdf = np.arange(1, len(sorted_times) + 1) / len(sorted_times)
+            style_key = label_map.get(dataset, dataset)
+            current_linestyle = line_styles.get(style_key, "solid")
+            ax.plot(
+                sorted_times,
+                cdf,
+                drawstyle="steps-post",
+                color=model_colors[method],
+                linestyle=current_linestyle,
+                linewidth=bold_linewidth,
             )
+            combined_label = f"{legend_map[style_key]} {model_legend_map[method]}"
+            if combined_label not in combined_handles:
+                combined_handles[combined_label] = Line2D(
+                    [0],
+                    [0],
+                    color=model_colors[method],
+                    linestyle=current_linestyle,
+                    linewidth=bold_linewidth,
+                    label=combined_label,
+                )
+    ax.set_xscale("log")
+    ax.set_xlim(global_min, global_max)
+    major_ticks = np.logspace(np.log10(global_min), np.log10(global_max), num=5)
+    ax.xaxis.set_major_locator(ticker.FixedLocator(major_ticks))
+    ax.xaxis.set_major_formatter(
+        ticker.FuncFormatter(lambda x, pos: f"{x:.2f}" if x < 1 else f"{int(x)}")
+    )
+    ax.minorticks_off()
+    ax.tick_params(axis="x", which="major", labelsize=fontsize)
+    y_ticks = np.linspace(0, 1, 6)
+    ax.set_yticks(y_ticks)
+    ax.set_yticklabels([f"{y:.1f}" for y in y_ticks])
+    ax.tick_params(axis="y", which="major", labelsize=fontsize)
+    ax.set_ylim(0, 1)
+    ax.set_xlabel("Time per Epoch (seconds)", fontsize=fontsize)
+    ax.set_ylabel("CDF", fontsize=fontsize)
+    legend = ax.legend(
+        handles=list(combined_handles.values()),
+        fontsize=LEGEND_SIZE,
+        title_fontsize=LEGEND_TITLE_SIZE,
+        loc="lower right",
+        handlelength=LEGEND_HANDLELENGTH,
+    )
+    plt.setp(legend.get_texts(), fontsize=LEGEND_SIZE)
+    legend.get_title().set_fontsize(LEGEND_TITLE_SIZE)
+    ax.grid(True, which="major", axis="both", linestyle="--", linewidth=0.5)
 
-        plt.show()
 
-    # Plot Precision
-    plot_metric("Precision", "Precision", "precision")
+# Combined ROC Plot
+def plot_combined_roc_common_ax(
+    ax, results, fontsize, label_map, line_styles, model_colors
+):
+    combined_handles = {}
+    for method in model_colors.keys():
+        for dataset in label_map.keys():
+            fpr = results[dataset][method]["fpr"][0]
+            tpr = results[dataset][method]["tpr"][0]
+            auc_value = auc(fpr, tpr)
+            style_key = label_map.get(dataset, dataset)
+            current_linestyle = line_styles.get(style_key, "solid")
+            ax.plot(
+                fpr,
+                tpr,
+                color=model_colors[method],
+                linestyle=current_linestyle,
+                linewidth=bold_linewidth,
+            )
+            combined_label = f"{legend_map[style_key]} {model_legend_map[method]} AUC: {auc_value:.2f}"
+            combined_handles[combined_label] = Line2D(
+                [0],
+                [0],
+                color=model_colors[method],
+                linestyle=current_linestyle,
+                linewidth=bold_linewidth,
+                label=combined_label,
+            )
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.set_xlabel("False Positive Rate", fontsize=fontsize)
+    ax.set_ylabel("True Positive Rate", fontsize=fontsize)
+    legend = ax.legend(
+        handles=list(combined_handles.values()),
+        fontsize=LEGEND_SIZE,
+        title_fontsize=LEGEND_TITLE_SIZE,
+        loc="lower right",
+        handlelength=LEGEND_HANDLELENGTH,
+    )
+    plt.setp(legend.get_texts(), fontsize=LEGEND_SIZE)
+    legend.get_title().set_fontsize(LEGEND_TITLE_SIZE)
+    ax.tick_params(axis="both", which="major", labelsize=fontsize)
+    ax.grid(True)
 
-    # Plot F1 Score
-    plot_metric("F1 Score", "F1 Score", "f1")
 
+# ----------------------
+# Generate and Save Plots
+# ----------------------
 
-# Call the function with desired parameters
-plot_precision_f1_separately(results_m, models, datasets, fontsize=22, ticksize=22)
+# Precision Plot
+fig, ax = get_common_ax(figsize=(8, 8))
+plot_precision_common_ax(
+    ax, results_m, model_colors, line_styles, label_map, fontsize=size
+)
+fig.savefig(
+    path.join(PROJECT_ROOT, "data", "feb_Precision_plot.pdf"),
+    bbox_inches="tight",
+    format="pdf",
+)
+plt.show()
+
+# F1 Plot
+fig, ax = get_common_ax(figsize=(8, 8))
+plot_f1_common_ax(ax, results_m, model_colors, line_styles, label_map, fontsize=size)
+fig.savefig(
+    path.join(PROJECT_ROOT, "data", "feb_F1_plot.pdf"),
+    bbox_inches="tight",
+    format="pdf",
+)
+plt.show()
+
+# Inference Plot
+fig, ax = get_common_ax(figsize=(8, 8))
+plot_infer_common_ax(
+    ax,
+    results_m,
+    label_map,
+    fontsize=size,
+    model_colors=model_colors,
+    line_styles=line_styles,
+)
+fig.tight_layout()  # Adjust layout if necessary
+fig.savefig(
+    path.join(PROJECT_ROOT, "data", "feb_inference_plot.pdf"),
+    bbox_inches="tight",
+    format="pdf",
+)
+plt.show()
+
+# Combined CDF Plot
+fig, ax = get_common_ax(figsize=(8, 8))
+plot_combined_cdf_common_ax(
+    ax,
+    results_m,
+    fontsize=size,
+    label_map=label_map,
+    line_styles=line_styles,
+    model_colors=model_colors,
+)
+fig.savefig(
+    path.join(PROJECT_ROOT, "data", "feb_combined_cdf_plot.pdf"),
+    bbox_inches="tight",
+    format="pdf",
+)
+plt.show()
+
+# Combined ROC Plot
+fig, ax = get_common_ax(figsize=(8, 8))
+plot_combined_roc_common_ax(
+    ax,
+    results_m,
+    fontsize=size,
+    label_map=label_map,
+    line_styles=line_styles,
+    model_colors=model_colors,
+)
+fig.savefig(
+    path.join(PROJECT_ROOT, "data", "feb_combined_roc_plot.pdf"),
+    bbox_inches="tight",
+    format="pdf",
+)
+plt.show()

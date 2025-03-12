@@ -31,24 +31,34 @@ from perseus.dataset.preprocess.train_test_validate import (
     get_new_detection,
     get_test_scored_signals,
     get_train_scored_signals,
+    get_valid_scored_signals,
 )
 from perseus.settings import PROJECT_ROOT
 
 
 # with open(path.join(PROJECT_ROOT, "data", "results_f.pkl"), "rb") as file:
 #     results_t = pickle.load(file)
-
-
 def aggregate_and_compare_combined(
-    gs_ls: dict, label_mapping_ls: dict, font_size: 24, tick_size: 24, bw: 0.5
+    gs_ls: dict, label_mapping_ls: dict, font_size: int, tick_size: int, bw: float
 ):
     """
-    This function aggregates the graph features and seperate them by group, then performs a T-test to compare the groups
+    This function aggregates the graph features and separates them by group, then performs a T-test
+    to compare the groups.
+
+    The plotting here has been modified so that the curves have a fixed width (linewidth=2),
+    the font sizes match the provided style, and the KDE plots:
+      - do not include mean values in the legend,
+      - show the mean as a vertical dashed bold line with an annotation placed to its left,
+      - and have the legend placed right above the plot outside the plotting area with:
+            * for Efficiency, only the Accomplices legend is shown (and the Mastermind mean is annotated to the right),
+            * for Clustering Coefficient, only the Mastermind legend is shown.
     """
+
+    # (Assuming that in_ego_graph, out_ego_graph, calculate_effsize_efficiency, and PROJECT_ROOT
+    #  are defined elsewhere in your code.)
 
     # Initialize containers for centrality measures and additional features by group
     metrics_by_group = {
-        # "degree_centrality": [[], []],
         "betweenness_centrality": [[], []],
         "closeness_centrality": [[], []],
         "pagerank": [[], []],
@@ -66,7 +76,6 @@ def aggregate_and_compare_combined(
         labels = label_mapping_ls.get(key, {})
 
         # Calculate centrality measures for each node
-        # degree_centrality = nx.degree_centrality(graph)
         betweenness_centrality = nx.betweenness_centrality(graph)
         closeness_centrality = nx.closeness_centrality(graph)
         pagerank = nx.pagerank(graph)
@@ -76,9 +85,6 @@ def aggregate_and_compare_combined(
             group = labels.get(node)
             if group is not None:
                 # Aggregate centrality measures
-                # metrics_by_group["degree_centrality"][group].append(
-                #     degree_centrality.get(node, 0)
-                # )
                 metrics_by_group["betweenness_centrality"][group].append(
                     betweenness_centrality.get(node, 0)
                 )
@@ -86,7 +92,6 @@ def aggregate_and_compare_combined(
                     closeness_centrality.get(node, 0)
                 )
                 metrics_by_group["pagerank"][group].append(pagerank.get(node, 0))
-
                 metrics_by_group["Clustering Coefficient"][group].append(
                     clustering_coeff.get(node, 0)
                 )
@@ -98,7 +103,6 @@ def aggregate_and_compare_combined(
                 out_ratio = (len(out_ego.nodes) - 1) / len(graph.nodes)
                 eff_size, efficiency = calculate_effsize_efficiency(graph, node)
                 density = nx.density(out_ego)
-                # clustering_coeff = nx.clustering(graph, node)
 
                 metrics_by_group["in_ratio"][group].append(in_ratio)
                 metrics_by_group["Out Ratio"][group].append(out_ratio)
@@ -106,7 +110,6 @@ def aggregate_and_compare_combined(
                 metrics_by_group["eff_size"][group].append(eff_size)
                 metrics_by_group["Efficiency"][group].append(efficiency)
                 metrics_by_group["Density"][group].append(density)
-                # metrics_by_group["clustering_coeff"][group].append(clustering_coeff)
 
     # Perform T-tests on the aggregated data for each metric
     ttest_results = {}
@@ -115,63 +118,119 @@ def aggregate_and_compare_combined(
             groups[0], groups[1], equal_var=False, nan_policy="omit"
         )
 
+    # We will plot only these two metrics
     metrics_to_plot = [
-        # "Density",
-        # "Clustering Coefficient",
-        # "Out Ratio",
-        # "Efficiency",
-        # # "eff_size",
-        "betweenness_centrality",
-        "closeness_centrality",
-        "pagerank",
-        "in_ratio",
-        "Out Ratio",
-        "out_nodes",
-        "eff_size",
         "Efficiency",
-        "Density",
         "Clustering Coefficient",
     ]
 
-    # Set global settings
+    # Set global settings (without bold styling)
     plt.rc("font", size=font_size)
     plt.rc("axes", titlesize=font_size, labelsize=font_size)
     plt.rc("xtick", labelsize=tick_size)
     plt.rc("ytick", labelsize=tick_size)
     plt.rc("legend", fontsize=font_size)
 
+    # Define colors for the two groups so that lines and vertical means match
+    group_colors = {"Accomplices": "lightblue", "Mastermind": "lightcoral"}
+
     for metric in metrics_to_plot:
-        fig, ax = plt.subplots(figsize=(8, 8))  # Explicitly creating a figure with axes
-        group0 = metrics_by_group[metric][0]
-        group1 = metrics_by_group[metric][1]
-        mean0, var0 = np.mean(group0), np.var(group0)
-        mean1, var1 = np.mean(group1), np.var(group1)
-        sns.kdeplot(
-            group0,
-            ax=ax,
-            label=f"Accomplices:\nMean:{mean0:.2f}, Variance:{var0:.2f}",
-            bw_adjust=0.7,
-            clip=(0, np.inf),
-        )
-        sns.kdeplot(
-            group1,
-            ax=ax,
-            label=f"Mastermind:\nMean:{mean1:.2f}, Variance:{var1:.2f}",
-            bw_adjust=0.7,
-            clip=(0, np.inf),
+        fig, ax = plt.subplots(figsize=(8, 8))
+        vertical_lines_info = (
+            []
+        )  # To store (mean, color, group_label) for annotation later
+
+        # Define ordering for plotting.
+        if metric == "Efficiency":
+            groups_info = [
+                (metrics_by_group[metric][1], "Mastermind"),
+                (metrics_by_group[metric][0], "Accomplices"),
+            ]
+        else:  # Clustering Coefficient
+            groups_info = [
+                (metrics_by_group[metric][0], "Accomplices"),
+                (metrics_by_group[metric][1], "Mastermind"),
+            ]
+
+        # Loop over the groups and plot the KDE curves
+        for data, group_label in groups_info:
+            mean_val = np.mean(data)
+            color = group_colors[group_label]
+            # Determine the legend label based on the metric:
+            # For Efficiency, show only Accomplices; for Clustering Coefficient, only Mastermind.
+            if metric == "Efficiency":
+                legend_label = (
+                    group_label if group_label == "Accomplices" else "_nolegend_"
+                )
+            else:
+                legend_label = (
+                    group_label if group_label == "Mastermind" else "_nolegend_"
+                )
+
+            sns.kdeplot(
+                data,
+                ax=ax,
+                label=legend_label,
+                bw_adjust=0.9,
+                clip=(0, np.inf),
+                linewidth=5,
+                color=color,
+            )
+            # Draw a vertical dashed bold line at the mean
+            ax.axvline(mean_val, color=color, linestyle="--", linewidth=2)
+            # Save the mean info along with the group label for later annotation
+            vertical_lines_info.append((mean_val, color, group_label))
+
+        # Annotate vertical lines with mean values.
+        y_max = ax.get_ylim()[1]
+        for mean_val, color, group_label in vertical_lines_info:
+            # For Efficiency metric, place the Mastermind annotation to the right of the line.
+            if metric == "Efficiency" and group_label == "Mastermind":
+                offset = (5, 0)
+                horizontal_alignment = "left"
+            else:
+                offset = (-5, 0)
+                horizontal_alignment = "right"
+            ax.annotate(
+                f"{mean_val:.2f}",
+                xy=(mean_val, y_max * 0.95),
+                xytext=offset,  # offset left or right
+                textcoords="offset points",
+                color=color,
+                weight="bold",
+                va="center",
+                ha=horizontal_alignment,
+            )
+
+        # Set axis labels (without bold font weight)
+        ax.set_ylabel(metric, fontsize=font_size)
+        ax.set_xlabel("Value", fontsize=font_size)
+
+        # Ensure tick labels are not bold
+        for tick_label in ax.get_xticklabels() + ax.get_yticklabels():
+            tick_label.set_fontweight("normal")
+        ax.tick_params(axis="both", which="major", labelsize=font_size)
+
+        # Add a grid with the desired style
+        ax.grid(True, which="major", axis="both", linestyle="--", linewidth=0.5)
+
+        # Place the legend right above the plot outside the plotting area.
+        ax.legend(
+            frameon=False,
+            loc="upper center",
+            bbox_to_anchor=(0.5, 1.15),
+            ncol=1,
+            prop={"weight": "normal", "size": font_size},
+            title_fontsize=font_size,
         )
 
-        # ax.set_title(metric)
-        ax.set_ylabel(f"{metric}", fontsize=font_size)
-        ax.legend(
-            loc="upper center", bbox_to_anchor=(0.5, -0.1), ncol=1
-        )  # Adjust legend position and ncol for vertical layout
-        plt.tight_layout()  # Adjust layout
-        plt.savefig(
-            path.join(path.join(PROJECT_ROOT, "data", f"distribution_{metric}.pdf"))
-        )
+        # Adjust layout so the legend does not overlap the plot
+        plt.tight_layout(rect=[0, 0, 1, 0.9])
+
+        # Save and show the plot
+        plt.savefig(path.join(PROJECT_ROOT, "data", f"distribution_{metric}.pdf"))
         plt.show()
-        plt.close(fig)  # Close the figure to free memory
+        plt.close(fig)
 
     return ttest_results, metrics_by_group
 
@@ -193,7 +252,7 @@ def assign_significance(p: float):
 
 if __name__ == "__main__":
 
-    signals = get_train_scored_signals()
+    signals = get_new_detection()
     processed_signals = process_dataframe(signals)
     ided_signals = assign_event_ids(processed_signals)
     cascade_buffer, no_nodes_buffer, id_mapping_buffer, cascade_labeling = (
@@ -221,7 +280,7 @@ if __name__ == "__main__":
                 # "average_speed",  # market
                 # "sum_total_targets",  # osn
                 "average_increase_percentage",  # market
-                "number_of_signals",  # osn
+                # "number_of_signals",  # osn
                 "sum_targets_achieved",  # osn
                 "rating",  # topological
                 # "in_ratio",  # topological
@@ -302,9 +361,7 @@ if __name__ == "__main__":
             data = Data(x=node_attributes, edge_index=edge_index)
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-            with open(
-                path.join(PROJECT_ROOT, "data", "saved", "results_l.pkl"), "rb"
-            ) as file:
+            with open(path.join(PROJECT_ROOT, "data", "results_wn.pkl"), "rb") as file:
                 results_t = pickle.load(file)
 
             model_1 = results_t["DDINA"]["GraphSAGE"]["model"]
@@ -385,7 +442,7 @@ if __name__ == "__main__":
         # print(output_dict)
 
     # Running the pooled analysis
-    results, c = aggregate_and_compare_combined(gs, output_dict, 24, 24, 0.9)
+    results, c = aggregate_and_compare_combined(gs, output_dict, 28, 28, 0.9)
     # plot_distribution(gs, output_dict, 25, 25, 17, 25)
 
     # Transform the t-test results into a format suitable for DataFrame construction
@@ -435,3 +492,68 @@ if __name__ == "__main__":
             ones_count[count_of_ones] += 1
 
     ones_count
+
+    # top 10 keys have the highest number of ones in trandformed_predictions with their corresponding number of ones
+    top_10 = sorted(
+        [
+            (key, sum(inner_dict.values()))
+            for key, inner_dict in transformed_predictions.items()
+        ],
+        key=lambda x: x[1],
+        reverse=True,
+    )[:10]
+    print(top_10)
+
+    # I want to know the co appreace of inner dict keys with values of 1. Give me a matrix of the co appearance for the inner keys
+    co_appearance = {}
+    for token, inner_dict in transformed_predictions.items():
+        for node, prediction in inner_dict.items():
+            if prediction == 1:
+                if node not in co_appearance:
+                    co_appearance[node] = {}
+                for other_node, other_prediction in inner_dict.items():
+                    if other_prediction == 1 and other_node != node:
+                        co_appearance[node][other_node] = (
+                            co_appearance[node].get(other_node, 0) + 1
+                        )
+
+    # Display the co_appearance dictionary in a mrtrix form,
+    # make the column and row names in the same order
+    # filter the matrix with a threshold of 10 co appearance
+    co_appearance_matrix = pd.DataFrame(co_appearance).fillna(0)
+    co_appearance_matrix = co_appearance_matrix.reindex(
+        sorted(co_appearance_matrix.columns), axis=1
+    )
+    co_appearance_matrix = co_appearance_matrix.reindex(
+        sorted(co_appearance_matrix.columns), axis=0
+    )
+    co_appearance_matrix = co_appearance_matrix[
+        co_appearance_matrix.columns[co_appearance_matrix.sum() > 10]
+    ]
+    co_appearance_matrix = co_appearance_matrix.loc[
+        co_appearance_matrix.index[co_appearance_matrix.sum(axis=1) > 10]
+    ]
+    co_appearance_matrix
+
+    # extract the nodes from co_appearance_matrix
+    nodes = co_appearance_matrix.index
+
+    # # Go over gs and create subgraphs that contain the nodes and the nodes neighbors
+    # subgraphs = {}
+    # for key, graph in gs.items():
+    #     # find the neighbors of the nodes in the co_appearance_matrix in the graph
+    #     nodes = co_appearance_matrix.index
+    #     neighbors = set()
+    #     for node in nodes:
+    #         neighbors.update(graph.neighbors(node))
+    #     nodes.update(neighbors)
+    #     subgraph = graph.subgraph(nodes)
+    #     subgraphs[key] = subgraph
+
+    # # Plot the subgraphs
+    # for key, subgraph in subgraphs.items():
+    #     plt.figure(figsize=(10, 10))
+    #     pos = nx.spring_layout(subgraph)
+    #     nx.draw(subgraph, pos, with_labels=True, node_size=500, font_size=10)
+    #     plt.title(key)
+    #     plt.show()

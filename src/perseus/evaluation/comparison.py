@@ -1,141 +1,98 @@
-import torch
-import torch.nn as nn
 import numpy as np
-from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
-from sklearn.linear_model import LogisticRegression
+import torch
+from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestClassifier
-import networkx as nx
-from torch_geometric.nn import Node2Vec
-import pandas as pd
-from perseus.dataset.dataset_preparation import get_split_data_pickle_l
-import random
+from sklearn.metrics import roc_curve, auc, matthews_corrcoef
+from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
+import matplotlib.pyplot as plt
+from perseus.dataset.dataset_preparation import get_split_data_pickle_wn
 
-# Load dataset (a, b, c)
-a, b, c = get_split_data_pickle_l("DDINA")
+# Assuming train_loader and valid_loader are already initialized
+train_loader, valid_loader, _ = get_split_data_pickle_wn("DDM")
 
 
-# Helper function to evaluate the model's performance
-def evaluate_performance(y_true, y_pred_probs, threshold=0.54):
-    y_pred = (y_pred_probs >= threshold).astype(int)
-    precision = precision_score(y_true, y_pred)
-    recall = recall_score(y_true, y_pred)
-    f1 = f1_score(y_true, y_pred)
-    accuracy = accuracy_score(y_true, y_pred)
-    return precision, recall, f1, accuracy
+# Prepare function to extract data from the DataLoader
+def extract_data_from_loader(data_loader):
+    X_list = []
+    y_list = []
 
-# Placeholder for results
-results = []
+    for batch in data_loader:
+        # Assuming batch.x are the node features and batch.y are the labels
+        X_list.append(batch.x)  # Node features
+        y_list.append(batch.y)  # Labels
 
-# Load the dataset (a, b, c) – assuming `a`, `b`, `c` are data loaders or lists of DataBatches
-# Extract features (x) and labels (y) from training and validation sets
-x_train = torch.cat([batch.x for batch in a], dim=0).numpy()
-y_train = torch.cat([batch.y for batch in a], dim=0).numpy()
+    # Concatenate all the batches into one matrix for X and y
+    X = torch.cat(X_list, dim=0).numpy()
+    y = torch.cat(y_list, dim=0).numpy().flatten()  # Ensure y is 1D
+    return X, y
 
-x_val = torch.cat([batch.x for batch in b], dim=0).numpy()
-y_val = torch.cat([batch.y for batch in b], dim=0).numpy()
 
-#########################################
-# 1. Linear Regression
-#########################################
-linear_model = LogisticRegression()  # Using LogisticRegression for probability output
-linear_model.fit(x_train, y_train)
+# Extract train and valid data
+X_train, y_train = extract_data_from_loader(train_loader)
+X_valid, y_valid = extract_data_from_loader(valid_loader)
 
-# Predict probabilities
-y_pred_probs_linear = linear_model.predict_proba(x_val)[:, 1]
-precision, recall, f1, accuracy = evaluate_performance(y_val, y_pred_probs_linear)
+# Initialize and train the linear regression model
+lin_reg_model = LinearRegression()
+lin_reg_model.fit(X_train, y_train)
 
-# Save results
-results.append(["Linear Regression", precision, f1, accuracy, recall])
+# Get the predicted scores for ROC curve
+y_scores_lin_reg = lin_reg_model.predict(X_valid)
 
-#########################################
-# 2. DeepWalk (Node2Vec)
-#########################################
-# Use edge_index for graph representation (extracted from your dataset)
-edge_index = torch.cat([batch.edge_index for batch in a], dim=1)
-node2vec = Node2Vec(edge_index, embedding_dim=64, walk_length=30, context_size=10, walks_per_node=10)
-node2vec = node2vec.to('cpu')  # Adjust based on your hardware
+# Compute ROC curve and AUC for Linear Regression
+fpr_lin_reg, tpr_lin_reg, thresholds_lin_reg = roc_curve(y_valid, y_scores_lin_reg)
+roc_auc_lin_reg = auc(fpr_lin_reg, tpr_lin_reg)
 
-# Train Node2Vec
-optimizer = torch.optim.Adam(node2vec.parameters(), lr=0.01)
-for epoch in range(100):  # Adjust epochs based on your needs
-    optimizer.zero_grad()
-    loss = node2vec.loss()
-    loss.backward()
-    optimizer.step()
-
-# Extract embeddings
-embeddings = node2vec().detach().numpy()
-
-# Train Logistic Regression on DeepWalk embeddings
-deepwalk_model = LogisticRegression()
-deepwalk_model.fit(embeddings, y_train)
-
-# Predict probabilities using DeepWalk embeddings
-y_pred_probs_deepwalk = deepwalk_model.predict_proba(embeddings)[:, 1]
-precision, recall, f1, accuracy = evaluate_performance(y_val, y_pred_probs_deepwalk)
-
-# Save results
-results.append(["DeepWalk", precision, f1, accuracy, recall])
-
-#########################################
-# 3. DeepWalk + LSTM
-#########################################
-class DeepWalkLSTM(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers, output_size):
-        super(DeepWalkLSTM, self).__init__()
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
-        self.fc = nn.Linear(hidden_size, output_size)
-
-    def forward(self, x):
-        out, _ = self.lstm(x)
-        out = self.fc(out[:, -1, :])
-        return out
-
-input_size = embeddings.shape[1]
-hidden_size = 128
-num_layers = 2
-output_size = 1
-
-lstm_model = DeepWalkLSTM(input_size, hidden_size, num_layers, output_size).to('cpu')
-criterion = nn.BCEWithLogitsLoss()  # Binary cross-entropy with logits
-optimizer = torch.optim.Adam(lstm_model.parameters(), lr=0.001)
-
-x_lstm_train = torch.tensor(embeddings).view(-1, 1, input_size).float()
-y_lstm_train = torch.tensor(y_train).float()
-
-# Train LSTM
-for epoch in range(100):
-    optimizer.zero_grad()
-    outputs = lstm_model(x_lstm_train)
-    loss = criterion(outputs.squeeze(), y_lstm_train)
-    loss.backward()
-    optimizer.step()
-
-# Predict probabilities using LSTM
-with torch.no_grad():
-    y_pred_probs_lstm = torch.sigmoid(lstm_model(x_lstm_train)).numpy().squeeze()
-precision, recall, f1, accuracy = evaluate_performance(y_val, y_pred_probs_lstm)
-
-# Save results
-results.append(["DeepWalk + LSTM", precision, f1, accuracy, recall])
-
-#########################################
-# 4. Random Forest
-#########################################
+# Initialize and train the Random Forest model
 rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
-rf_model.fit(x_train, y_train)
+rf_model.fit(X_train, y_train)
 
-# Predict probabilities using Random Forest
-y_pred_probs_rf = rf_model.predict_proba(x_val)[:, 1]
-precision, recall, f1, accuracy = evaluate_performance(y_val, y_pred_probs_rf)
+# Get predicted probabilities for Random Forest (used for ROC)
+y_scores_rf = rf_model.predict_proba(X_valid)[:, 1]
 
-# Save results
-results.append(["Random Forest", precision, f1, accuracy, recall])
+# Compute ROC curve and AUC for Random Forest
+fpr_rf, tpr_rf, thresholds_rf = roc_curve(y_valid, y_scores_rf)
+roc_auc_rf = auc(fpr_rf, tpr_rf)
 
-#########################################
-# Output Results
-#########################################
-results_df = pd.DataFrame(results, columns=["model_dataset", "precision", "f1", "accuracy", "recall"])
+# Find the best threshold for F1 score
+thresholds = np.linspace(0.01, 0.99, 100)
+f1_scores = [f1_score(y_valid, y_scores_rf > t) for t in thresholds]
+best_threshold = thresholds[np.argmax(f1_scores)]
+best_f1 = np.max(f1_scores)
 
-# Display results as a table
-import ace_tools as tools; tools.display_dataframe_to_user(name="Model Evaluation Results", dataframe=results_df)
+# Calculate all metrics at the best threshold
+y_pred_rf_optimal = (y_scores_rf >= best_threshold).astype(int)
+mcc = matthews_corrcoef(y_valid, y_pred_rf_optimal)
+f1 = f1_score(y_valid, y_pred_rf_optimal)
+precision = precision_score(y_valid, y_pred_rf_optimal)
+recall = recall_score(y_valid, y_pred_rf_optimal)
+accuracy = accuracy_score(y_valid, y_pred_rf_optimal)
+
+# Plotting both ROC curves
+plt.figure()
+plt.plot(
+    fpr_lin_reg,
+    tpr_lin_reg,
+    color="darkorange",
+    lw=2,
+    label=f"Linear Regression ROC (AUC = {roc_auc_lin_reg:.2f})",
+)
+plt.plot(
+    fpr_rf,
+    tpr_rf,
+    color="blue",
+    lw=2,
+    label=f"Random Forest ROC (AUC = {roc_auc_rf:.2f})",
+)
+plt.plot([0, 1], [0, 1], color="navy", lw=2, linestyle="--")
+plt.xlim([0.0, 1.0])
+plt.ylim([0.0, 1.05])
+plt.xlabel("False Positive Rate")
+plt.ylabel("True Positive Rate")
+plt.title("ROC Curves for Linear Regression and Random Forest")
+plt.legend(loc="lower right")
+plt.show()
+
+# Print the best threshold and metrics
+print(
+    f"Best Threshold: {best_threshold:.2f}, MCC: {mcc:.2f}, F1: {f1:.2f}, Precision: {precision:.2f}, Recall: {recall:.2f}, Accuracy: {accuracy:.2f}"
+)

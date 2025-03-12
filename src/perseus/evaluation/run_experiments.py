@@ -30,6 +30,7 @@ from perseus.dataset.dataset_preparation import (
     get_split_data_pickle_s,
     get_split_data_pickle_l,
     get_split_data_pickle_l_wc,
+    get_split_data_pickle_wn,
 )
 from perseus.model.gnn_model import GCNNet, Net, GraphSAGENet
 from perseus.settings import PROJECT_ROOT
@@ -222,7 +223,7 @@ if __name__ == "__main__":
     with ProcessPoolExecutor(max_workers=12) as executor:
         future_to_model = {}
         for dataset in datasets:
-            train_loader, test_loader, _ = get_split_data_pickle_l(dataset)
+            train_loader, test_loader, _ = get_split_data_pickle_wn(dataset)
             for model_name in models:
                 future = executor.submit(
                     experiment_pipeline,
@@ -230,7 +231,7 @@ if __name__ == "__main__":
                     dataset,
                     train_loader,
                     test_loader,
-                    features=14,
+                    features=13,
                 )
                 future_to_model[future] = (dataset, model_name)
 
@@ -245,34 +246,5 @@ if __name__ == "__main__":
                     f"{model_name} experiment on {dataset} generated an exception: {exc}"
                 )
 
-    with ProcessPoolExecutor(max_workers=12) as executor:
-        future_to_model = {}
-        for dataset in datasets:
-            train_loader, test_loader, _ = get_split_data_pickle_l_wc(dataset)
-            for model_name in models:
-                future = executor.submit(
-                    experiment_pipeline,
-                    model_name,
-                    dataset,
-                    train_loader,
-                    test_loader,
-                    features=14,
-                )
-                future_to_model[future] = (dataset, model_name)
-
-        for future in as_completed(future_to_model):
-            dataset, model_name = future_to_model[future]
-            try:
-                result = future.result()
-                results_l_wc[dataset][model_name] = result
-                print(f"Completed {model_name} Experiment on {dataset}")
-            except Exception as exc:
-                print(
-                    f"{model_name} experiment on {dataset} generated an exception: {exc}"
-                )
-
-    with open(path.join(PROJECT_ROOT, "data", "results_l.pkl"), "wb") as file:
+    with open(path.join(PROJECT_ROOT, "data", "results_wn.pkl"), "wb") as file:
         pickle.dump(results_l, file)
-
-    with open(path.join(PROJECT_ROOT, "data", "results_l_wc.pkl"), "wb") as file:
-        pickle.dump(results_l_wc, file)

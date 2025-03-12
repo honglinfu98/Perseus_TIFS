@@ -2,9 +2,7 @@
 Download data from Cloudburst.
 """
 
-from os import path
 import os
-import pickle
 import psycopg2
 import pandas as pd
 from perseus.config import (
@@ -14,7 +12,6 @@ from perseus.config import (
     GAIA_DB_PORT,
     GAIA_DB_USER,
 )
-from perseus.settings import PROJECT_ROOT
 
 
 all_scored_sql_path = os.path.join(os.path.dirname(__file__), "all.sql")
@@ -22,6 +19,8 @@ direct_link = os.path.join(os.path.dirname(__file__), "direct_link.sql")
 volume = os.path.join(os.path.dirname(__file__), "volume.sql")
 comparison = os.path.join(os.path.dirname(__file__), "timevscrowd.sql")
 new_detection = os.path.join(os.path.dirname(__file__), "new_detection.sql")
+group_name = os.path.join(os.path.dirname(__file__), "group_name.sql")
+signals_channel = os.path.join(os.path.dirname(__file__), "timecrowd_channel.sql")
 
 with open(all_scored_sql_path, "r") as f:
     ALL_QUERY_SCORED_PUMPS = f.read()
@@ -33,6 +32,10 @@ with open(comparison, "r") as f:
     QUERY_COMPARISON = f.read()
 with open(new_detection, "r") as f:
     QUERY_NEW_DETECTION = f.read()
+with open(group_name, "r") as f:
+    QUERY_GROUP_NAME = f.read()
+with open(signals_channel, "r") as f:
+    QUERY_SIGNALS_CHANNEL = f.read()
 
 
 def get_direct_link(query: str = QUERY_DIRECT_LINK):
@@ -119,7 +122,37 @@ def get_comparison(query: str = QUERY_COMPARISON):
     return result
 
 
+def get_groupname(query: str = QUERY_GROUP_NAME):
+    """
+    Get volumes from the database for pre-pump scoring.
+    """
+
+    conn = psycopg2.connect(
+        f"dbname={GAIA_DB_DB} user={GAIA_DB_USER} password={GAIA_DB_PASSWORD} host={GAIA_DB_HOST} port={GAIA_DB_PORT}"
+    )
+
+    result = pd.read_sql(query, conn)  # type: ignore
+
+    conn.close()
+
+    return result
+
+
+def get_signals_channel(query: str = QUERY_SIGNALS_CHANNEL):
+    """
+    Get volumes from the database for pre-pump scoring.
+    """
+
+    conn = psycopg2.connect(
+        f"dbname={GAIA_DB_DB} user={GAIA_DB_USER} password={GAIA_DB_PASSWORD} host={GAIA_DB_HOST} port={GAIA_DB_PORT}"
+    )
+
+    result = pd.read_sql(query, conn)  # type: ignore
+
+    conn.close()
+
+    return result
+
+
 if __name__ == "__main__":
-    all = get_volumes()
-    # with open(path.join(PROJECT_ROOT, "data", "new_detection.pkl"), "wb") as file:
-    #     pickle.dump(all, file)
+    signal_channel = get_signals_channel()

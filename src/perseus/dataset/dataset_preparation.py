@@ -57,7 +57,7 @@ def prepare_data(graphs: dict, features: dict, label_mapping: dict):
             # "average_speed",  # market
             # "sum_total_targets",  # osn
             "average_increase_percentage",  # market
-            "number_of_signals",  # osn
+            # "number_of_signals",  # osn
             "sum_targets_achieved",  # osn
             "rating",  # topological
             # "in_ratio",  # topological
@@ -164,7 +164,7 @@ def prepare_ddm_data(graphs: dict, features: dict, label_mapping: dict, P_dict: 
             # "average_speed",  # market
             # "sum_total_targets",  # osn
             "average_increase_percentage",  # market
-            "number_of_signals",  # osn
+            # "number_of_signals",  # osn
             "sum_targets_achieved",  # osn
             "rating",  # topological
             # "weighted_in_ratio",
@@ -280,7 +280,7 @@ def prepare_cos_data(graphs: dict, features: dict, label_mapping: dict):
             # "average_speed",  # market
             # "sum_total_targets",  # osn
             "average_increase_percentage",  # market
-            "number_of_signals",  # osn
+            # "number_of_signals",  # osn
             "sum_targets_achieved",  # osn
             "rating",  # topological
             # "weighted_in_ratio",
@@ -418,16 +418,17 @@ def split_data(options: str, loader: bool = True):
     """
     # Initial data loading and processing
     train_signals = get_train_scored_signals()
-    test_signals = get_test_scored_signals()
     validate_signals = get_valid_scored_signals()
+    test_signals = get_test_scored_signals()
 
-    datasets = [train_signals, test_signals, validate_signals]
+    datasets = [train_signals, validate_signals, test_signals]
     gs_ls = []
     features_ls = []
     market_features_ls = []
     P_dicts_ls = []
     label_mapping_ls = []
     P_com_ls = []
+    cascade_ls = []
 
     for dataset in datasets:
         processed_signals = process_dataframe(dataset)
@@ -447,11 +448,12 @@ def split_data(options: str, loader: bool = True):
         market_features_ls.append(market_feature)
         P_dicts_ls.append(P_dict)
         P_com_ls.append(P_com)
+        cascade_ls.append(cascade)
 
     label_mapping_ls = [
         read_labeling_csv_back_to_dict("train"),
-        read_labeling_csv_back_to_dict("test"),
         read_labeling_csv_back_to_dict("valid"),
+        read_labeling_csv_back_to_dict("test"),
     ]
 
     for i in range(3):
@@ -476,34 +478,34 @@ def split_data(options: str, loader: bool = True):
 
     if options == "DDINA":
         train_data = prepare_data(gs_ls[0], features_ls[0], label_mapping_ls[0])
-        test_data = prepare_data(gs_ls[1], features_ls[1], label_mapping_ls[1])
-        validate_data = prepare_data(gs_ls[2], features_ls[2], label_mapping_ls[2])
+        validate_data = prepare_data(gs_ls[1], features_ls[1], label_mapping_ls[1])
+        test_data = prepare_data(gs_ls[2], features_ls[2], label_mapping_ls[2])
 
     elif options == "COSS":
         train_data = prepare_cos_data(gs_ls[0], features_ls[0], label_mapping_ls[0])
-        test_data = prepare_cos_data(gs_ls[1], features_ls[1], label_mapping_ls[1])
-        validate_data = prepare_cos_data(gs_ls[2], features_ls[2], label_mapping_ls[2])
+        validate_data = prepare_cos_data(gs_ls[1], features_ls[1], label_mapping_ls[1])
+        test_data = prepare_cos_data(gs_ls[2], features_ls[2], label_mapping_ls[2])
     elif options == "DDM":
         train_data = prepare_ddm_data(
             gs_ls[0], features_ls[0], label_mapping_ls[0], P_com_ls[0]
         )
-        test_data = prepare_ddm_data(
+        validate_data = prepare_ddm_data(
             gs_ls[1], features_ls[1], label_mapping_ls[1], P_com_ls[1]
         )
-        validate_data = prepare_ddm_data(
+        test_data = prepare_ddm_data(
             gs_ls[2], features_ls[2], label_mapping_ls[2], P_com_ls[2]
         )
 
     if loader:
         train_loader = DataLoader(train_data, batch_size=1, shuffle=True)
-        test_loader = DataLoader(test_data, batch_size=1, shuffle=True)
         validate_loader = DataLoader(validate_data, batch_size=1, shuffle=True)
+        test_loader = DataLoader(test_data, batch_size=1, shuffle=True)
 
-        return train_loader, test_loader, validate_loader
+        return train_loader, validate_loader, test_loader
 
     else:
 
-        return train_data, test_data, validate_data
+        return train_data, validate_data, test_data
 
 
 def get_split_data_pickle(options: str):
@@ -523,10 +525,10 @@ def get_split_data_pickle(options: str):
             data = pickle.load(file)
 
     train_loader = data[0]
-    test_loader = data[1]
-    validate_loader = data[2]
+    validate_loader = data[1]
+    test_loader = data[2]
 
-    return train_loader, test_loader, validate_loader
+    return train_loader, validate_loader, test_loader
 
 
 def get_split_data_pickle_f(options: str):
@@ -546,10 +548,10 @@ def get_split_data_pickle_f(options: str):
             data = pickle.load(file)
 
     train_loader = data[0]
-    test_loader = data[1]
-    validate_loader = data[2]
+    validate_loader = data[1]
+    test_loader = data[2]
 
-    return train_loader, test_loader, validate_loader
+    return train_loader, validate_loader, test_loader
 
 
 def get_split_data_pickle_t(options: str):
@@ -569,10 +571,10 @@ def get_split_data_pickle_t(options: str):
             data = pickle.load(file)
 
     train_loader = data[0]
-    test_loader = data[1]
-    validate_loader = data[2]
+    validate_loader = data[1]
+    test_loader = data[2]
 
-    return train_loader, test_loader, validate_loader
+    return train_loader, validate_loader, test_loader
 
 
 def get_split_data_pickle_fv(options: str):
@@ -592,10 +594,10 @@ def get_split_data_pickle_fv(options: str):
             data = pickle.load(file)
 
     train_loader = data[0]
-    test_loader = data[1]
-    validate_loader = data[2]
+    validate_loader = data[1]
+    test_loader = data[2]
 
-    return train_loader, test_loader, validate_loader
+    return train_loader, validate_loader, test_loader
 
 
 def get_split_data_pickle_tr(options: str):
@@ -615,10 +617,10 @@ def get_split_data_pickle_tr(options: str):
             data = pickle.load(file)
 
     train_loader = data[0]
-    test_loader = data[1]
-    validate_loader = data[2]
+    validate_loader = data[1]
+    test_loader = data[2]
 
-    return train_loader, test_loader, validate_loader
+    return train_loader, validate_loader, test_loader
 
 
 def get_split_data_pickle_e(options: str):
@@ -638,10 +640,10 @@ def get_split_data_pickle_e(options: str):
             data = pickle.load(file)
 
     train_loader = data[0]
-    test_loader = data[1]
-    validate_loader = data[2]
+    validate_loader = data[1]
+    test_loader = data[2]
 
-    return train_loader, test_loader, validate_loader
+    return train_loader, validate_loader, test_loader
 
 
 def get_split_data_pickle_s(options: str):
@@ -661,10 +663,10 @@ def get_split_data_pickle_s(options: str):
             data = pickle.load(file)
 
     train_loader = data[0]
-    test_loader = data[1]
-    validate_loader = data[2]
+    validate_loader = data[1]
+    test_loader = data[2]
 
-    return train_loader, test_loader, validate_loader
+    return train_loader, validate_loader, test_loader
 
 
 def get_split_data_pickle_m(options: str):
@@ -684,10 +686,10 @@ def get_split_data_pickle_m(options: str):
             data = pickle.load(file)
 
     train_loader = data[0]
-    test_loader = data[1]
-    validate_loader = data[2]
+    validate_loader = data[1]
+    test_loader = data[2]
 
-    return train_loader, test_loader, validate_loader
+    return train_loader, validate_loader, test_loader
 
 
 def get_split_data_pickle_l(options: str):
@@ -707,10 +709,10 @@ def get_split_data_pickle_l(options: str):
             data = pickle.load(file)
 
     train_loader = data[0]
-    test_loader = data[1]
-    validate_loader = data[2]
+    validate_loader = data[1]
+    test_loader = data[2]
 
-    return train_loader, test_loader, validate_loader
+    return train_loader, validate_loader, test_loader
 
 
 def get_split_data_pickle_l_wc(options: str):
@@ -730,24 +732,51 @@ def get_split_data_pickle_l_wc(options: str):
             data = pickle.load(file)
 
     train_loader = data[0]
-    test_loader = data[1]
-    validate_loader = data[2]
+    validate_loader = data[1]
+    test_loader = data[2]
 
-    return train_loader, test_loader, validate_loader
+    return train_loader, validate_loader, test_loader
+
+
+def get_split_data_pickle_wn(options: str):
+    """
+    Load the data for temporal tasks using the pickle file
+    """
+    if options == "DDINA":
+        with open(path.join(PROJECT_ROOT, "data", "DDINA_data_wn.pkl"), "rb") as file:
+            data = pickle.load(file)
+
+    elif options == "COSS":
+        with open(path.join(PROJECT_ROOT, "data", "COSS_data_wn.pkl"), "rb") as file:
+            data = pickle.load(file)
+
+    elif options == "DDM":
+        with open(path.join(PROJECT_ROOT, "data", "DDM_data_wn.pkl"), "rb") as file:
+            data = pickle.load(file)
+
+    train_loader = data[0]
+    validate_loader = data[1]
+    test_loader = data[2]
+
+    return train_loader, validate_loader, test_loader
 
 
 if __name__ == "__main__":
     # a = get_split_data_pickle_t("DDM")
 
-    a = split_data("DDINA", loader=True)
-    # save it in pickle
-    with open(path.join(PROJECT_ROOT, "data", "DDINA_data_l_wc.pkl"), "wb") as file:
-        pickle.dump(a, file)
-    b = split_data("COSS", loader=True)
-    # save it in pickle
-    with open(path.join(PROJECT_ROOT, "data", "COSS_data_l_wc.pkl"), "wb") as file:
-        pickle.dump(b, file)
-    c = split_data("DDM", loader=True)
-    # save it in pickle
-    with open(path.join(PROJECT_ROOT, "data", "DDM_data_l_wc.pkl"), "wb") as file:
-        pickle.dump(c, file)
+    # a = split_data("DDINA", loader=True)
+    # # save it in pickle
+    # with open(path.join(PROJECT_ROOT, "data", "DDINA_data_wn.pkl"), "wb") as file:
+    #     pickle.dump(a, file)
+    # b = split_data("COSS", loader=True)
+    # # save it in pickle
+    # with open(path.join(PROJECT_ROOT, "data", "COSS_data_wn.pkl"), "wb") as file:
+    #     pickle.dump(b, file)
+    # c = split_data("DDM", loader=True)
+    # # save it in pickle
+    # with open(path.join(PROJECT_ROOT, "data", "DDM_data_wn.pkl"), "wb") as file:
+    #     pickle.dump(c, file)
+
+    a = get_split_data_pickle_wn("DDINA")
+    # b = get_split_data_pickle_wn("COSS")
+    c = get_split_data_pickle_wn("DDM")

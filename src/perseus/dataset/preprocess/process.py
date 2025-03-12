@@ -185,34 +185,6 @@ def compute_weighted_graph_features(edge_weights: dict):
     return dfs
 
 
-# def calculate_effsize_efficiency(G, ego):
-#     """
-#     This function is used to calculate the effective size and efficiency of a node in a graph
-#     """
-#     # Get the ego network
-#     ego_net = nx.ego_graph(G, ego, undirected=False)
-
-#     # Get alters in the ego network (excluding ego)
-#     alters = set(ego_net.nodes()) - {ego}
-#     num_alters = len(alters)
-#     avg_degree = 0  # Default to 0
-#     if num_alters > 0:
-#         avg_degree = (
-#             sum(
-#                 ego_net.degree(n) - (1 if ego_net.has_edge(ego, n) else 0)
-#                 for n in alters
-#             )
-#             / num_alters
-#         )
-
-#     # Calculate effective size
-#     eff_size = num_alters - avg_degree
-#     # Calculate efficiency
-#     efficiency = eff_size / num_alters if num_alters > 0 else 0
-
-#     return eff_size, efficiency
-
-
 def calculate_effsize_efficiency(G, ego):
     """
     This function is used to calculate the effective size and efficiency of a node in a graph

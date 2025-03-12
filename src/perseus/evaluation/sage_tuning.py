@@ -5,13 +5,13 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 import pandas as pd
 from sklearn.metrics import auc
-from perseus.dataset.dataset_preparation import get_split_data_pickle_l
+from perseus.dataset.dataset_preparation import get_split_data_pickle_wn
 from perseus.model.sage_multi import GraphSAGENet, run_experiment
 from perseus.settings import PROJECT_ROOT
 
 
-def plot_single_heatmap(pivot_table, title, font_size=12, tick_size=10):
-    fig, ax = plt.subplots(figsize=(12, 10))
+def plot_single_heatmap(pivot_table, font_size=12, tick_size=10):
+    fig, ax = plt.subplots(figsize=(12, 6))
     cmap = sns.light_palette("green", as_cmap=True)
 
     plt.rc("font", size=font_size)
@@ -41,14 +41,14 @@ def plot_single_heatmap(pivot_table, title, font_size=12, tick_size=10):
     ax.plot(hc_idx + 0.5, lr_idx + 0.5, marker="x", markersize=15, color="red", mew=3)
 
     plt.tight_layout()
-    plt.savefig(path.join(PROJECT_ROOT, "data", "ddina_auc_heatmap_benchmark.pdf"))
+    plt.savefig(path.join(PROJECT_ROOT, "data", "ddm_auc_heatmap_benchmark.pdf"))
     plt.show()
 
 
-def run_experiments_for_ddina():
-    dataset_name = "DDINA"
-    num_features = 14
-    train_loader, test_loader, _ = get_split_data_pickle_l(dataset_name)
+def run_experiments():
+    dataset_name = "DDM"
+    num_features = 13
+    train_loader, test_loader, _ = get_split_data_pickle_wn(dataset_name)
 
     learning_rates = [5e-6, 5e-5, 5e-4, 5e-3, 5e-2]
     hidden_channels_list = [2, 8, 32, 128, 512]
@@ -86,7 +86,12 @@ def run_experiments_for_ddina():
 
 
 if __name__ == "__main__":
-    with open(path.join(PROJECT_ROOT, "data", "results_tuning_sage.pkl"), "rb") as file:
+    # results = run_experiments()
+    # with open(path.join(PROJECT_ROOT, "data", "results_tuning_sage_weighted.pkl"), "wb") as file:
+    #     pickle.dump(results, file)
+    with open(
+        path.join(PROJECT_ROOT, "data", "results_tuning_sage_weighted.pkl"), "rb"
+    ) as file:
         results = pickle.load(file)
 
     data = []
@@ -122,6 +127,4 @@ if __name__ == "__main__":
     )
 
     # Plot the heatmap for DDINA
-    plot_single_heatmap(
-        pivot_table, title="DDINA AUC Heatmap", font_size=25, tick_size=25
-    )
+    plot_single_heatmap(pivot_table, font_size=25, tick_size=25)

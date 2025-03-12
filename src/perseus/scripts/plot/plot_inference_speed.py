@@ -3,52 +3,44 @@ import pickle
 from matplotlib import pyplot as plt
 import numpy as np
 from scipy.interpolate import make_interp_spline
+from matplotlib.ticker import MaxNLocator, ScalarFormatter
 from perseus.settings import PROJECT_ROOT
 
-datasets = ["DDINA", "DDM"]
-dataset_colors = {"DDINA": "blue", "DDM": "red"}
-models = ["GAT", "GraphSAGE"]
-label = 1
-dataset_labels = {
-    "DDINA": "Directed Diffusion",
-    "COSS": "Cosine Similarity",
-    "DDM": "Weighted Diffusion",
-}
 
-
-with open(path.join(PROJECT_ROOT, "data", "saved", "results_l.pkl"), "rb") as file:
+with open(path.join(PROJECT_ROOT, "data", "results_wn.pkl"), "rb") as file:
     results_m = pickle.load(file)
 
-from matplotlib.ticker import MaxNLocator, ScalarFormatter
+
+datasets = ["DDINA", "DDM"]
+models = ["GAT", "GraphSAGE"]
+label_map = {"DDINA": "Directed", "DDM": "Weighted"}
+line_styles = {"Directed": "dashed", "Weighted": "solid"}
+model_colors = {"GAT": "#1f77b4", "GraphSAGE": "#ff7f0e"}
 
 
 def plot_combined_batch_time_vs_nodes(
     results,
-    ax,
     models,
-    title,
-    show_legend=True,
-    show_ylabel=True,
-    show_xlabel=True,
+    label_map,
     fontsize=12,
-    ticksize=10,
+    model_colors=model_colors,
+    line_styles=line_styles,
 ):
-    line_styles = {"Directed": "dashed", "Weighted": "solid"}
-    model_colors = {"GAT": "blue", "GraphSAGE": "red"}
-    dataset_name_mapping = {"DDINA": "Directed", "DDM": "Weighted"}
+
+    plt.figure(figsize=(8, 8))
+    ax = plt.gca()
 
     combined_handles = {}  # To store combined handles for legend
 
     # Plot each dataset and model combination
     for model_name in models:
-        for dataset_key in dataset_name_mapping:
-            dataset = dataset_name_mapping[dataset_key]
+        for dataset_key, dataset in label_map.items():
             if model_name in results[dataset_key]:
                 batch_times = np.array(results[dataset_key][model_name]["batch_times"])
                 num_nodes = np.array(results[dataset_key][model_name]["num_nodes"])
                 unique_nodes, indices = np.unique(num_nodes, return_inverse=True)
                 average_batch_times = np.zeros_like(unique_nodes, dtype=float)
-                for i, node in enumerate(unique_nodes):
+                for i in range(len(unique_nodes)):
                     average_batch_times[i] = np.mean(batch_times[indices == i])
 
                 # Check if enough points for spline interpolation
@@ -72,7 +64,7 @@ def plot_combined_batch_time_vs_nodes(
                     )
 
                 # Combine dataset and model in one label
-                combined_label = f"{dataset} ({model_name})"
+                combined_label = f"{dataset} {model_name}"
 
                 # Create and store unique combined handles for legend
                 if combined_label not in combined_handles:
@@ -85,47 +77,39 @@ def plot_combined_batch_time_vs_nodes(
                     )
 
     # Set labels with fontsize
-    if show_xlabel:
-        ax.set_xlabel("Number of Nodes", fontsize=fontsize)
-    if show_ylabel:
-        ax.set_ylabel("Inference Speed (sec)", fontsize=fontsize)
+    ax.set_xlabel("Number of Nodes", fontsize=fontsize)
+    ax.set_ylabel("Inference Speed (sec)", fontsize=fontsize)
 
     # Set y-axis to scientific notation
     ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
     ax.ticklabel_format(style="sci", axis="y", scilimits=(0, 0))
-    ax.yaxis.get_offset_text().set_fontsize(ticksize)
+    ax.yaxis.get_offset_text().set_fontsize(fontsize)
     ax.yaxis.set_major_locator(MaxNLocator(nbins=6))
 
     # Add combined legend if requested
-    if show_legend:
-        ax.legend(
-            handles=list(combined_handles.values()),
-            fontsize=fontsize,
-            title_fontsize=fontsize,
-            loc="center left",
-        )
+    ax.legend(
+        handles=list(combined_handles.values()),
+        fontsize=fontsize,
+        title_fontsize=fontsize,
+        loc="center left",
+    )
 
     # Set tick parameters
-    ax.tick_params(axis="both", which="major", labelsize=ticksize)
+    ax.tick_params(axis="both", which="major", labelsize=fontsize)
     ax.grid(True, which="major", axis="both", linestyle="--", linewidth=0.5)
 
+    plt.tight_layout()
+    plt.savefig(path.join(PROJECT_ROOT, "data", "feb_inference_plot.pdf"))
+    plt.show()
+    plt.close()
 
-# Example usage for the combined plot:
-fig, ax = plt.subplots(figsize=(8, 8))  # Single plot for all results
+
+# Plot the combined batch time vs nodes on the current axes
 plot_combined_batch_time_vs_nodes(
     results_m,  # Assuming results_m is the relevant dataset
-    ax,
     models,
-    title="Batch Time vs Nodes for Directed Diffusion and Weighted Diffusion (GAT vs GraphSAGE)",
-    show_legend=True,
-    show_ylabel=True,
-    show_xlabel=True,
-    fontsize=22,  # Set the fontsize as desired
-    ticksize=22,  # Set the ticksize as desired
+    label_map,
+    fontsize=26,  # Set the fontsize as desired
+    model_colors=model_colors,
+    line_styles=line_styles,
 )
-plt.tight_layout()
-plt.savefig(
-    path.join(PROJECT_ROOT, "data", "oct_combined_batch_time_vs_nodes_results.pdf")
-)
-plt.show()
-plt.close(fig)

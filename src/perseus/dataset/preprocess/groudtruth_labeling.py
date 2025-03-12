@@ -115,13 +115,57 @@ def export_csv_for_labeling():
     return
 
 
+# def read_labeling_csv_back_to_dict(train_test_valid: str):
+#     """
+#     Read the edited CSV file
+#     """
+#     if train_test_valid == "train":
+#         train_edited_df = pd.read_csv(
+#             path.join(PROJECT_ROOT, "data", "old", "train_labeling_finished.csv")
+#         )
+
+#         edited_train_label_mapping = {}
+#         for _, row in train_edited_df.iterrows():
+#             if row["Symbol"] not in edited_train_label_mapping:
+#                 edited_train_label_mapping[row["Symbol"]] = {}
+#             edited_train_label_mapping[row["Symbol"]][row["Code"]] = row["Value"]
+
+#         return edited_train_label_mapping
+
+#     elif train_test_valid == "test":
+#         test_edited_df = pd.read_csv(
+#             path.join(PROJECT_ROOT, "data", "old", "test_labeling_0308.csv")
+#         )
+
+#         edited_test_label_mapping = {}
+#         for _, row in test_edited_df.iterrows():
+#             if row["Symbol"] not in edited_test_label_mapping:
+#                 edited_test_label_mapping[row["Symbol"]] = {}
+#             edited_test_label_mapping[row["Symbol"]][row["Code"]] = row["Value"]
+
+#         return edited_test_label_mapping
+
+#     elif train_test_valid == "valid":
+#         valid_edited_df = pd.read_csv(
+#             path.join(PROJECT_ROOT, "data", "old", "valid_labeling_0318.csv")
+#         )
+
+#         edited_valie_label_mapping = {}
+#         for _, row in valid_edited_df.iterrows():
+#             if row["Symbol"] not in edited_valie_label_mapping:
+#                 edited_valie_label_mapping[row["Symbol"]] = {}
+#             edited_valie_label_mapping[row["Symbol"]][row["Code"]] = row["Value"]
+
+#         return edited_valie_label_mapping
+
+
 def read_labeling_csv_back_to_dict(train_test_valid: str):
     """
     Read the edited CSV file
     """
     if train_test_valid == "train":
         train_edited_df = pd.read_csv(
-            path.join(PROJECT_ROOT, "data", "train_labeling_finished.csv")
+            path.join(PROJECT_ROOT, "data", "train_labeling_0115.csv")
         )
 
         edited_train_label_mapping = {}
@@ -132,22 +176,9 @@ def read_labeling_csv_back_to_dict(train_test_valid: str):
 
         return edited_train_label_mapping
 
-    elif train_test_valid == "test":
-        test_edited_df = pd.read_csv(
-            path.join(PROJECT_ROOT, "data", "test_labeling_0308.csv")
-        )
-
-        edited_test_label_mapping = {}
-        for _, row in test_edited_df.iterrows():
-            if row["Symbol"] not in edited_test_label_mapping:
-                edited_test_label_mapping[row["Symbol"]] = {}
-            edited_test_label_mapping[row["Symbol"]][row["Code"]] = row["Value"]
-
-        return edited_test_label_mapping
-
     elif train_test_valid == "valid":
         valid_edited_df = pd.read_csv(
-            path.join(PROJECT_ROOT, "data", "valid_labeling_0318.csv")
+            path.join(PROJECT_ROOT, "data", "valid_labeling_0115.csv")
         )
 
         edited_valie_label_mapping = {}
@@ -157,6 +188,19 @@ def read_labeling_csv_back_to_dict(train_test_valid: str):
             edited_valie_label_mapping[row["Symbol"]][row["Code"]] = row["Value"]
 
         return edited_valie_label_mapping
+
+    elif train_test_valid == "test":
+        test_edited_df = pd.read_csv(
+            path.join(PROJECT_ROOT, "data", "test_labeling_0115.csv")
+        )
+
+        edited_test_label_mapping = {}
+        for _, row in test_edited_df.iterrows():
+            if row["Symbol"] not in edited_test_label_mapping:
+                edited_test_label_mapping[row["Symbol"]] = {}
+            edited_test_label_mapping[row["Symbol"]][row["Code"]] = row["Value"]
+
+        return edited_test_label_mapping
 
 
 if __name__ == "__main__":
