@@ -204,7 +204,7 @@ def aggregate_and_compare_combined(
 
         # Set axis labels (without bold font weight)
         ax.set_ylabel(metric, fontsize=font_size)
-        ax.set_xlabel("Value", fontsize=font_size)
+        # ax.set_xlabel("Value", fontsize=font_size)
 
         # Ensure tick labels are not bold
         for tick_label in ax.get_xticklabels() + ax.get_yticklabels():
@@ -452,6 +452,8 @@ if __name__ == "__main__":
         "P-value": [],
         "Degrees of Freedom": [],
         "Significance": [],  # New column for significance marks
+        "Group 0 Mean": [],  # New column for the mean of group 0
+        "Group 1 Mean": [],  # New column for the mean of group 1
     }
 
     for metric, result in results.items():
@@ -464,6 +466,12 @@ if __name__ == "__main__":
         )  # Use getattr for compatibility
         # Assign significance level
         data["Significance"].append(assign_significance(result.pvalue))
+
+        # Compute means for the two groups using the aggregated metrics (c)
+        mean_group0 = np.mean(c[metric][0]) if c[metric][0] else np.nan
+        mean_group1 = np.mean(c[metric][1]) if c[metric][1] else np.nan
+        data["Group 0 Mean"].append(mean_group0)
+        data["Group 1 Mean"].append(mean_group1)
 
     # Create a DataFrame
     df_results = pd.DataFrame(data)

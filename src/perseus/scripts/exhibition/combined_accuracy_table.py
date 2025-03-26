@@ -31,7 +31,10 @@ from sklearn.ensemble import RandomForestClassifier
 
 # from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score, matthews_corrcoef
 import matplotlib.pyplot as plt
-from perseus.dataset.dataset_preparation import get_split_data_pickle_wn
+from perseus.dataset.dataset_preparation import (
+    get_split_data_pickle_wn,
+    get_split_data_pickle_wot,
+)
 
 
 def extract_data_from_loader(data_loader):
@@ -207,6 +210,47 @@ if __name__ == "__main__":
     ]
     df_reordered = df_reordered.loc[[1, 3, 0, 2, 4, 5]].reset_index(drop=True)
 
+    train_loader, valid_loader, _ = get_split_data_pickle_wot("DDM")
+
+    # Extract train and valid data
+    X_train, y_train = extract_data_from_loader(train_loader)
+    X_valid, y_valid = extract_data_from_loader(valid_loader)
+
+    # Initialize and train the Random Forest model
+    rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
+    rf_model.fit(X_train, y_train)
+
+    # Get predicted probabilities for Random Forest (used for ROC)
+    y_scores_rf = rf_model.predict_proba(X_valid)[:, 1]
+
+    # Compute ROC curve and AUC for Random Forest
+    fpr_rf, tpr_rf, thresholds_rf = roc_curve(y_valid, y_scores_rf)
+    roc_auc_rf = auc(fpr_rf, tpr_rf)
+
+    # Find the best threshold for F1 score
+    thresholds = np.linspace(0.01, 0.99, 100)
+    f1_scores = [f1_score(y_valid, y_scores_rf > t) for t in thresholds]
+    best_threshold = thresholds[np.argmax(f1_scores)]
+    best_f1 = np.max(f1_scores)
+
+    # Calculate all metrics at the best threshold
+    y_pred_rf_optimal = (y_scores_rf >= best_threshold).astype(int)
+    mcc = matthews_corrcoef(y_valid, y_pred_rf_optimal)
+    f1 = f1_score(y_valid, y_pred_rf_optimal)
+    precision = precision_score(y_valid, y_pred_rf_optimal)
+    recall = recall_score(y_valid, y_pred_rf_optimal)
+    accuracy = accuracy_score(y_valid, y_pred_rf_optimal)
+
+    # add a new row for model random forest f1, precision, recall, accuracy (0.7169811320754716, 0.7238095238095238, 0.7102803738317757, 0.883495145631068)
+    random_forest_wot = {
+        "model_dataset": "Random Forest Weighted Diffusion without Topological Features",
+        "precision": precision,
+        "f1": f1,
+        "accuracy": accuracy,
+        "recall": recall,
+        "mcc": mcc,
+    }
+
     train_loader, valid_loader, _ = get_split_data_pickle_wn("DDM")
 
     # Extract train and valid data
@@ -292,6 +336,7 @@ if __name__ == "__main__":
     # add the new row to the dataframe
     df_reordered = df_reordered.append(random_forest, ignore_index=True)
     df_reordered = df_reordered.append(random_forest_d, ignore_index=True)
+    df_reordered = df_reordered.append(random_forest_wot, ignore_index=True)
 
     latex_code = df_reordered.to_latex(
         index=False,

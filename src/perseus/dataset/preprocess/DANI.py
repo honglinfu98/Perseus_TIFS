@@ -91,6 +91,10 @@ def DANI(N: int, cascades: list) -> tuple:
                 if P[i][j] > 0:
                     P_dict[(i, j)] = P[i][j]
 
+    cascade_buffer = dict()
+    for c_i, cascade_dict in enumerate(cascades):
+        cascade_buffer[c_i] = list(cascade_dict.keys())[:-1]
+
     node_status_set = {}
     for i in range(N):
         node_status_set[i] = set()
@@ -108,6 +112,35 @@ def DANI(N: int, cascades: list) -> tuple:
                 node_status_matrix[(i, j)] = len(
                     node_status_set[i] & node_status_set[j]
                 ) / len(node_status_set[i] | node_status_set[j])
+
+    theta = {}
+    for u in range(N):
+        for v in range(N):
+            if u != v:
+                count_uv = (
+                    0  # Number of cascades with u and v where index(u) < index(v)
+                )
+                count_u_or_v = 0  # Number of cascades with at least u or v
+
+                for c_i, nodes in cascade_buffer.items():
+                    # Check if this cascade contains u or v
+                    contains_u = u in nodes
+                    contains_v = v in nodes
+
+                    if contains_u or contains_v:
+                        count_u_or_v += 1
+
+                    # If it contains both, check their positions
+                    if contains_u and contains_v:
+                        if nodes.index(u) < nodes.index(v):
+                            count_uv += 1
+
+                # Compute theta_{u,v}
+                if count_u_or_v > 0:
+                    theta[(u, v)] = count_uv / count_u_or_v
+                else:
+                    # If neither u nor v ever appears, we can define theta_{u,v} = 0 or skip it
+                    theta[(u, v)] = 0.0
 
     P_dict_real = {}
     for i in range(N):
@@ -150,4 +183,48 @@ def DANI(N: int, cascades: list) -> tuple:
         if i >= len(result):
             break
 
-    return IG, result, A, P_dict, P_dict_real
+    return IG, result, A, P_dict, P_dict_real, theta
+
+
+if __name__ == "__main__":
+    N1 = 5
+
+    e1 = [
+        {1: 0.0, 2: 1.0, 3: 2.0, 4: 195.0, "T": 195.0},
+        {1: 0.0, 2: 39.0, "T": 39.0},
+        {3: 0.0, 2: 1.0, "T": 1.0},
+        {4: 0.0, 1: 1.0, "T": 1.0},
+    ]
+
+    IG, result, A, P_dict, P_dict_real, theta = DANI(N1, e1)
+
+    print(IG.edges())
+    print(result)
+    print(A)
+    print(P_dict)
+    print(P_dict_real)
+
+    N2 = 13
+
+    e2 = [
+        {
+            8: 0.0,
+            0: 0.0,
+            5: 0.0,
+            1: 195.0,
+            7: 2293.0,
+            6: 2293.0,
+            4: 2293.0,
+            "T": 2293.0,
+        },
+        {10: 0.0, 3: 39.0, 2: 39.0, 11: 108.0, "T": 108.0},
+        {12: 0.0, 9: 1.0, "T": 1.0},
+    ]
+
+    IG, result, A, P_dict, P_dict_real, theta = DANI(N2, e2)
+
+    print(IG.edges())
+    print(result)
+    print(A)
+    print(P_dict)
+    print(P_dict_real)

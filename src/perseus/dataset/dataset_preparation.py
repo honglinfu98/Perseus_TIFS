@@ -40,6 +40,46 @@ from perseus.dataset.preprocess.groudtruth_labeling import (
 from perseus.settings import PROJECT_ROOT
 
 
+FEATURE_COLUMN = [
+    # "average_speed",  # market
+    # "sum_total_targets",  # osn
+    "average_increase_percentage",  # market
+    # "number_of_signals",  # osn
+    "sum_targets_achieved",  # osn
+    "rating",  # topological
+    # "in_ratio",  # topological
+    # "out_ratio",  # topological
+    # "out_nodes",  # topological
+    # "density",  # topological
+    # "clustering_coeff",  # topological
+    # "closeness_centrality",  # topological
+    # "eff_size",  # topological
+    # "efficiency",  # topological
+    # "betweenness_centrality",
+    # "pagerank",
+    "ego_in_ratio",
+    "ego_out_ratio",
+    "ego_out_nodes",
+    "eff_size",
+    "efficiency",
+    "density",
+    "clustering_coeff",
+    "closeness_centrality",
+    "pagerank",
+    "betweenness_centrality",
+    # "ego_weighted_in_ratio",
+    # "ego_weighted_out_ratio",
+    # "ego_out_weights",
+    # "weighted_closeness_centrality",
+    # "weighted_betweenness_centrality",
+    # "weighted_pagerank",
+    # "ego_weighted_eff_size",
+    # "ego_weighted_efficiency",
+    # "weighted_clustering_coefficient",
+    # "ego_weighted_density",
+]
+
+
 def prepare_data(graphs: dict, features: dict, label_mapping: dict):
     """
     Prepare the data for the Directed DINA model
@@ -70,16 +110,16 @@ def prepare_data(graphs: dict, features: dict, label_mapping: dict):
             # "efficiency",  # topological
             # "betweenness_centrality",
             # "pagerank",
-            "ego_in_ratio",
-            "ego_out_ratio",
-            "ego_out_nodes",
-            "eff_size",
-            "efficiency",
-            "density",
-            "clustering_coeff",
-            "closeness_centrality",
-            "pagerank",
-            "betweenness_centrality",
+            # "ego_in_ratio",
+            # "ego_out_ratio",
+            # "ego_out_nodes",
+            # "eff_size",
+            # "efficiency",
+            # "density",
+            # "clustering_coeff",
+            # "closeness_centrality",
+            # "pagerank",
+            # "betweenness_centrality",
             # "ego_weighted_in_ratio",
             # "ego_weighted_out_ratio",
             # "ego_out_weights",
@@ -177,16 +217,16 @@ def prepare_ddm_data(graphs: dict, features: dict, label_mapping: dict, P_dict: 
             # "weighted_efficiency",
             # "weighted_clustering_coefficient",
             # "weighted_density",
-            "ego_weighted_in_ratio",
-            "ego_weighted_out_ratio",
-            "ego_out_weights",
-            "weighted_closeness_centrality",
-            "weighted_betweenness_centrality",
-            "weighted_pagerank",
-            "ego_weighted_eff_size",
-            "ego_weighted_efficiency",
-            "weighted_clustering_coefficient",
-            "ego_weighted_density",
+            # "ego_weighted_in_ratio",
+            # "ego_weighted_out_ratio",
+            # "ego_out_weights",
+            # "weighted_closeness_centrality",
+            # "weighted_betweenness_centrality",
+            # "weighted_pagerank",
+            # "ego_weighted_eff_size",
+            # "ego_weighted_efficiency",
+            # "weighted_clustering_coefficient",
+            # "ego_weighted_density",
             # "ego_in_ratio",
             # "ego_out_ratio",
             # "ego_out_nodes",
@@ -293,16 +333,16 @@ def prepare_cos_data(graphs: dict, features: dict, label_mapping: dict):
             # "weighted_efficiency",
             # "weighted_clustering_coefficient",
             # "weighted_density",
-            "ego_weighted_in_ratio",
-            "ego_weighted_out_ratio",
-            "ego_out_weights",
-            "weighted_closeness_centrality",
-            "weighted_betweenness_centrality",
-            "weighted_pagerank",
-            "ego_weighted_eff_size",
-            "ego_weighted_efficiency",
-            "weighted_clustering_coefficient",
-            "ego_weighted_density",
+            # "ego_weighted_in_ratio",
+            # "ego_weighted_out_ratio",
+            # "ego_out_weights",
+            # "weighted_closeness_centrality",
+            # "weighted_betweenness_centrality",
+            # "weighted_pagerank",
+            # "ego_weighted_eff_size",
+            # "ego_weighted_efficiency",
+            # "weighted_clustering_coefficient",
+            # "ego_weighted_density",
             # "ego_in_ratio",
             # "ego_out_ratio",
             # "ego_out_nodes",
@@ -508,234 +548,234 @@ def split_data(options: str, loader: bool = True):
         return train_data, validate_data, test_data
 
 
-def get_split_data_pickle(options: str):
-    """
-    Load the data for temporal tasks using the pickle file
-    """
-    if options == "DDINA":
-        with open(path.join(PROJECT_ROOT, "data", "DDINA_data.pkl"), "rb") as file:
-            data = pickle.load(file)
+# def get_split_data_pickle(options: str):
+#     """
+#     Load the data for temporal tasks using the pickle file
+#     """
+#     if options == "DDINA":
+#         with open(path.join(PROJECT_ROOT, "data", "DDINA_data.pkl"), "rb") as file:
+#             data = pickle.load(file)
 
-    elif options == "COSS":
-        with open(path.join(PROJECT_ROOT, "data", "COSS_data.pkl"), "rb") as file:
-            data = pickle.load(file)
+#     elif options == "COSS":
+#         with open(path.join(PROJECT_ROOT, "data", "COSS_data.pkl"), "rb") as file:
+#             data = pickle.load(file)
 
-    elif options == "DDM":
-        with open(path.join(PROJECT_ROOT, "data", "DDM_data.pkl"), "rb") as file:
-            data = pickle.load(file)
+#     elif options == "DDM":
+#         with open(path.join(PROJECT_ROOT, "data", "DDM_data.pkl"), "rb") as file:
+#             data = pickle.load(file)
 
-    train_loader = data[0]
-    validate_loader = data[1]
-    test_loader = data[2]
+#     train_loader = data[0]
+#     validate_loader = data[1]
+#     test_loader = data[2]
 
-    return train_loader, validate_loader, test_loader
-
-
-def get_split_data_pickle_f(options: str):
-    """
-    Load the data for temporal tasks using the pickle file
-    """
-    if options == "DDINA":
-        with open(path.join(PROJECT_ROOT, "data", "DDINA_data_f.pkl"), "rb") as file:
-            data = pickle.load(file)
-
-    elif options == "COSS":
-        with open(path.join(PROJECT_ROOT, "data", "COSS_data_f.pkl"), "rb") as file:
-            data = pickle.load(file)
-
-    elif options == "DDM":
-        with open(path.join(PROJECT_ROOT, "data", "DDM_data_f.pkl"), "rb") as file:
-            data = pickle.load(file)
-
-    train_loader = data[0]
-    validate_loader = data[1]
-    test_loader = data[2]
-
-    return train_loader, validate_loader, test_loader
+#     return train_loader, validate_loader, test_loader
 
 
-def get_split_data_pickle_t(options: str):
-    """
-    Load the data for temporal tasks using the pickle file
-    """
-    if options == "DDINA":
-        with open(path.join(PROJECT_ROOT, "data", "DDINA_data_t.pkl"), "rb") as file:
-            data = pickle.load(file)
+# def get_split_data_pickle_f(options: str):
+#     """
+#     Load the data for temporal tasks using the pickle file
+#     """
+#     if options == "DDINA":
+#         with open(path.join(PROJECT_ROOT, "data", "DDINA_data_f.pkl"), "rb") as file:
+#             data = pickle.load(file)
 
-    elif options == "COSS":
-        with open(path.join(PROJECT_ROOT, "data", "COSS_data_t.pkl"), "rb") as file:
-            data = pickle.load(file)
+#     elif options == "COSS":
+#         with open(path.join(PROJECT_ROOT, "data", "COSS_data_f.pkl"), "rb") as file:
+#             data = pickle.load(file)
 
-    elif options == "DDM":
-        with open(path.join(PROJECT_ROOT, "data", "DDM_data_t.pkl"), "rb") as file:
-            data = pickle.load(file)
+#     elif options == "DDM":
+#         with open(path.join(PROJECT_ROOT, "data", "DDM_data_f.pkl"), "rb") as file:
+#             data = pickle.load(file)
 
-    train_loader = data[0]
-    validate_loader = data[1]
-    test_loader = data[2]
+#     train_loader = data[0]
+#     validate_loader = data[1]
+#     test_loader = data[2]
 
-    return train_loader, validate_loader, test_loader
-
-
-def get_split_data_pickle_fv(options: str):
-    """
-    Load the data for temporal tasks using the pickle file
-    """
-    if options == "DDINA":
-        with open(path.join(PROJECT_ROOT, "data", "DDINA_data_fv.pkl"), "rb") as file:
-            data = pickle.load(file)
-
-    elif options == "COSS":
-        with open(path.join(PROJECT_ROOT, "data", "COSS_data_fv.pkl"), "rb") as file:
-            data = pickle.load(file)
-
-    elif options == "DDM":
-        with open(path.join(PROJECT_ROOT, "data", "DDM_data_fv.pkl"), "rb") as file:
-            data = pickle.load(file)
-
-    train_loader = data[0]
-    validate_loader = data[1]
-    test_loader = data[2]
-
-    return train_loader, validate_loader, test_loader
+#     return train_loader, validate_loader, test_loader
 
 
-def get_split_data_pickle_tr(options: str):
-    """
-    Load the data for temporal tasks using the pickle file
-    """
-    if options == "DDINA":
-        with open(path.join(PROJECT_ROOT, "data", "DDINA_data_tr.pkl"), "rb") as file:
-            data = pickle.load(file)
+# def get_split_data_pickle_t(options: str):
+#     """
+#     Load the data for temporal tasks using the pickle file
+#     """
+#     if options == "DDINA":
+#         with open(path.join(PROJECT_ROOT, "data", "DDINA_data_t.pkl"), "rb") as file:
+#             data = pickle.load(file)
 
-    elif options == "COSS":
-        with open(path.join(PROJECT_ROOT, "data", "COSS_data_tr.pkl"), "rb") as file:
-            data = pickle.load(file)
+#     elif options == "COSS":
+#         with open(path.join(PROJECT_ROOT, "data", "COSS_data_t.pkl"), "rb") as file:
+#             data = pickle.load(file)
 
-    elif options == "DDM":
-        with open(path.join(PROJECT_ROOT, "data", "DDM_data_tr.pkl"), "rb") as file:
-            data = pickle.load(file)
+#     elif options == "DDM":
+#         with open(path.join(PROJECT_ROOT, "data", "DDM_data_t.pkl"), "rb") as file:
+#             data = pickle.load(file)
 
-    train_loader = data[0]
-    validate_loader = data[1]
-    test_loader = data[2]
+#     train_loader = data[0]
+#     validate_loader = data[1]
+#     test_loader = data[2]
 
-    return train_loader, validate_loader, test_loader
-
-
-def get_split_data_pickle_e(options: str):
-    """
-    Load the data for temporal tasks using the pickle file
-    """
-    if options == "DDINA":
-        with open(path.join(PROJECT_ROOT, "data", "DDINA_data_e.pkl"), "rb") as file:
-            data = pickle.load(file)
-
-    elif options == "COSS":
-        with open(path.join(PROJECT_ROOT, "data", "COSS_data_e.pkl"), "rb") as file:
-            data = pickle.load(file)
-
-    elif options == "DDM":
-        with open(path.join(PROJECT_ROOT, "data", "DDM_data_e.pkl"), "rb") as file:
-            data = pickle.load(file)
-
-    train_loader = data[0]
-    validate_loader = data[1]
-    test_loader = data[2]
-
-    return train_loader, validate_loader, test_loader
+#     return train_loader, validate_loader, test_loader
 
 
-def get_split_data_pickle_s(options: str):
-    """
-    Load the data for temporal tasks using the pickle file
-    """
-    if options == "DDINA":
-        with open(path.join(PROJECT_ROOT, "data", "DDINA_data_s.pkl"), "rb") as file:
-            data = pickle.load(file)
+# def get_split_data_pickle_fv(options: str):
+#     """
+#     Load the data for temporal tasks using the pickle file
+#     """
+#     if options == "DDINA":
+#         with open(path.join(PROJECT_ROOT, "data", "DDINA_data_fv.pkl"), "rb") as file:
+#             data = pickle.load(file)
 
-    elif options == "COSS":
-        with open(path.join(PROJECT_ROOT, "data", "COSS_data_s.pkl"), "rb") as file:
-            data = pickle.load(file)
+#     elif options == "COSS":
+#         with open(path.join(PROJECT_ROOT, "data", "COSS_data_fv.pkl"), "rb") as file:
+#             data = pickle.load(file)
 
-    elif options == "DDM":
-        with open(path.join(PROJECT_ROOT, "data", "DDM_data_s.pkl"), "rb") as file:
-            data = pickle.load(file)
+#     elif options == "DDM":
+#         with open(path.join(PROJECT_ROOT, "data", "DDM_data_fv.pkl"), "rb") as file:
+#             data = pickle.load(file)
 
-    train_loader = data[0]
-    validate_loader = data[1]
-    test_loader = data[2]
+#     train_loader = data[0]
+#     validate_loader = data[1]
+#     test_loader = data[2]
 
-    return train_loader, validate_loader, test_loader
-
-
-def get_split_data_pickle_m(options: str):
-    """
-    Load the data for temporal tasks using the pickle file
-    """
-    if options == "DDINA":
-        with open(path.join(PROJECT_ROOT, "data", "DDINA_data_m.pkl"), "rb") as file:
-            data = pickle.load(file)
-
-    elif options == "COSS":
-        with open(path.join(PROJECT_ROOT, "data", "COSS_data_m.pkl"), "rb") as file:
-            data = pickle.load(file)
-
-    elif options == "DDM":
-        with open(path.join(PROJECT_ROOT, "data", "DDM_data_m.pkl"), "rb") as file:
-            data = pickle.load(file)
-
-    train_loader = data[0]
-    validate_loader = data[1]
-    test_loader = data[2]
-
-    return train_loader, validate_loader, test_loader
+#     return train_loader, validate_loader, test_loader
 
 
-def get_split_data_pickle_l(options: str):
-    """
-    Load the data for temporal tasks using the pickle file
-    """
-    if options == "DDINA":
-        with open(path.join(PROJECT_ROOT, "data", "DDINA_data_l.pkl"), "rb") as file:
-            data = pickle.load(file)
+# def get_split_data_pickle_tr(options: str):
+#     """
+#     Load the data for temporal tasks using the pickle file
+#     """
+#     if options == "DDINA":
+#         with open(path.join(PROJECT_ROOT, "data", "DDINA_data_tr.pkl"), "rb") as file:
+#             data = pickle.load(file)
 
-    elif options == "COSS":
-        with open(path.join(PROJECT_ROOT, "data", "COSS_data_l.pkl"), "rb") as file:
-            data = pickle.load(file)
+#     elif options == "COSS":
+#         with open(path.join(PROJECT_ROOT, "data", "COSS_data_tr.pkl"), "rb") as file:
+#             data = pickle.load(file)
 
-    elif options == "DDM":
-        with open(path.join(PROJECT_ROOT, "data", "DDM_data_l.pkl"), "rb") as file:
-            data = pickle.load(file)
+#     elif options == "DDM":
+#         with open(path.join(PROJECT_ROOT, "data", "DDM_data_tr.pkl"), "rb") as file:
+#             data = pickle.load(file)
 
-    train_loader = data[0]
-    validate_loader = data[1]
-    test_loader = data[2]
+#     train_loader = data[0]
+#     validate_loader = data[1]
+#     test_loader = data[2]
 
-    return train_loader, validate_loader, test_loader
+#     return train_loader, validate_loader, test_loader
 
 
-def get_split_data_pickle_l_wc(options: str):
-    """
-    Load the data for temporal tasks using the pickle file
-    """
-    if options == "DDINA":
-        with open(path.join(PROJECT_ROOT, "data", "DDINA_data_l_wc.pkl"), "rb") as file:
-            data = pickle.load(file)
+# def get_split_data_pickle_e(options: str):
+#     """
+#     Load the data for temporal tasks using the pickle file
+#     """
+#     if options == "DDINA":
+#         with open(path.join(PROJECT_ROOT, "data", "DDINA_data_e.pkl"), "rb") as file:
+#             data = pickle.load(file)
 
-    elif options == "COSS":
-        with open(path.join(PROJECT_ROOT, "data", "COSS_data_l_wc.pkl"), "rb") as file:
-            data = pickle.load(file)
+#     elif options == "COSS":
+#         with open(path.join(PROJECT_ROOT, "data", "COSS_data_e.pkl"), "rb") as file:
+#             data = pickle.load(file)
 
-    elif options == "DDM":
-        with open(path.join(PROJECT_ROOT, "data", "DDM_data_l_wc.pkl"), "rb") as file:
-            data = pickle.load(file)
+#     elif options == "DDM":
+#         with open(path.join(PROJECT_ROOT, "data", "DDM_data_e.pkl"), "rb") as file:
+#             data = pickle.load(file)
 
-    train_loader = data[0]
-    validate_loader = data[1]
-    test_loader = data[2]
+#     train_loader = data[0]
+#     validate_loader = data[1]
+#     test_loader = data[2]
 
-    return train_loader, validate_loader, test_loader
+#     return train_loader, validate_loader, test_loader
+
+
+# def get_split_data_pickle_s(options: str):
+#     """
+#     Load the data for temporal tasks using the pickle file
+#     """
+#     if options == "DDINA":
+#         with open(path.join(PROJECT_ROOT, "data", "DDINA_data_s.pkl"), "rb") as file:
+#             data = pickle.load(file)
+
+#     elif options == "COSS":
+#         with open(path.join(PROJECT_ROOT, "data", "COSS_data_s.pkl"), "rb") as file:
+#             data = pickle.load(file)
+
+#     elif options == "DDM":
+#         with open(path.join(PROJECT_ROOT, "data", "DDM_data_s.pkl"), "rb") as file:
+#             data = pickle.load(file)
+
+#     train_loader = data[0]
+#     validate_loader = data[1]
+#     test_loader = data[2]
+
+#     return train_loader, validate_loader, test_loader
+
+
+# def get_split_data_pickle_m(options: str):
+#     """
+#     Load the data for temporal tasks using the pickle file
+#     """
+#     if options == "DDINA":
+#         with open(path.join(PROJECT_ROOT, "data", "DDINA_data_m.pkl"), "rb") as file:
+#             data = pickle.load(file)
+
+#     elif options == "COSS":
+#         with open(path.join(PROJECT_ROOT, "data", "COSS_data_m.pkl"), "rb") as file:
+#             data = pickle.load(file)
+
+#     elif options == "DDM":
+#         with open(path.join(PROJECT_ROOT, "data", "DDM_data_m.pkl"), "rb") as file:
+#             data = pickle.load(file)
+
+#     train_loader = data[0]
+#     validate_loader = data[1]
+#     test_loader = data[2]
+
+#     return train_loader, validate_loader, test_loader
+
+
+# def get_split_data_pickle_l(options: str):
+#     """
+#     Load the data for temporal tasks using the pickle file
+#     """
+#     if options == "DDINA":
+#         with open(path.join(PROJECT_ROOT, "data", "DDINA_data_l.pkl"), "rb") as file:
+#             data = pickle.load(file)
+
+#     elif options == "COSS":
+#         with open(path.join(PROJECT_ROOT, "data", "COSS_data_l.pkl"), "rb") as file:
+#             data = pickle.load(file)
+
+#     elif options == "DDM":
+#         with open(path.join(PROJECT_ROOT, "data", "DDM_data_l.pkl"), "rb") as file:
+#             data = pickle.load(file)
+
+#     train_loader = data[0]
+#     validate_loader = data[1]
+#     test_loader = data[2]
+
+#     return train_loader, validate_loader, test_loader
+
+
+# def get_split_data_pickle_l_wc(options: str):
+#     """
+#     Load the data for temporal tasks using the pickle file
+#     """
+#     if options == "DDINA":
+#         with open(path.join(PROJECT_ROOT, "data", "DDINA_data_l_wc.pkl"), "rb") as file:
+#             data = pickle.load(file)
+
+#     elif options == "COSS":
+#         with open(path.join(PROJECT_ROOT, "data", "COSS_data_l_wc.pkl"), "rb") as file:
+#             data = pickle.load(file)
+
+#     elif options == "DDM":
+#         with open(path.join(PROJECT_ROOT, "data", "DDM_data_l_wc.pkl"), "rb") as file:
+#             data = pickle.load(file)
+
+#     train_loader = data[0]
+#     validate_loader = data[1]
+#     test_loader = data[2]
+
+#     return train_loader, validate_loader, test_loader
 
 
 def get_split_data_pickle_wn(options: str):
@@ -761,22 +801,45 @@ def get_split_data_pickle_wn(options: str):
     return train_loader, validate_loader, test_loader
 
 
+def get_split_data_pickle_wot(options: str):
+    """
+    Load the data for temporal tasks using the pickle file
+    """
+    if options == "DDINA":
+        with open(path.join(PROJECT_ROOT, "data", "DDINA_data_wot.pkl"), "rb") as file:
+            data = pickle.load(file)
+
+    elif options == "COSS":
+        with open(path.join(PROJECT_ROOT, "data", "COSS_data_wot.pkl"), "rb") as file:
+            data = pickle.load(file)
+
+    elif options == "DDM":
+        with open(path.join(PROJECT_ROOT, "data", "DDM_data_wot.pkl"), "rb") as file:
+            data = pickle.load(file)
+
+    train_loader = data[0]
+    validate_loader = data[1]
+    test_loader = data[2]
+
+    return train_loader, validate_loader, test_loader
+
+
 if __name__ == "__main__":
     # a = get_split_data_pickle_t("DDM")
 
     # a = split_data("DDINA", loader=True)
-    # # save it in pickle
-    # with open(path.join(PROJECT_ROOT, "data", "DDINA_data_wn.pkl"), "wb") as file:
+    # # # save it in pickle
+    # with open(path.join(PROJECT_ROOT, "data", "DDINA_data_wot.pkl"), "wb") as file:
     #     pickle.dump(a, file)
     # b = split_data("COSS", loader=True)
     # # save it in pickle
-    # with open(path.join(PROJECT_ROOT, "data", "COSS_data_wn.pkl"), "wb") as file:
+    # with open(path.join(PROJECT_ROOT, "data", "COSS_data_wot.pkl"), "wb") as file:
     #     pickle.dump(b, file)
     # c = split_data("DDM", loader=True)
     # # save it in pickle
-    # with open(path.join(PROJECT_ROOT, "data", "DDM_data_wn.pkl"), "wb") as file:
+    # with open(path.join(PROJECT_ROOT, "data", "DDM_data_wot.pkl"), "wb") as file:
     #     pickle.dump(c, file)
 
-    a = get_split_data_pickle_wn("DDINA")
-    # b = get_split_data_pickle_wn("COSS")
-    c = get_split_data_pickle_wn("DDM")
+    a = get_split_data_pickle_wot("DDINA")
+    b = get_split_data_pickle_wot("COSS")
+    c = get_split_data_pickle_wot("DDM")
