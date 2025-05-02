@@ -21,6 +21,8 @@ comparison = os.path.join(os.path.dirname(__file__), "timevscrowd.sql")
 new_detection = os.path.join(os.path.dirname(__file__), "new_detection.sql")
 group_name = os.path.join(os.path.dirname(__file__), "group_name.sql")
 signals_channel = os.path.join(os.path.dirname(__file__), "timecrowd_channel.sql")
+btc_base = os.path.join(os.path.dirname(__file__), "btc_query.sql")
+
 
 with open(all_scored_sql_path, "r") as f:
     ALL_QUERY_SCORED_PUMPS = f.read()
@@ -36,6 +38,8 @@ with open(group_name, "r") as f:
     QUERY_GROUP_NAME = f.read()
 with open(signals_channel, "r") as f:
     QUERY_SIGNALS_CHANNEL = f.read()
+with open(btc_base, "r") as f:
+    QUERY_BTC_BASE = f.read()
 
 
 def get_direct_link(query: str = QUERY_DIRECT_LINK):
@@ -154,5 +158,21 @@ def get_signals_channel(query: str = QUERY_SIGNALS_CHANNEL):
     return result
 
 
+def get_btc_base(query: str = QUERY_BTC_BASE):
+    """
+    Get BTC signals from the database.
+    """
+
+    conn = psycopg2.connect(
+        f"dbname={GAIA_DB_DB} user={GAIA_DB_USER} password={GAIA_DB_PASSWORD} host={GAIA_DB_HOST} port={GAIA_DB_PORT}"
+    )
+
+    result = pd.read_sql(query, conn)  # type: ignore
+
+    conn.close()
+
+    return result
+
+
 if __name__ == "__main__":
-    signal_channel = get_signals_channel()
+    signal_channel = get_btc_base()

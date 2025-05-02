@@ -10,7 +10,7 @@ from matplotlib.ticker import MaxNLocator, ScalarFormatter
 from perseus.settings import PROJECT_ROOT
 
 # Load results
-with open(path.join(PROJECT_ROOT, "data", "results_wn.pkl"), "rb") as file:
+with open(path.join(PROJECT_ROOT, "data", "results_btc.pkl"), "rb") as file:
     results_m = pickle.load(file)
 
 # Global style settings
@@ -183,7 +183,7 @@ def plot_infer_common_ax(
                         label=combined_label,
                     )
     ax.set_xlim(3, 15)
-    ax.set_ylim(0.00009, 0.00026)
+    ax.set_ylim(0.00009, 0.00030)
     ax.set_xlabel("Number of Nodes", fontsize=fontsize)
     ax.set_ylabel("Inference Speed (sec)", fontsize=fontsize)
     ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
@@ -330,7 +330,7 @@ plot_precision_common_ax(
     ax, results_m, model_colors, line_styles, label_map, fontsize=size
 )
 fig.savefig(
-    path.join(PROJECT_ROOT, "data", "feb_Precision_plot.pdf"),
+    path.join(PROJECT_ROOT, "data", "mar_Precision_plot.pdf"),
     bbox_inches="tight",
     format="pdf",
 )
@@ -340,7 +340,7 @@ plt.show()
 fig, ax = get_common_ax(figsize=(8, 8))
 plot_f1_common_ax(ax, results_m, model_colors, line_styles, label_map, fontsize=size)
 fig.savefig(
-    path.join(PROJECT_ROOT, "data", "feb_F1_plot.pdf"),
+    path.join(PROJECT_ROOT, "data", "mar_F1_plot.pdf"),
     bbox_inches="tight",
     format="pdf",
 )
@@ -358,7 +358,7 @@ plot_infer_common_ax(
 )
 fig.tight_layout()  # Adjust layout if necessary
 fig.savefig(
-    path.join(PROJECT_ROOT, "data", "feb_inference_plot.pdf"),
+    path.join(PROJECT_ROOT, "data", "mar_inference_plot.pdf"),
     bbox_inches="tight",
     format="pdf",
 )
@@ -375,7 +375,7 @@ plot_combined_cdf_common_ax(
     model_colors=model_colors,
 )
 fig.savefig(
-    path.join(PROJECT_ROOT, "data", "feb_combined_cdf_plot.pdf"),
+    path.join(PROJECT_ROOT, "data", "mar_combined_cdf_plot.pdf"),
     bbox_inches="tight",
     format="pdf",
 )
@@ -392,7 +392,7 @@ plot_combined_roc_common_ax(
     model_colors=model_colors,
 )
 fig.savefig(
-    path.join(PROJECT_ROOT, "data", "feb_combined_roc_plot.pdf"),
+    path.join(PROJECT_ROOT, "data", "mar_combined_roc_plot.pdf"),
     bbox_inches="tight",
     format="pdf",
 )

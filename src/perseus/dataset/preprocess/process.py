@@ -442,6 +442,8 @@ def process_dataframe(signals_df: pd.DataFrame):
     # Calculate the time difference between consecutive rows for the same entity_id and signal type
     df["time_diff"] = df.groupby(["position", "commodity"])["start_date"].diff()
 
+    df["btc_base_return"] = df["btc_base_return"].fillna(df["increase_percentage"])
+
     return df
 
 
@@ -466,6 +468,7 @@ def aggregate_data(df: pd.DataFrame):
                 group["telegram_chat_id"],
                 delta_minutes,
                 group["increase_percentage"],
+                group["btc_base_return"],
                 group["position"],
                 group["targets_achieved"],
                 group["total_targets"],
@@ -536,6 +539,7 @@ def features_engineer(df: pd.DataFrame):
         .agg(
             {
                 "increase_percentage": "mean",
+                "btc_base_return": "mean",
                 "speed": "mean",
                 "id": "count",
                 "chat_crowd_score": "last",
@@ -547,6 +551,7 @@ def features_engineer(df: pd.DataFrame):
         .rename(
             columns={
                 "increase_percentage": "average_increase_percentage",
+                "btc_base_return": "average_btc_base_return",
                 "speed": "average_speed",
                 "id": "number_of_signals",
                 "chat_crowd_score": "latest_chat_crowd_score",
@@ -563,6 +568,7 @@ def features_engineer(df: pd.DataFrame):
             [
                 "telegram_chat_id",
                 "average_increase_percentage",
+                "average_btc_base_return",
                 "average_speed",
                 "number_of_signals",
                 "latest_chat_crowd_score",
@@ -596,33 +602,25 @@ def get_graphs(cascade: dict, no_nodes: dict, id_mapping: dict):
 
     # Create the graphs for each commodity using moer_than_three
     graphs = {}
-    result = {}
-    A = {}
+
     P_dict = {}
-    P_com = {}
+    P_theta = {}
     for key, value in ensure_graph_learned.items():
-        graphs[key], result[key], A[key], P_dict[key], P_com[key] = DANI(
+        print(f"Creating graph for {key} with {value} nodes")
+        graphs[key], P_dict[key], P_theta[key] = DANI(
             ensure_graph_learned[key], cascade[key]
         )
         graphs[key] = nx.relabel_nodes(graphs[key], id_mapping[key]["new_to_id"])
 
-    # Loop over each key in P_dict and apply the mapping
-    for key in P_dict:
-        if key in id_mapping:
-            # Extract new_to_id mapping for the current key
-            new_to_id = id_mapping[key]["new_to_id"]
-            # Relabel edges in the current dictionary using the new_to_id mapping
-            P_dict[key] = relabel_edges(P_dict[key], new_to_id)
-
     # Loop over each key in P_com and apply the mapping
-    for key in P_com:
+    for key in P_theta:
         if key in id_mapping:
             # Extract new_to_id mapping for the current key
             new_to_id = id_mapping[key]["new_to_id"]
             # Relabel edges in the current dictionary using the new_to_id mapping
-            P_com[key] = relabel_edges(P_com[key], new_to_id)
+            P_theta[key] = relabel_edges(P_theta[key], new_to_id)
 
-    return graphs, result, A, P_dict, P_com
+    return graphs, P_theta
 
 
 if __name__ == "__main__":
@@ -632,10 +630,8 @@ if __name__ == "__main__":
     cascade_buffer, no_nodes_buffer, id_mapping_buffer, cascade_labeling = (
         aggregate_data(ided_signals)
     )
-    gs, results, As, P_dict, P_com = get_graphs(
-        cascade_buffer, no_nodes_buffer, id_mapping_buffer
-    )
+    gs, P_theta = get_graphs(cascade_buffer, no_nodes_buffer, id_mapping_buffer)
     graph_feature = graph_features(gs)
     market_feature = features_engineer(processed_signals)
-    weighted_feature = compute_weighted_graph_features(P_com)
+    weighted_feature = compute_weighted_graph_features(P_theta)
     combine_feature = combine_features(market_feature, graph_feature, weighted_feature)

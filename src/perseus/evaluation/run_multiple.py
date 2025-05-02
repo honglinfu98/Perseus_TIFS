@@ -35,7 +35,12 @@ from perseus.dataset.dataset_preparation import (
 
 
 from perseus.dataset.aggregating_dateset import get_split_data_pickle_aa
-from perseus.model.gnn_model import GCNNet, Net, GraphSAGENet
+from perseus.model.gnn_model import (
+    GCNNet,
+    Net,
+    GraphSAGENet,
+    GraphClassifierWithMaxPooling,
+)
 from perseus.settings import PROJECT_ROOT
 
 

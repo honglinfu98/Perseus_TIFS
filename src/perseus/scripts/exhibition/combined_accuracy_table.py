@@ -32,9 +32,13 @@ from sklearn.ensemble import RandomForestClassifier
 # from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score, matthews_corrcoef
 import matplotlib.pyplot as plt
 from perseus.dataset.dataset_preparation import (
-    get_split_data_pickle_wn,
+    get_split_data_pickle_wnt,
     get_split_data_pickle_wot,
+    get_split_data_pickle_btc,
 )
+
+
+from perseus.dataset.aggregating_dateset import get_split_data_pickle_aa
 
 
 def extract_data_from_loader(data_loader):
@@ -147,7 +151,7 @@ if __name__ == "__main__":
     label = 1
 
     # open the results files
-    with open(path.join(PROJECT_ROOT, "data", "results_wn.pkl"), "rb") as file:
+    with open(path.join(PROJECT_ROOT, "data", "results_btc.pkl"), "rb") as file:
         results_tr = pickle.load(file)
 
     # Assuming results_tr is loaded as shown in your previous example
@@ -164,27 +168,9 @@ if __name__ == "__main__":
         ["model_dataset", "accuracy", "precision", "recall", "f1", "mcc"]
     ]
 
-    a = three_features_df.iloc[3]
+    a = three_features_df.iloc[0]
     a["model_dataset"] = "Cossine similarity GCN (directed features)"
     a_df = a.to_frame().T
-
-    # open the results files
-    with open(path.join(PROJECT_ROOT, "data", "results_l.pkl"), "rb") as file:
-        results_tr = pickle.load(file)
-
-    # Assuming results_tr is loaded as shown in your previous example
-    three_features = get_metrics(results_tr)
-    three_features_df = get_dataframe(three_features)
-
-    # combine the first three columns into one
-    three_features_df["model_dataset"] = (
-        three_features_df["model"] + " - " + three_features_df["dataset"]
-    )
-
-    # change the order of the columns
-    three_features_df = three_features_df[
-        ["model_dataset", "accuracy", "precision", "recall", "f1", "mcc"]
-    ]
 
     b = three_features_df.iloc[3]
     b["model_dataset"] = "Cossine similarity GCN (weighted features)"
@@ -208,7 +194,7 @@ if __name__ == "__main__":
     df_reordered = merged_df[
         ["model_dataset", "precision", "f1", "accuracy", "recall", "mcc"]
     ]
-    df_reordered = df_reordered.loc[[1, 3, 0, 2, 4, 5]].reset_index(drop=True)
+    df_reordered = df_reordered.loc[[3, 1, 0, 2, 4, 5]].reset_index(drop=True)
 
     train_loader, valid_loader, _ = get_split_data_pickle_wot("DDM")
 
@@ -251,7 +237,7 @@ if __name__ == "__main__":
         "mcc": mcc,
     }
 
-    train_loader, valid_loader, _ = get_split_data_pickle_wn("DDM")
+    train_loader, valid_loader, _ = get_split_data_pickle_btc("DDM")
 
     # Extract train and valid data
     X_train, y_train = extract_data_from_loader(train_loader)
@@ -292,7 +278,7 @@ if __name__ == "__main__":
         "mcc": mcc,
     }
 
-    train_loader_d, valid_loader_d, _ = get_split_data_pickle_wn("DDINA")
+    train_loader_d, valid_loader_d, _ = get_split_data_pickle_btc("DDINA")
 
     # Extract train and valid data
     X_train_d, y_train_d = extract_data_from_loader(train_loader_d)

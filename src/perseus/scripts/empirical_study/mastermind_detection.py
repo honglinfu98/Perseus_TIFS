@@ -202,9 +202,9 @@ def aggregate_and_compare_combined(
                 ha=horizontal_alignment,
             )
 
-        # Set axis labels (without bold font weight)
-        ax.set_ylabel(metric, fontsize=font_size)
-        # ax.set_xlabel("Value", fontsize=font_size)
+        # Set axis labels: now the x-axis shows the metric (below) and y-axis indicates density.
+        ax.set_xlabel(metric, fontsize=font_size)
+        ax.set_ylabel("", fontsize=font_size)
 
         # Ensure tick labels are not bold
         for tick_label in ax.get_xticklabels() + ax.get_yticklabels():
@@ -258,12 +258,10 @@ if __name__ == "__main__":
     cascade_buffer, no_nodes_buffer, id_mapping_buffer, cascade_labeling = (
         aggregate_data(ided_signals)
     )
-    gs, results, As, P_dict, P_com = get_graphs(
-        cascade_buffer, no_nodes_buffer, id_mapping_buffer
-    )
+    gs, P_theta = get_graphs(cascade_buffer, no_nodes_buffer, id_mapping_buffer)
     graph_feature = graph_features(gs)
     market_feature = features_engineer(processed_signals)
-    weighted_feature = compute_weighted_graph_features(P_com)
+    weighted_feature = compute_weighted_graph_features(P_theta)
     combine_feature = combine_features(market_feature, graph_feature, weighted_feature)
     all_predictions = {}
 
@@ -361,7 +359,9 @@ if __name__ == "__main__":
             data = Data(x=node_attributes, edge_index=edge_index)
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-            with open(path.join(PROJECT_ROOT, "data", "results_wn.pkl"), "rb") as file:
+            with open(
+                path.join(PROJECT_ROOT, "data", "results_wnt03281555.pkl"), "rb"
+            ) as file:
                 results_t = pickle.load(file)
 
             model_1 = results_t["DDINA"]["GraphSAGE"]["model"]

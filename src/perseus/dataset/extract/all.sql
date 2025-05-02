@@ -34,4 +34,5 @@ AND s.commodity != 'PIVX'
 AND s.commodity != 'DLT'
 AND p.pump_type = 'crowd'
 AND p.pump_score != 0
+AND s.source_posted_at::date <= '2024-02-16' 
 ORDER BY s.source_posted_at DESC;
