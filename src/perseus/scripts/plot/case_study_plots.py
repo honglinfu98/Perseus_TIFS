@@ -23,7 +23,7 @@ from perseus.dataset.preprocess.process import (
 )
 from perseus.dataset.preprocess.train_test_validate import (
     # get_train_scored_signals,
-    get_test_scored_signals,
+    get_btc_test_scored_signals,
     # get_valid_scored_signals,
 )
 from perseus.dataset.dataset_preparation import combine_features, graph_features
@@ -92,22 +92,45 @@ class HandlerCircle(HandlerPatch):
         return [circle]
 
 
+# def community_detection_weighted(P_dict: dict):
+#     """
+#     This function detects communities in a graph using the Louvain method.
+#     """
+
+#     communities_dict = {}
+
+#     # Iterate over each key in the P_dict to process its edges and weights
+#     for key in P_dict.keys():
+#         G = nx.Graph()
+
+#         # Populate edge index and weights
+#         for (source_node, target_node), weight in P_dict[key].items():
+#             if weight > 0:  # Check if the weight is positive
+#                 G.add_edge(source_node, target_node, weight=weight)
+#         communities = louvain_communities(G)
+#         communities_dict[key] = communities
+
+#     return communities_dict
+
+import networkx as nx
+
+
 def community_detection_weighted(P_dict: dict):
     """
-    This function detects communities in a graph using the Louvain method.
+    This function detects communities in a graph using the Label Propagation algorithm.
     """
 
     communities_dict = {}
 
-    # Iterate over each key in the P_dict to process its edges and weights
     for key in P_dict.keys():
         G = nx.Graph()
-
-        # Populate edge index and weights
         for (source_node, target_node), weight in P_dict[key].items():
-            if weight > 0:  # Check if the weight is positive
+            if weight > 0:
                 G.add_edge(source_node, target_node, weight=weight)
-        communities = louvain_communities(G)
+        # Label Propagation (returns a generator of sets)
+        communities = list(
+            nx.algorithms.community.asyn_lpa_communities(G, weight="weight")
+        )
         communities_dict[key] = communities
 
     return communities_dict
@@ -190,16 +213,16 @@ def draw_graph_with_communities(
     label_pos = {
         node: (
             pos[node][0]
-            + 4 * label_distance * np.cos(np.arctan2(pos[node][1], pos[node][0])),
+            + 6 * label_distance * np.cos(np.arctan2(pos[node][1], pos[node][0])),
             pos[node][1]
             + 1.5 * label_distance * np.sin(np.arctan2(pos[node][1], pos[node][0])),
         )
-        for node in [316, 1505]
+        for node in [316, 320, 1701, 1738]
     }
-    for k in [320, 309, 1701, 1738]:
+    for k in [1505, 309]:
         label_pos[k] = (
-            pos[k][0] + 6 * label_distance * np.cos(np.arctan2(pos[k][1], pos[k][0])),
-            pos[k][1] + 1.5 * label_distance * np.sin(np.arctan2(pos[k][1], pos[k][0])),
+            pos[k][0] + 1.5 * label_distance * np.cos(np.arctan2(pos[k][1], pos[k][0])),
+            pos[k][1] - 0.5,
         )
 
     adjusted_labels = {node: id_to_username.get(node, str(node)) for node in G.nodes()}
@@ -241,7 +264,7 @@ def draw_graph_with_communities(
     ax.set_xlim(min(xs) - 2, max(xs) + 2)
     ax.set_ylim(min(ys) - 2, max(ys) + 2)
     fig.tight_layout()
-    fig.savefig(path.join(PROJECT_ROOT, "data", f"{key}_case.pdf"))
+    fig.savefig(path.join(PROJECT_ROOT, "data", f"june_{key}_case.pdf"))
     plt.show()
 
 
@@ -340,9 +363,9 @@ def draw_graph_with_communities_wrong_case(
     label_pos = {
         node: (
             pos[node][0]
-            + 2.1 * label_distance * np.cos(np.arctan2(pos[node][1], pos[node][0])),
+            + 1.6 * label_distance * np.cos(np.arctan2(pos[node][1], pos[node][0])),
             pos[node][1]
-            + 1.1 * label_distance * np.sin(np.arctan2(pos[node][1], pos[node][0])),
+            + 2 * label_distance * np.sin(np.arctan2(pos[node][1], pos[node][0])),
         )
         for node in G.nodes()
     }
@@ -388,27 +411,25 @@ def draw_graph_with_communities_wrong_case(
     ax.set_xlim(min(xs) - 2, max(xs) + 2)
     ax.set_ylim(min(ys) - 2, max(ys) + 2)
     fig.tight_layout()
-    fig.savefig(path.join(PROJECT_ROOT, "data", f"{key}_case.pdf"))
+    fig.savefig(path.join(PROJECT_ROOT, "data", f"june_{key}_case.pdf"))
     plt.show()
 
 
 # Update the function call in the main block to include id_to_username:
 if __name__ == "__main__":
-    signals = get_test_scored_signals()
+    signals = get_btc_test_scored_signals()
     processed_signals = process_dataframe(signals)
     ided_signals = assign_event_ids(processed_signals)
     cascade_buffer, no_nodes_buffer, id_mapping_buffer, cascade_labeling = (
         aggregate_data(ided_signals)
     )
-    gs, results, As, P_dict, P_com = get_graphs(
-        cascade_buffer, no_nodes_buffer, id_mapping_buffer
-    )
+    gs, P_theta = get_graphs(cascade_buffer, no_nodes_buffer, id_mapping_buffer)
     graph_feature = graph_features(gs)
     market_feature = features_engineer(processed_signals)
-    weighted_feature = compute_weighted_graph_features(P_com)
+    weighted_feature = compute_weighted_graph_features(P_theta)
     combine_feature = combine_features(market_feature, graph_feature, weighted_feature)
 
-    communities_dict = community_detection_weighted(P_dict)
+    communities_dict = community_detection_weighted(P_theta)
     # Assume id_to_username is available here
 
     telegram_id = pd.read_csv(path.join(PROJECT_ROOT, "data", "telegram_id.csv"))
@@ -434,9 +455,7 @@ if __name__ == "__main__":
             pass
 
     # load the prediction labels pickle file from the data folder
-    with open(
-        path.join(PROJECT_ROOT, "data", "buffer", "predictions.pkl"), "rb"
-    ) as file:
+    with open(path.join(PROJECT_ROOT, "data", "sp", "predictions.pkl"), "rb") as file:
         predictions = pickle.load(file)
 
     true_false_labels = {}

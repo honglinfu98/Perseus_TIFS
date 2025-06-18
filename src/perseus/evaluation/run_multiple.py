@@ -30,7 +30,7 @@ from perseus.dataset.dataset_preparation import (
     # get_split_data_pickle_s,
     # get_split_data_pickle_l,
     # get_split_data_pickle_l_wc,
-    get_split_data_pickle_btc,
+    get_split_data_pickle_btc_noloader,
 )
 
 
@@ -231,7 +231,7 @@ if __name__ == "__main__":
     with ProcessPoolExecutor(max_workers=12) as executor:
         future_to_model = {}
         for dataset in datasets:
-            train_loader, test_loader, _ = get_split_data_pickle_btc(dataset)
+            train_loader, test_loader, _ = get_split_data_pickle_btc_noloader(dataset)
             for model_name in models:
                 future = executor.submit(
                     experiment_pipeline,

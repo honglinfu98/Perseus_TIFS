@@ -22,15 +22,17 @@ from perseus.dataset.preprocess.process import (
     compute_weighted_graph_features,
 )
 from perseus.dataset.preprocess.train_test_validate import (
-    get_train_scored_signals,
-    get_test_scored_signals,
-    get_valid_scored_signals,
+    get_btc_test_scored_signals,
+    get_btc_train_scored_signals,
+    get_btc_valid_scored_signals,
 )
 from perseus.dataset.dataset_preparation import combine_features, graph_features
 from perseus.settings import PROJECT_ROOT
 
 
-def community_detection_weighted(P_dict: dict):
+def community_detection_weighted(
+    P_dict: dict, resolution: int = 1, threshold: float = 1e-7
+):
     """
     This function detects communities in a graph using the Louvain method.
     """
@@ -205,6 +207,8 @@ def draw_graph_with_communities_wrong_case(
             node_shapes[node] = "s"  # Square for false positive
         elif prediction == (0, 1):
             node_shapes[node] = "^"  # Triangle for false negative
+        elif prediction == (1, 1):
+            node_shapes[node] = "D"
         else:
             node_shapes[node] = "o"  # Circle for correct predictions
 
@@ -298,21 +302,19 @@ def draw_graph_with_communities_wrong_case(
 
 # Update the function call in the main block to include id_to_username:
 if __name__ == "__main__":
-    signals = get_test_scored_signals()
+    signals = get_btc_test_scored_signals()
     processed_signals = process_dataframe(signals)
     ided_signals = assign_event_ids(processed_signals)
     cascade_buffer, no_nodes_buffer, id_mapping_buffer, cascade_labeling = (
         aggregate_data(ided_signals)
     )
-    gs, results, As, P_dict, P_com = get_graphs(
-        cascade_buffer, no_nodes_buffer, id_mapping_buffer
-    )
+    gs, P_theta = get_graphs(cascade_buffer, no_nodes_buffer, id_mapping_buffer)
     graph_feature = graph_features(gs)
     market_feature = features_engineer(processed_signals)
-    weighted_feature = compute_weighted_graph_features(P_com)
+    weighted_feature = compute_weighted_graph_features(P_theta)
     combine_feature = combine_features(market_feature, graph_feature, weighted_feature)
 
-    communities_dict = community_detection_weighted(P_dict)
+    communities_dict = community_detection_weighted(P_theta)
     # Assume id_to_username is available here
 
     telegram_id = pd.read_csv(path.join(PROJECT_ROOT, "data", "telegram_id.csv"))
@@ -365,9 +367,8 @@ if __name__ == "__main__":
     # )
 
     # load the prediction labels pickle file from the data folder
-    with open(
-        path.join(PROJECT_ROOT, "data", "buffer", "predictions.pkl"), "rb"
-    ) as file:
+    with open(path.join(PROJECT_ROOT, "data", "sp", "predictions.pkl"), "rb") as file:
+
         predictions = pickle.load(file)
 
     # for k,v in predictions.items():
@@ -411,14 +412,49 @@ if __name__ == "__main__":
         if {(1, 0), (0, 1)}.issubset(label_set):
             potential_coins.append(coin)
 
+    potential_false_positive_coins = []
+    # go over each coin and node in each coin and output the key with at least one (1,0)
+    for coin, _ in true_false_labels.items():
+        # for node in true_false_labels[coin].keys():
+        # Convert true_false_labels[coin][node] to a set for easy checking
+        label_set = set(v for i, v in true_false_labels[coin].items())
+
+        # Check if all required tuples are in the set
+        if (1, 0) in label_set:
+            potential_false_positive_coins.append(coin)
+
     # for i in potential_coins_true:
     #     print(i)
     #     draw_graph_with_communities(
     #         gs, i, communities_dict, id_to_username, labels[i]
     #     )
 
-    for i in potential_coins:
-        print(i)
-        draw_graph_with_communities_wrong_case(
-            gs, i, communities_dict, id_to_username, true_false_labels[i]
-        )
+    # for i in potential_coins:
+    #     print(i)
+    #     draw_graph_with_communities_wrong_case(
+    #         gs, i, communities_dict, id_to_username, true_false_labels[i]
+    #     )
+
+    # set a few param for community detection and loop over
+
+    resolution = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    threshold = [1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1]
+    for res in resolution:
+        for th in threshold:
+            print(f"Resolution: {res}, Threshold: {th}")
+            communities_dict = community_detection_weighted(P_theta, res, th)
+            for i in potential_coins_true:
+                if i == "SUI":
+                    print(i)
+                    draw_graph_with_communities(
+                        gs, i, communities_dict, id_to_username, labels[i]
+                    )
+
+    # communities_dict = community_detection_weighted(P_theta, resolution=0.5, threshold=1e-7)
+
+    # for i in potential_coins_true:
+    #     if i == "SUI":
+    #         print(i)
+    #         draw_graph_with_communities(
+    #             gs, i, communities_dict, id_to_username, labels[i]
+    #         )

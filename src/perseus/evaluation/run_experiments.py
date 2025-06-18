@@ -34,7 +34,6 @@ from perseus.dataset.dataset_preparation import (
 )
 
 
-from perseus.dataset.aggregating_dateset import get_split_data_pickle_aa
 from perseus.model.gnn_model import GCNNet, Net, GraphSAGENet
 from perseus.settings import PROJECT_ROOT
 
@@ -226,7 +225,7 @@ if __name__ == "__main__":
     with ProcessPoolExecutor(max_workers=12) as executor:
         future_to_model = {}
         for dataset in datasets:
-            train_loader, test_loader, _ = get_split_data_pickle_btc(dataset)
+            train_loader, valid_loader, test_loader = get_split_data_pickle_btc(dataset)
             for model_name in models:
                 future = executor.submit(
                     experiment_pipeline,

@@ -1,6 +1,10 @@
-"""
-This function is used to get the global minimum and maximum training times
-"""
+# --- Add MultiGAT/MultiGraphSAGE results from multi_run.py ---
+
+from os import path
+import pandas as pd
+
+from perseus.settings import PROJECT_ROOT
+
 
 from os import path
 import pickle
@@ -34,11 +38,11 @@ import matplotlib.pyplot as plt
 from perseus.dataset.dataset_preparation import (
     get_split_data_pickle_wnt,
     get_split_data_pickle_wot,
-    get_split_data_pickle_btc_noloader,
+    get_split_data_pickle_btc,
 )
 
 
-from perseus.dataset.aggregating_dateset import get_split_data_pickle_aa
+# from perseus.dataset.aggregating_dateset import get_split_data_pickle_aa
 
 
 def extract_data_from_loader(data_loader):
@@ -196,11 +200,11 @@ if __name__ == "__main__":
     ]
     df_reordered = df_reordered.loc[[3, 1, 0, 2, 4, 5]].reset_index(drop=True)
 
-    train_loader, valid_loader, _ = get_split_data_pickle_wot("DDM")
+    train_loader, valid_loader, test_loader = get_split_data_pickle_wot("DDM")
 
     # Extract train and valid data
     X_train, y_train = extract_data_from_loader(train_loader)
-    X_valid, y_valid = extract_data_from_loader(valid_loader)
+    X_valid, y_valid = extract_data_from_loader(test_loader)
 
     # Initialize and train the Random Forest model
     rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
@@ -222,26 +226,25 @@ if __name__ == "__main__":
     # Calculate all metrics at the best threshold
     y_pred_rf_optimal = (y_scores_rf >= best_threshold).astype(int)
     mcc = matthews_corrcoef(y_valid, y_pred_rf_optimal)
-    f1 = f1_score(y_valid, y_pred_rf_optimal)
-    precision = precision_score(y_valid, y_pred_rf_optimal)
-    recall = recall_score(y_valid, y_pred_rf_optimal)
-    accuracy = accuracy_score(y_valid, y_pred_rf_optimal)
+    precision = precision_score(y_valid, y_pred_rf_optimal, zero_division=0)
+    recall = recall_score(y_valid, y_pred_rf_optimal, zero_division=0)
+    f1 = f1_score(y_valid, y_pred_rf_optimal, zero_division=0)
 
     # add a new row for model random forest f1, precision, recall, accuracy (0.7169811320754716, 0.7238095238095238, 0.7102803738317757, 0.883495145631068)
     random_forest_wot = {
         "model_dataset": "Random Forest Weighted Diffusion without Topological Features",
         "precision": precision,
         "f1": f1,
-        "accuracy": accuracy,
+        "accuracy": accuracy_score(y_valid, y_pred_rf_optimal),
         "recall": recall,
         "mcc": mcc,
     }
 
-    train_loader, valid_loader, _ = get_split_data_pickle_btc_noloader("DDM")
+    train_loader, valid_loader, test_loader = get_split_data_pickle_btc("DDM")
 
     # Extract train and valid data
     X_train, y_train = extract_data_from_loader(train_loader)
-    X_valid, y_valid = extract_data_from_loader(valid_loader)
+    X_valid, y_valid = extract_data_from_loader(test_loader)
 
     # Initialize and train the Random Forest model
     rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
@@ -263,26 +266,25 @@ if __name__ == "__main__":
     # Calculate all metrics at the best threshold
     y_pred_rf_optimal = (y_scores_rf >= best_threshold).astype(int)
     mcc = matthews_corrcoef(y_valid, y_pred_rf_optimal)
-    f1 = f1_score(y_valid, y_pred_rf_optimal)
-    precision = precision_score(y_valid, y_pred_rf_optimal)
-    recall = recall_score(y_valid, y_pred_rf_optimal)
-    accuracy = accuracy_score(y_valid, y_pred_rf_optimal)
+    precision = precision_score(y_valid, y_pred_rf_optimal, zero_division=0)
+    recall = recall_score(y_valid, y_pred_rf_optimal, zero_division=0)
+    f1 = f1_score(y_valid, y_pred_rf_optimal, zero_division=0)
 
     # add a new row for model random forest f1, precision, recall, accuracy (0.7169811320754716, 0.7238095238095238, 0.7102803738317757, 0.883495145631068)
     random_forest = {
         "model_dataset": "Random Forest Weighted Diffusion",
         "precision": precision,
         "f1": f1,
-        "accuracy": accuracy,
+        "accuracy": accuracy_score(y_valid, y_pred_rf_optimal),
         "recall": recall,
         "mcc": mcc,
     }
 
-    train_loader_d, valid_loader_d, _ = get_split_data_pickle_btc_noloader("DDINA")
+    train_loader_d, valid_loader_d, test_loader_d = get_split_data_pickle_btc("DDINA")
 
     # Extract train and valid data
     X_train_d, y_train_d = extract_data_from_loader(train_loader_d)
-    X_valid_d, y_valid_d = extract_data_from_loader(valid_loader_d)
+    X_valid_d, y_valid_d = extract_data_from_loader(test_loader_d)
 
     # Initialize and train the Random Forest model
     rf_model_d = RandomForestClassifier(n_estimators=100, random_state=42)
@@ -304,17 +306,16 @@ if __name__ == "__main__":
     # Calculate all metrics at the best threshold
     y_pred_rf_optimal_d = (y_scores_rf_d >= best_threshold_d).astype(int)
     mcc_d = matthews_corrcoef(y_valid_d, y_pred_rf_optimal_d)
-    f1_d = f1_score(y_valid_d, y_pred_rf_optimal_d)
-    precision_d = precision_score(y_valid_d, y_pred_rf_optimal_d)
-    recall_d = recall_score(y_valid_d, y_pred_rf_optimal_d)
-    accuracy_d = accuracy_score(y_valid_d, y_pred_rf_optimal_d)
+    precision_d = precision_score(y_valid_d, y_pred_rf_optimal_d, zero_division=0)
+    recall_d = recall_score(y_valid_d, y_pred_rf_optimal_d, zero_division=0)
+    f1_d = f1_score(y_valid_d, y_pred_rf_optimal_d, zero_division=0)
 
     # add a new row for model random forest f1, precision, recall, accuracy (0.7169811320754716, 0.7238095238095238, 0.7102803738317757, 0.883495145631068)
     random_forest_d = {
         "model_dataset": "Random Forest Directed Diffusion",
         "precision": precision_d,
         "f1": f1_d,
-        "accuracy": accuracy_d,
+        "accuracy": accuracy_score(y_valid_d, y_pred_rf_optimal_d),
         "recall": recall_d,
         "mcc": mcc_d,
     }
@@ -360,4 +361,48 @@ if __name__ == "__main__":
     # Print the final LaTeX table code
     print(latex_output)
     df_reordered
-    # merged_df.loc[merged_df['model_dataset'] == 'GCN - COSS', 'model_dataset'] = 'cossine similarity directed diffusion GCN'
+
+    # Read CSV
+    hp_df = pd.read_csv(path.join(PROJECT_ROOT, "data/buffer/hp_search_results2.csv"))
+
+    # For each (data, model), get the row with the best test_f1
+    best_rows = (
+        hp_df.sort_values("test_f1", ascending=False)
+        .groupby(["data", "model"], as_index=False)
+        .first()
+    )
+
+    # Map to your display names
+    model_map = {"MultiGAT": "Multi-head GAT", "MultiGraphSAGE": "Multi-head GraphSAGE"}
+    dataset_map = {"DDINA": "Directed diffusion", "DDM": "Weighted diffusion"}
+
+    # Build rows for the table
+    multi_rows = []
+    for _, row in best_rows.iterrows():
+        model_dataset = f"{model_map.get(row['model'], row['model'])} {dataset_map.get(row['data'], row['data'])}"
+        multi_rows.append(
+            {
+                "model_dataset": model_dataset,
+                "precision": row[
+                    "test_precision"
+                ],  # Not in CSV, can be left blank or calculated if you have probs/labels
+                "f1": row["test_f1"],
+                "accuracy": row["test_acc"],
+                "recall": row["test_recall"],  # Not in CSV
+                "mcc": row["test_mcc"],  # Not in CSV
+            }
+        )
+
+    # Convert to DataFrame and append
+    multi_df = pd.DataFrame(multi_rows)
+    # If you want to keep the order, you can insert at a specific position or just append
+    df_reordered = pd.concat([df_reordered, multi_df], ignore_index=True)
+
+    # change model_dataset row 4 and 5 to SOTA directed diffusion and SOTA weighted diffusion
+    df_reordered.loc[4, "model_dataset"] = "SOTA Directed Diffusion"
+    df_reordered.loc[5, "model_dataset"] = "SOTA Weighted Diffusion"
+
+    # change multi-head in model_dataset to fusion
+    df_reordered["model_dataset"] = df_reordered["model_dataset"].str.replace(
+        "Multi-head", "Fusion"
+    )

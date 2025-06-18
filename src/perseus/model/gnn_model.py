@@ -1,6 +1,6 @@
 import torch
 import torch.nn.functional as F
-from torch_geometric.nn import GATConv, GCNConv, SAGEConv
+from torch_geometric.nn import GATConv, GCNConv, SAGEConv, global_max_pool
 
 import torch
 import torch.nn.functional as F
@@ -84,31 +84,52 @@ class GraphSAGENet(torch.nn.Module):
         return x, embeddings
 
 
-class SageEncode(torch.nn.Module):
-    def __init__(self, num_features, hidden_channels, embedding_size):
-        super(SageEncode, self).__init__()
+class GraphSAGENetFusion(torch.nn.Module):
+    def __init__(self, num_features, hidden_channels, num_classes):
+        super(GraphSAGENet, self).__init__()
         self.conv1 = SAGEConv(num_features, hidden_channels)
-        self.conv2 = SAGEConv(hidden_channels, embedding_size)
+        self.conv2 = SAGEConv(hidden_channels, num_classes)
 
-    def forward(self, x, edge_index):
-        x = F.relu(self.conv1(x, edge_index))
-        embeddings = F.dropout(x, training=self.training)
-        out = self.conv2(embeddings, edge_index)
-        return out, embeddings
+    def forward(self, x, edge_index, batch, edge_weight=None):
+        # first conv + ReLU
+        x1 = F.relu(self.conv1(x, edge_index, edge_weight))
+        # dropout embeddings
+        embeddings = F.dropout(x1, training=self.training)
+        # second conv + sigmoid for node-level scores
+        x_out = torch.sigmoid(self.conv2(embeddings, edge_index, edge_weight))
+
+        # now do a graph-level readout (max over each graph’s nodes)
+        graph_emb = global_max_pool(embeddings, batch)
+
+        # return node scores, node embeddings, and (optionally) the graph embedding
+        return x_out, embeddings, graph_emb
 
 
-class GraphClassifierWithMaxPooling(torch.nn.Module):
-    def __init__(self, num_features, hidden_channels, embedding_size):
-        super(GraphClassifierWithMaxPooling, self).__init__()
+# class SageEncode(torch.nn.Module):
+#     def __init__(self, num_features, hidden_channels, embedding_size):
+#         super(SageEncode, self).__init__()
+#         self.conv1 = SAGEConv(num_features, hidden_channels)
+#         self.conv2 = SAGEConv(hidden_channels, embedding_size)
 
-        self.encoder = SageEncode(num_features, hidden_channels, embedding_size)
-        self.classifier = Linear(embedding_size, 1)
+#     def forward(self, x, edge_index):
+#         x = F.relu(self.conv1(x, edge_index))
+#         embeddings = F.dropout(x, training=self.training)
+#         out = self.conv2(embeddings, edge_index)
+#         return out, embeddings
 
-    def forward(self, batch):
-        # batch.x:   [total_nodes,  num_features]
-        # batch.batch: [total_nodes] → graph-idx for each node
-        out, embeddings = self.encoder(batch.x, batch.edge_index)
-        # global_max_pool will now return [batch.num_graphs, embedding_size]
-        graph_repr = global_max_pool(embeddings, batch.batch)
-        logits = self.classifier(graph_repr)  # → [batch.num_graphs, 1]
-        return torch.sigmoid(logits).view(-1)  # → [batch.num_graphs]
+
+# class GraphClassifierWithMaxPooling(torch.nn.Module):
+#     def __init__(self, num_features, hidden_channels, embedding_size):
+#         super(GraphClassifierWithMaxPooling, self).__init__()
+
+#         self.encoder = SageEncode(num_features, hidden_channels, embedding_size)
+#         self.classifier = Linear(embedding_size, 1)
+
+#     def forward(self, batch):
+#         # batch.x:   [total_nodes,  num_features]
+#         # batch.batch: [total_nodes] → graph-idx for each node
+#         out, embeddings = self.encoder(batch.x, batch.edge_index)
+#         # global_max_pool will now return [batch.num_graphs, embedding_size]
+#         graph_repr = global_max_pool(embeddings, batch.batch)
+#         logits = self.classifier(graph_repr)  # → [batch.num_graphs, 1]
+#         return torch.sigmoid(logits).view(-1)  # → [batch.num_graphs]

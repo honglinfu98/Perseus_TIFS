@@ -182,7 +182,7 @@ def DANI(N: int, cascades: list) -> tuple:
         if c != 0:
             u = i[0]
             v = i[1]
-            if P_theta[(u, v)] < P_theta[(v, u)]:
+            if P_theta[(u, v)] > P_theta[(v, u)]:
                 IG.add_edge(u, v)
             else:
                 IG.add_edge(v, u)

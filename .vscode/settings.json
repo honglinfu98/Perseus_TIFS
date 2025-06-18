@@ -3,7 +3,7 @@
   "editor.formatOnSaveMode": "file",
   "python.formatting.provider": "black",
   "python.linting.enabled": true,
-  "python.languageServer": "Pylance",
+  "python.languageServer": "None",
   "python.pythonPath": "venv/bin/python",
   "python.linting.pylintPath": "venv/Scripts/pylint",
   "python.linting.pylintEnabled": true,

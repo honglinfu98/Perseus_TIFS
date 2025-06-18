@@ -8,10 +8,11 @@ from sklearn.metrics import precision_score, f1_score, auc
 from scipy.interpolate import make_interp_spline
 from matplotlib.ticker import MaxNLocator, ScalarFormatter
 from perseus.settings import PROJECT_ROOT
+import copy
 
-# Load results
-with open(path.join(PROJECT_ROOT, "data", "results_btc.pkl"), "rb") as file:
-    results_m = pickle.load(file)
+# Load results (unflattened for batch plot)
+with open(path.join(PROJECT_ROOT, "data", "sp", "new_results_btc.pkl"), "rb") as file:
+    batch_results = pickle.load(file)
 
 # Global style settings
 bold_linewidth = 5  # Line width for curves
@@ -28,6 +29,17 @@ model_colors = {"GAT": "#1f77b4", "GraphSAGE": "#ff7f0e"}
 label_map = {"DDINA": "Directed", "DDM": "Weighted"}
 legend_map = {"Directed": "D", "Weighted": "W"}
 model_legend_map = {"GAT": "A", "GraphSAGE": "S"}
+
+# For old plots, flatten to default batch size
+default_batch_size = 8
+results_m = copy.deepcopy(batch_results)
+for dataset in results_m:
+    for model in results_m[dataset]:
+        if (
+            isinstance(results_m[dataset][model], dict)
+            and default_batch_size in results_m[dataset][model]
+        ):
+            results_m[dataset][model] = results_m[dataset][model][default_batch_size]
 
 
 # Helper: Create a figure and axis with common size
@@ -78,7 +90,7 @@ def plot_precision_common_ax(ax, results, colors, linestyles, label_map, fontsiz
         handles=list(combined_handles.values()),
         fontsize=LEGEND_SIZE,
         title_fontsize=LEGEND_TITLE_SIZE,
-        loc="upper left",
+        loc="lower center",
         handlelength=LEGEND_HANDLELENGTH,
     )
     plt.setp(legend.get_texts(), fontsize=LEGEND_SIZE)
@@ -126,7 +138,7 @@ def plot_f1_common_ax(ax, results, colors, linestyles, label_map, fontsize=10):
         handles=list(combined_handles.values()),
         fontsize=LEGEND_SIZE,
         title_fontsize=LEGEND_TITLE_SIZE,
-        loc="upper left",
+        loc="lower left",
         handlelength=LEGEND_HANDLELENGTH,
     )
     plt.setp(legend.get_texts(), fontsize=LEGEND_SIZE)
@@ -196,7 +208,7 @@ def plot_infer_common_ax(
         handles=list(combined_handles.values()),
         fontsize=LEGEND_SIZE,
         title_fontsize=LEGEND_TITLE_SIZE,
-        loc="center left",
+        loc="lower center",
         handlelength=LEGEND_HANDLELENGTH,
     )
     plt.setp(legend.get_texts(), fontsize=LEGEND_SIZE)
@@ -267,7 +279,7 @@ def plot_combined_cdf_common_ax(
         handles=list(combined_handles.values()),
         fontsize=LEGEND_SIZE,
         title_fontsize=LEGEND_TITLE_SIZE,
-        loc="lower right",
+        loc="lower center",
         handlelength=LEGEND_HANDLELENGTH,
     )
     plt.setp(legend.get_texts(), fontsize=LEGEND_SIZE)
@@ -320,6 +332,75 @@ def plot_combined_roc_common_ax(
     ax.grid(True)
 
 
+# Batch Time vs Batch Size Plot
+def plot_batch_time_vs_batch_size(
+    ax, results, label_map, model_colors, line_styles, fontsize=10
+):
+    combined_handles = {}
+    found_any = False
+    for model in model_colors.keys():
+        for dataset in label_map.keys():
+            batch_size_dict = results[dataset][model]
+            batch_sizes = []
+            avg_batch_times = []
+            for bs, res in batch_size_dict.items():
+                try:
+                    bs_int = int(bs)
+                except Exception:
+                    continue
+                if "batch_times" in res:
+                    batch_times = np.array(res["batch_times"])
+                    if len(batch_times) > 0:
+                        batch_sizes.append(bs_int)
+                        avg_batch_times.append(np.mean(batch_times))
+            if batch_sizes:
+                found_any = True
+                sorted_idx = np.argsort(batch_sizes)
+                batch_sizes = np.array(batch_sizes)[sorted_idx]
+                avg_batch_times = np.array(avg_batch_times)[sorted_idx]
+                ax.plot(
+                    batch_sizes,
+                    avg_batch_times,
+                    marker="o",
+                    color=model_colors[model],
+                    linestyle=line_styles[label_map[dataset]],
+                    linewidth=bold_linewidth,
+                )
+                combined_label = (
+                    f"{legend_map[label_map[dataset]]} {model_legend_map[model]}"
+                )
+                if combined_label not in combined_handles:
+                    combined_handles[combined_label] = Line2D(
+                        [0],
+                        [0],
+                        color=model_colors[model],
+                        linestyle=line_styles[label_map[dataset]],
+                        linewidth=bold_linewidth,
+                        label=combined_label,
+                    )
+            else:
+                print(f"No valid batch_times for {dataset} {model}")
+    ax.set_xlabel("Batch Size", fontsize=fontsize)
+    ax.set_ylabel("Inference Speed (sec)", fontsize=fontsize)
+    ax.grid(True)
+    ax.tick_params(axis="both", which="major", labelsize=fontsize)
+    ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+    ax.ticklabel_format(style="sci", axis="y", scilimits=(0, 0))
+    ax.yaxis.get_offset_text().set_fontsize(fontsize)
+    legend = ax.legend(
+        handles=list(combined_handles.values()),
+        fontsize=LEGEND_SIZE,
+        title_fontsize=LEGEND_TITLE_SIZE,
+        loc="upper left",
+        handlelength=LEGEND_HANDLELENGTH,
+    )
+    plt.setp(legend.get_texts(), fontsize=LEGEND_SIZE)
+    legend.get_title().set_fontsize(LEGEND_TITLE_SIZE)
+    if not found_any:
+        print("No batch time data found for any model/dataset.")
+    ax.set_box_aspect(1)
+
+
 # ----------------------
 # Generate and Save Plots
 # ----------------------
@@ -346,23 +427,23 @@ fig.savefig(
 )
 plt.show()
 
-# Inference Plot
-fig, ax = get_common_ax(figsize=(8, 8))
-plot_infer_common_ax(
-    ax,
-    results_m,
-    label_map,
-    fontsize=size,
-    model_colors=model_colors,
-    line_styles=line_styles,
-)
-fig.tight_layout()  # Adjust layout if necessary
-fig.savefig(
-    path.join(PROJECT_ROOT, "data", "mar_inference_plot.pdf"),
-    bbox_inches="tight",
-    format="pdf",
-)
-plt.show()
+# # Inference Plot
+# fig, ax = get_common_ax(figsize=(8, 8))
+# plot_infer_common_ax(
+#     ax,
+#     results_m,
+#     label_map,
+#     fontsize=size,
+#     model_colors=model_colors,
+#     line_styles=line_styles,
+# )
+# fig.tight_layout()  # Adjust layout if necessary
+# fig.savefig(
+#     path.join(PROJECT_ROOT, "data", "mar_inference_plot.pdf"),
+#     bbox_inches="tight",
+#     format="pdf",
+# )
+# plt.show()
 
 # Combined CDF Plot
 fig, ax = get_common_ax(figsize=(8, 8))
@@ -393,6 +474,21 @@ plot_combined_roc_common_ax(
 )
 fig.savefig(
     path.join(PROJECT_ROOT, "data", "mar_combined_roc_plot.pdf"),
+    bbox_inches="tight",
+    format="pdf",
+)
+plt.show()
+
+# Batch Time vs Batch Size Plot
+fig, ax = get_common_ax(figsize=(8, 8))
+plot_batch_time_vs_batch_size(
+    ax, batch_results, label_map, model_colors, line_styles, fontsize=size
+)
+ax.set_xlim(2, 20)  # Adjust to your batch size range
+ax.set_ylim(0, 0.01)  # Adjust to your data range
+fig.tight_layout()
+fig.savefig(
+    path.join(PROJECT_ROOT, "data", "mar_inference_plot.pdf"),
     bbox_inches="tight",
     format="pdf",
 )
