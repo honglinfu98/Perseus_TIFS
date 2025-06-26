@@ -95,24 +95,6 @@ def DANI(N: int, cascades: list) -> tuple:
     for c_i, cascade_dict in enumerate(cascades):
         cascade_buffer[c_i] = list(cascade_dict.keys())[:-1]
 
-    # node_status_set = {}
-    # for i in range(N):
-    #     node_status_set[i] = set()
-    #     for c_i, cascade_dict in enumerate(cascades):
-    #         cascade = trans_list(cascade_dict)
-    #         if i in cascade[0]:
-    #             node_status_set[i].add(c_i)
-
-    # node_status_matrix = {}
-    # for i in range(N):
-    #     for j in range(N):
-    #         if i == j:
-    #             continue
-    #         else:
-    #             node_status_matrix[(i, j)] = len(
-    #                 node_status_set[i] & node_status_set[j]
-    #             ) / len(node_status_set[i] | node_status_set[j])
-
     theta = {}
     for u in range(N):
         for v in range(N):
@@ -142,14 +124,6 @@ def DANI(N: int, cascades: list) -> tuple:
                     # If neither u nor v ever appears, we can define theta_{u,v} = 0 or skip it
                     theta[(u, v)] = 0.0
 
-    # P_dict_real = {}
-    # for i in range(N):
-    #     for j in range(N):
-    #         if i == j:
-    #             continue
-    #         else:
-    #             P_dict_real[(i, j)] = P_dict[(i, j)] * node_status_matrix[(i, j)]
-
     P_theta = {}
     for i in range(N):
         for j in range(N):
@@ -157,24 +131,6 @@ def DANI(N: int, cascades: list) -> tuple:
                 continue
             else:
                 P_theta[(i, j)] = P_dict[(i, j)] * theta[(i, j)]
-
-    # A = {}
-    # for u in range(N):
-    #     for v in range(u + 1, N):
-    #         A[(u, v)] = (
-    #             len(node_status_set[u] & node_status_set[v])
-    #             / len(node_status_set[u] | node_status_set[v])
-    #             * (P_dict[(u, v)] + P_dict[(v, u)])
-    #         )
-
-    # result = []
-    # for key in A.keys():
-    #     result.append((key, A[key]))
-
-    # def takeSecond(elem):
-    #     return elem[1]
-
-    # result.sort(key=takeSecond, reverse=True)
 
     IG = nx.DiGraph()
 
@@ -186,19 +142,6 @@ def DANI(N: int, cascades: list) -> tuple:
                 IG.add_edge(u, v)
             else:
                 IG.add_edge(v, u)
-
-    # i = 0
-    # while result[i][1] != 0:
-    #     u, v = result[i][0]
-    #     # For directed graph, add edge from u to v or v to u based on larger influence
-    #     if P_theta[(u, v)] >= P_theta[(v, u)]:
-    #         IG.add_edge(u, v)
-    #     else:
-    #         IG.add_edge(v, u)
-
-    #     i += 1
-    #     if i >= len(result):
-    #         break
 
     return IG, P_dict, P_theta
 
@@ -216,10 +159,8 @@ if __name__ == "__main__":
     IG, P_dict, P_theta = DANI(N1, e1)
 
     print(IG.edges())
-    # print(result)
-    # print(A)
+
     print(P_dict)
-    # print(P_dict_real)
 
     N2 = 13
 
@@ -241,7 +182,5 @@ if __name__ == "__main__":
     IG, P_dict, P_theta = DANI(N2, e2)
 
     print(IG.edges())
-    # print(result)
-    # print(A)
+
     print(P_dict)
-    # print(P_dict_real)

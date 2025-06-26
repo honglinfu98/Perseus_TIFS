@@ -20,11 +20,6 @@ from torch_geometric.loader import DataLoader
 from torch_geometric.utils import to_undirected
 from torch_geometric.data import Data
 
-# from perseus.dataset.preprocess.train_test_validate import (
-#     get_test_scored_signals,
-#     get_train_scored_signals,
-#     get_valid_scored_signals,
-# )
 from perseus.dataset.preprocess.train_test_validate import (
     get_btc_test_scored_signals,
     get_btc_train_scored_signals,
@@ -44,46 +39,6 @@ from perseus.dataset.preprocess.groudtruth_labeling import (
     read_labeling_csv_back_to_dict,
 )
 from perseus.settings import PROJECT_ROOT
-
-
-# FEATURE_COLUMN = [
-#     # "average_speed",  # market
-#     # "sum_total_targets",  # osn
-#     "average_increase_percentage",  # market
-#     # "number_of_signals",  # osn
-#     "sum_targets_achieved",  # osn
-#     "rating",  # topological
-#     # "in_ratio",  # topological
-#     # "out_ratio",  # topological
-#     # "out_nodes",  # topological
-#     # "density",  # topological
-#     # "clustering_coeff",  # topological
-#     # "closeness_centrality",  # topological
-#     # "eff_size",  # topological
-#     # "efficiency",  # topological
-#     # "betweenness_centrality",
-#     # "pagerank",
-#     "ego_in_ratio",
-#     "ego_out_ratio",
-#     "ego_out_nodes",
-#     "eff_size",
-#     "efficiency",
-#     "density",
-#     "clustering_coeff",
-#     "closeness_centrality",
-#     "pagerank",
-#     "betweenness_centrality",
-#     # "ego_weighted_in_ratio",
-#     # "ego_weighted_out_ratio",
-#     # "ego_out_weights",
-#     # "weighted_closeness_centrality",
-#     # "weighted_betweenness_centrality",
-#     # "weighted_pagerank",
-#     # "ego_weighted_eff_size",
-#     # "ego_weighted_efficiency",
-#     # "weighted_clustering_coefficient",
-#     # "ego_weighted_density",
-# ]
 
 
 def prepare_data(graphs: dict, features: dict, label_mapping: dict):
@@ -542,112 +497,6 @@ def split_data(options: str, loader: bool = True):
     else:
 
         return train_data, validate_data, test_data
-
-
-# def split_data_whole_graph(options: str, loader: bool = True):
-#     """
-#     Split the data into train, test, and validate sets for temporal tasks
-#     """
-#     # Initial data loading and processing
-#     train_signals = get_btc_train_scored_signals()
-#     validate_signals = get_btc_valid_scored_signals()
-#     test_signals = get_btc_test_scored_signals()
-
-#     datasets = [train_signals, validate_signals, test_signals]
-#     gs_ls = []
-#     features_ls = []
-#     label_mapping_ls = []
-#     cascade_ls = []
-#     P_theta_ls = []
-
-#     for dataset in datasets:
-#         processed_signals = process_dataframe(dataset)
-#         ided_signals = assign_event_ids(processed_signals)
-#         cascade, no_nodes, id_mapping, cascade_labeling = aggregate_data(ided_signals)
-#         gs, P_theta = get_graphs(cascade, no_nodes, id_mapping)
-#         graph_feature = graph_features(gs)
-#         market_feature = features_engineer(processed_signals)
-#         weighted_feature = compute_weighted_graph_features(P_theta)
-#         combine_feature = combine_features(
-#             market_feature, graph_feature, weighted_feature
-#         )
-
-#         gs_ls.append(gs)
-#         features_ls.append(combine_feature)
-#         cascade_ls.append(cascade)
-#         P_theta_ls.append(P_theta)
-
-#     label_mapping_ls = [
-#         read_labeling_csv_back_to_dict("train"),
-#         read_labeling_csv_back_to_dict("valid"),
-#         read_labeling_csv_back_to_dict("test"),
-#     ]
-
-#     for i in range(3):
-#         common_keys = set(
-#             label_mapping_ls[i].keys()
-#         )  # Assuming label_mapping_ls[i] is a dict with relevant keys
-#         gs_ls[i] = {key: gs_ls[i][key] for key in common_keys if key in gs_ls[i]}
-#         features_ls[i] = {
-#             key: features_ls[i][key] for key in common_keys if key in features_ls[i]
-#         }
-#         P_theta_ls[i] = {
-#             key: P_theta_ls[i][key] for key in common_keys if key in P_theta_ls[i]
-#         }
-
-#     if options == "DDINA":
-#         train_data = prepare_data(gs_ls[0], features_ls[0], label_mapping_ls[0])
-#         validate_data = prepare_data(gs_ls[1], features_ls[1], label_mapping_ls[1])
-#         test_data = prepare_data(gs_ls[2], features_ls[2], label_mapping_ls[2])
-
-#     elif options == "COSS":
-#         train_data = prepare_cos_data(gs_ls[0], features_ls[0], label_mapping_ls[0])
-#         validate_data = prepare_cos_data(gs_ls[1], features_ls[1], label_mapping_ls[1])
-#         test_data = prepare_cos_data(gs_ls[2], features_ls[2], label_mapping_ls[2])
-#     elif options == "DDM":
-#         train_data = prepare_ddm_data(
-#             gs_ls[0], features_ls[0], label_mapping_ls[0], P_theta_ls[0]
-#         )
-#         validate_data = prepare_ddm_data(
-#             gs_ls[1], features_ls[1], label_mapping_ls[1], P_theta_ls[1]
-#         )
-#         test_data = prepare_ddm_data(
-#             gs_ls[2], features_ls[2], label_mapping_ls[2], P_theta_ls[2]
-#         )
-
-#     if loader:
-#         train_loader = DataLoader(train_data, batch_size=1, shuffle=True)
-#         validate_loader = DataLoader(validate_data, batch_size=1, shuffle=True)
-#         test_loader = DataLoader(test_data, batch_size=1, shuffle=True)
-
-#         return train_loader, validate_loader, test_loader
-
-#     else:
-
-#         return train_data, validate_data, test_data
-
-
-def get_split_data_pickle_wnt(options: str):
-    """
-    Load the data for temporal tasks using the pickle file
-    """
-    if options == "DDINA":
-        with open(path.join(PROJECT_ROOT, "data", "DDINA_data_wnt.pkl"), "rb") as file:
-            data = pickle.load(file)
-
-    elif options == "COSS":
-        with open(path.join(PROJECT_ROOT, "data", "COSS_data_wnt.pkl"), "rb") as file:
-            data = pickle.load(file)
-
-    elif options == "DDM":
-        with open(path.join(PROJECT_ROOT, "data", "DDM_data_wnt.pkl"), "rb") as file:
-            data = pickle.load(file)
-
-    train_loader = data[0]
-    validate_loader = data[1]
-    test_loader = data[2]
-
-    return train_loader, validate_loader, test_loader
 
 
 def get_split_data_pickle_wot(options: str):

@@ -8,9 +8,9 @@ from collections import defaultdict
 import pandas as pd
 import networkx as nx
 from perseus.dataset.preprocess.train_test_validate import (
-    get_train_scored_signals,
-    get_test_scored_signals,
-    get_valid_scored_signals,
+    get_btc_train_scored_signals,
+    get_btc_test_scored_signals,
+    get_btc_valid_scored_signals,
 )
 from perseus.dataset.preprocess.DANI import DANI
 

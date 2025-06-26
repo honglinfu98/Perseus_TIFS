@@ -1,6 +1,5 @@
 import itertools
 import torch
-import torch.nn.functional as F
 import pandas as pd
 import matplotlib.pyplot as plt
 from torch_geometric.loader import DataListLoader
@@ -21,6 +20,7 @@ from sklearn.metrics import (
 import pickle
 from sklearn.metrics import roc_curve
 import os
+from torch.optim.adam import Adam
 
 
 def train_epoch(model, loader, optimizer, criterion, device):
@@ -80,7 +80,13 @@ def run_experiment(
     epochs=100,
     batch_size=8,
     device_str=None,
+    return_roc=False,
+    return_timings=False,
+    return_embs=False,
 ):
+    import time
+    from sklearn.metrics import roc_curve
+
     device = (
         torch.device(device_str)
         if device_str
@@ -94,12 +100,17 @@ def run_experiment(
     model = model_cls(in_channels=in_channels, hidden_channels=hidden_channels).to(
         device
     )
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+    optimizer = Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     criterion = torch.nn.BCEWithLogitsLoss()
     best_val_f1 = 0.0
     best_state = None
+    train_times = []
     for epoch in range(1, epochs + 1):
+        if return_timings:
+            start_time = time.time()
         train_epoch(model, train_loader, optimizer, criterion, device)
+        if return_timings:
+            train_times.append(time.time() - start_time)
         _, _, val_f1, _, _, _ = eval_epoch(model, valid_loader, criterion, device)
         if val_f1 > best_val_f1:
             best_val_f1 = val_f1
@@ -108,21 +119,35 @@ def run_experiment(
     # Collect all_probs and all_labels on test set
     model.eval()
     all_probs, all_labels = [], []
+    batch_times, num_nodes, embs = [], [], []
     with torch.no_grad():
         for data_list in test_loader:
             data_list = [d.to(device) for d in data_list]
+            if return_timings:
+                batch_start = time.time()
             logits_list = model(data_list)
+            if return_timings:
+                batch_times.append(time.time() - batch_start)
             y_list = [d.y.view(-1).float() for d in data_list]
+            x_list = [d.x for d in data_list]
             logits = torch.cat(logits_list, dim=0)
             y = torch.cat(y_list, dim=0)
             all_probs.append(logits.cpu())
             all_labels.append(y.cpu())
+            if return_embs:
+                # Optionally collect embeddings if model supports it
+                if hasattr(model, "get_embeddings"):
+                    embs.append(model.get_embeddings(data_list))
+                else:
+                    embs.append([])
+            for x in x_list:
+                num_nodes.append(x.shape[0])
     all_probs = torch.cat(all_probs, dim=0).sigmoid().numpy()
     all_labels = torch.cat(all_labels, dim=0).numpy()
     test_loss, test_acc, test_f1, test_precision, test_recall, test_mcc = eval_epoch(
         model, test_loader, criterion, device
     )
-    return {
+    results = {
         "data": data_name,
         "model": model_cls.__name__,
         "hidden_channels": hidden_channels,
@@ -141,13 +166,35 @@ def run_experiment(
         "all_labels": all_labels,
         "batch_size": batch_size,
     }
+    if return_roc:
+        if len(all_labels.shape) == 1 or (
+            hasattr(all_labels, "shape") and all_labels.shape[1] == 1
+        ):
+            fpr, tpr, _ = roc_curve(all_labels.ravel(), all_probs.ravel())
+            results["fpr"] = {0: fpr}
+            results["tpr"] = {0: tpr}
+        else:
+            fpr_dict, tpr_dict = {}, {}
+            for i in range(all_labels.shape[1]):
+                fpr, tpr, _ = roc_curve(all_labels[:, i], all_probs[:, i])
+                fpr_dict[i] = fpr
+                tpr_dict[i] = tpr
+            results["fpr"] = fpr_dict
+            results["tpr"] = tpr_dict
+    if return_timings:
+        results["train_times"] = train_times
+        results["batch_times"] = batch_times
+        results["num_nodes"] = num_nodes
+    if return_embs:
+        results["embs"] = embs
+    return results
 
 
 def hyperparameter_search(max_workers=12):
     param_grid = list(
         itertools.product(
             ["DDM", "DDINA"],
-            [AMultiGraphSAGE, AMultiGAT],
+            ["MultiGraphSAGE", "MultiGAT"],
             [8, 128, 1025],
             [0.5, 0.005, 0.00005],
             [5e-4],
@@ -157,20 +204,21 @@ def hyperparameter_search(max_workers=12):
     # For mastermind_detection_from_multirun.py compatibility
     model_save_dict = {}
     device_str = "cuda" if torch.cuda.is_available() else "cpu"
+    model_map = {"MultiGAT": MultiGAT, "MultiGraphSAGE": MultiGraphSAGE}
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
         futures = {
             executor.submit(
                 run_experiment,
                 data_name,
-                model_cls,
+                model_map[model_cls_name],
                 hidden,
                 lr,
                 wd,
                 100,
                 20,
                 device_str,
-            ): (data_name, model_cls.__name__, hidden, lr, wd)
-            for data_name, model_cls, hidden, lr, wd in param_grid
+            ): (data_name, model_cls_name, hidden, lr, wd)
+            for data_name, model_cls_name, hidden, lr, wd in param_grid
         }
         for future in as_completed(futures):
             cfg = futures[future]
@@ -210,57 +258,6 @@ def hyperparameter_search(max_workers=12):
     )
 
 
-def visualize_results(
-    metric=None,
-    csv_path=os.path.join(PROJECT_ROOT, "data", "buffer", "hp_search_results_a.csv"),
-    fontsize=20,
-):
-    df = pd.read_csv(csv_path)
-    available_metrics = [col for col in df.columns if col.startswith("test_")]
-    print("Available metrics for visualization:", available_metrics)
-
-    # Default to the first available metric if not specified
-    if metric is None:
-        if available_metrics:
-            metric = available_metrics[0]
-            print(f"Defaulting to metric: {metric}")
-        else:
-            raise ValueError(
-                "No metric columns starting with 'test_' found in the CSV."
-            )
-
-    for data_name in df["data"].unique():
-        for model_name in df["model"].unique():
-            for wd in df["weight_decay"].unique():
-                sub = df[
-                    (df["data"] == data_name)
-                    & (df["model"] == model_name)
-                    & (df["weight_decay"] == wd)
-                ]
-                if sub.empty or metric not in sub.columns:
-                    continue
-                pivot = sub.pivot_table(
-                    index="hidden_channels", columns="lr", values=metric
-                )
-                plt.figure()
-                plt.imshow(pivot.values, aspect="auto", cmap="Greens")
-                plt.xticks(range(len(pivot.columns)), pivot.columns, fontsize=fontsize)
-                plt.yticks(range(len(pivot.index)), pivot.index, fontsize=fontsize)
-                plt.xlabel("Learning Rate", fontsize=fontsize)
-                plt.ylabel("Hidden Channels", fontsize=fontsize)
-                plt.title(
-                    f"{data_name} - {model_name} - {wd} - {metric}", fontsize=fontsize
-                )
-
-                cbar = plt.colorbar()
-                cbar.ax.tick_params(labelsize=fontsize)
-                plt.tight_layout()
-
-    # save the plot to data/tuning.pdf
-    plt.savefig(os.path.join(PROJECT_ROOT, "data", "tuning.pdf"), bbox_inches="tight")
-    plt.show()
-
-
 def collect_full_outputs(
     data_name,
     model_cls,
@@ -271,95 +268,42 @@ def collect_full_outputs(
     epochs=100,
     device_str=None,
 ):
-    device = (
-        torch.device(device_str)
-        if device_str
-        else torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    )
-    train_list, test_list, valid_list = get_split_data_pickle_btc_noloader(data_name)
-    in_channels = train_list[0].x.size(1)
     results_by_batch_size = {}
-
     for batch_size in batch_sizes:
-        # Train
-        model = model_cls(in_channels=in_channels, hidden_channels=hidden_channels).to(
-            device
+        result = run_experiment(
+            data_name,
+            model_cls,
+            hidden_channels,
+            lr,
+            weight_decay,
+            epochs,
+            batch_size,
+            device_str,
+            return_roc=True,
+            return_timings=True,
+            return_embs=True,
         )
-        optimizer = torch.optim.Adam(
-            model.parameters(), lr=lr, weight_decay=weight_decay
-        )
-        criterion = torch.nn.BCEWithLogitsLoss()
-        best_val_f1 = 0.0
-        best_state = None
-        train_loader = DataListLoader(train_list, batch_size=batch_size, shuffle=True)
-        valid_loader = DataListLoader(valid_list, batch_size=batch_size)
-        test_loader = DataListLoader(test_list, batch_size=batch_size)
-
-        train_times = []
-        import time
-
-        for epoch in range(1, epochs + 1):
-            start_time = time.time()
-            train_epoch(model, train_loader, optimizer, criterion, device)
-            train_times.append(time.time() - start_time)
-            _, _, val_f1, _, _, _ = eval_epoch(model, valid_loader, criterion, device)
-            if val_f1 > best_val_f1:
-                best_val_f1 = val_f1
-                best_state = model.state_dict()
-        model.load_state_dict(best_state)
-
-        # Inference (test set)
-        model.eval()
-        all_probs, all_labels = [], []
-        batch_times, num_nodes = [], []
-        embs = []
-        with torch.no_grad():
-            for data_list in test_loader:
-                data_list = [d.to(device) for d in data_list]
-                start_time = time.time()
-                logits_list = model(data_list)
-                batch_time = time.time() - start_time
-                y_list = [d.y.view(-1).float() for d in data_list]
-                x_list = [d.x for d in data_list]
-                logits = torch.cat(logits_list, dim=0)
-                y = torch.cat(y_list, dim=0)
-                all_probs.append(logits.cpu())
-                all_labels.append(y.cpu())
-                for x in x_list:
-                    num_nodes.append(x.shape[0])
-                    batch_times.append(batch_time)
-        probs = torch.cat(all_probs, dim=0).sigmoid().numpy()
-        labels = torch.cat(all_labels, dim=0).numpy()
-        # ROC
-        if len(labels.shape) == 1 or labels.shape[1] == 1:
-            fpr, tpr, thresholds = roc_curve(labels.ravel(), probs.ravel())
-            fpr_dict = {0: fpr}
-            tpr_dict = {0: tpr}
-        else:
-            fpr_dict, tpr_dict = {}, {}
-            for i in range(labels.shape[1]):
-                fpr, tpr, _ = roc_curve(labels[:, i], probs[:, i])
-                fpr_dict[i] = fpr
-                tpr_dict[i] = tpr
+        labels = result["all_labels"]
+        probs = result["all_probs"]
         results_by_batch_size[batch_size] = {
             "metrics": {
                 "labels": labels,
                 "probs": probs,
             },
-            "fpr": fpr_dict,
-            "tpr": tpr_dict,
-            "train_times": train_times,
-            "batch_times": batch_times,
-            "num_nodes": num_nodes,
-            "embs": embs,
+            "fpr": result.get("fpr", {}),
+            "tpr": result.get("tpr", {}),
+            "train_times": result.get("train_times", []),
+            "batch_times": result.get("batch_times", []),
+            "num_nodes": result.get("num_nodes", []),
+            "embs": result.get("embs", []),
             "labels": [labels],
         }
     return results_by_batch_size
 
 
 def export_results_for_plot(
-    csv_path="hp_search_results1.csv",
-    out_path="new_results_btc.pkl",
+    csv_path=os.path.join(PROJECT_ROOT, "data", "buffer", "hp_search_results_a.csv"),
+    out_path=os.path.join(PROJECT_ROOT, "data", "buffer", "new_results_btc.pkl"),
     batch_sizes=range(2, 21),
 ):
     import concurrent.futures
@@ -407,8 +351,6 @@ def export_results_for_plot(
 
 if __name__ == "__main__":
     hyperparameter_search()
-    # # To visualize, set the metric you want, e.g.:
-    # "test_f1", "test_precision", "test_recall", "test_acc", "test_mcc"
-    visualize_results(metric="test_f1")
+
     # Export results for plotting
-    # export_results_for_plot()
+    export_results_for_plot()

@@ -1,5 +1,4 @@
 from os import path
-import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from perseus.dataset.extract.cloudburst_connection import get_signals_channel

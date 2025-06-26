@@ -92,29 +92,6 @@ class HandlerCircle(HandlerPatch):
         return [circle]
 
 
-# def community_detection_weighted(P_dict: dict):
-#     """
-#     This function detects communities in a graph using the Louvain method.
-#     """
-
-#     communities_dict = {}
-
-#     # Iterate over each key in the P_dict to process its edges and weights
-#     for key in P_dict.keys():
-#         G = nx.Graph()
-
-#         # Populate edge index and weights
-#         for (source_node, target_node), weight in P_dict[key].items():
-#             if weight > 0:  # Check if the weight is positive
-#                 G.add_edge(source_node, target_node, weight=weight)
-#         communities = louvain_communities(G)
-#         communities_dict[key] = communities
-
-#     return communities_dict
-
-import networkx as nx
-
-
 def community_detection_weighted(P_dict: dict):
     """
     This function detects communities in a graph using the Label Propagation algorithm.

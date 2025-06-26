@@ -19,17 +19,6 @@ from sklearn.metrics import (
     balanced_accuracy_score,
 )
 from perseus.dataset.dataset_preparation import (
-    # get_split_data_pickle,
-    # split_data,
-    # get_split_data_pickle_t,
-    # get_split_data_pickle_f,
-    # get_split_data_pickle_fv,
-    # get_split_data_pickle_tr,
-    # get_split_data_pickle_e,
-    # get_split_data_pickle_m,
-    # get_split_data_pickle_s,
-    # get_split_data_pickle_l,
-    # get_split_data_pickle_l_wc,
     get_split_data_pickle_btc,
 )
 
@@ -248,5 +237,7 @@ if __name__ == "__main__":
                     f"{model_name} experiment on {dataset} generated an exception: {exc}"
                 )
 
-    with open(path.join(PROJECT_ROOT, "data", "results_btc.pkl"), "wb") as file:
+    with open(
+        path.join(PROJECT_ROOT, "data", "buffer", "results_btc_11.pkl"), "wb"
+    ) as file:
         pickle.dump(results_l, file)
