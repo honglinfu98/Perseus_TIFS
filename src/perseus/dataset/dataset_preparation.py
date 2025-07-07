@@ -504,15 +504,21 @@ def get_split_data_pickle_wot(options: str):
     Load the data for temporal tasks using the pickle file
     """
     if options == "DDINA":
-        with open(path.join(PROJECT_ROOT, "data", "DDINA_data_wot.pkl"), "rb") as file:
+        with open(
+            path.join(PROJECT_ROOT, "data", "storage", "DDINA_data_wot.pkl"), "rb"
+        ) as file:
             data = pickle.load(file)
 
     elif options == "COSS":
-        with open(path.join(PROJECT_ROOT, "data", "COSS_data_wot.pkl"), "rb") as file:
+        with open(
+            path.join(PROJECT_ROOT, "data", "storage", "COSS_data_wot.pkl"), "rb"
+        ) as file:
             data = pickle.load(file)
 
     elif options == "DDM":
-        with open(path.join(PROJECT_ROOT, "data", "DDM_data_wot.pkl"), "rb") as file:
+        with open(
+            path.join(PROJECT_ROOT, "data", "storage", "DDM_data_wot.pkl"), "rb"
+        ) as file:
             data = pickle.load(file)
 
     train_loader = data[0]
@@ -527,15 +533,21 @@ def get_split_data_pickle_btc(options: str):
     Load the data for temporal tasks using the pickle file
     """
     if options == "DDINA":
-        with open(path.join(PROJECT_ROOT, "data", "DDINA_data_btc.pkl"), "rb") as file:
+        with open(
+            path.join(PROJECT_ROOT, "data", "storage", "DDINA_data_btc.pkl"), "rb"
+        ) as file:
             data = pickle.load(file)
 
     elif options == "COSS":
-        with open(path.join(PROJECT_ROOT, "data", "COSS_data_btc.pkl"), "rb") as file:
+        with open(
+            path.join(PROJECT_ROOT, "data", "storage", "COSS_data_btc.pkl"), "rb"
+        ) as file:
             data = pickle.load(file)
 
     elif options == "DDM":
-        with open(path.join(PROJECT_ROOT, "data", "DDM_data_btc.pkl"), "rb") as file:
+        with open(
+            path.join(PROJECT_ROOT, "data", "storage", "DDM_data_btc.pkl"), "rb"
+        ) as file:
             data = pickle.load(file)
 
     train_loader = data[0]

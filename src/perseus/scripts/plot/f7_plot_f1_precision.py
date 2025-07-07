@@ -11,8 +11,11 @@ from perseus.settings import PROJECT_ROOT
 import copy
 
 # Load results (unflattened for batch plot)
-with open(path.join(PROJECT_ROOT, "data", "sp", "new_results_btc.pkl"), "rb") as file:
+with open(
+    path.join(PROJECT_ROOT, "data", "buffer", "new_results_btc.pkl"), "rb"
+) as file:
     batch_results = pickle.load(file)
+
 
 # Global style settings
 bold_linewidth = 5  # Line width for curves
@@ -25,13 +28,13 @@ LEGEND_HANDLELENGTH = 2  # Adjust handle length if needed
 
 # Mapping dictionaries for styling
 line_styles = {"Directed": (0, (4, 4)), "Weighted": "solid"}  # Custom dash: 4 on, 4 off
-model_colors = {"GAT": "#1f77b4", "GraphSAGE": "#ff7f0e"}
+model_colors = {"MultiGAT": "#1f77b4", "MultiGraphSAGE": "#ff7f0e"}
 label_map = {"DDINA": "Directed", "DDM": "Weighted"}
 legend_map = {"Directed": "D", "Weighted": "W"}
-model_legend_map = {"GAT": "A", "GraphSAGE": "S"}
+model_legend_map = {"MultiGAT": "A", "MultiGraphSAGE": "S"}
 
 # For old plots, flatten to default batch size
-default_batch_size = 8
+default_batch_size = 2
 results_m = copy.deepcopy(batch_results)
 for dataset in results_m:
     for model in results_m[dataset]:
@@ -44,12 +47,32 @@ for dataset in results_m:
 
 # Helper: Create a figure and axis with common size
 def get_common_ax(figsize=(8, 8)):
+    """
+    Create a matplotlib figure and axis with a common size.
+
+    Args:
+        figsize (tuple, optional): Figure size in inches. Defaults to (8, 8).
+
+    Returns:
+        tuple: (fig, ax) where fig is the Figure and ax is the Axes object.
+    """
     fig, ax = plt.subplots(figsize=figsize)
     return fig, ax
 
 
 # Precision Plot
 def plot_precision_common_ax(ax, results, colors, linestyles, label_map, fontsize=10):
+    """
+    Plot precision curves for each model and dataset on a common axis.
+
+    Args:
+        ax (matplotlib.axes.Axes): The axis to plot on.
+        results (dict): Nested dict of results[dataset][model]["metrics"] with 'labels' and 'probs'.
+        colors (dict): Mapping from model name to color.
+        linestyles (dict): Mapping from dataset label to line style.
+        label_map (dict): Mapping from dataset key to label string.
+        fontsize (int, optional): Font size for labels and ticks. Defaults to 10.
+    """
     thresholds = np.linspace(0, 1, 100)
     combined_handles = {}
     # Plot precision curves for each model and dataset
@@ -99,6 +122,17 @@ def plot_precision_common_ax(ax, results, colors, linestyles, label_map, fontsiz
 
 # F1 Plot
 def plot_f1_common_ax(ax, results, colors, linestyles, label_map, fontsize=10):
+    """
+    Plot F1 score curves for each model and dataset on a common axis.
+
+    Args:
+        ax (matplotlib.axes.Axes): The axis to plot on.
+        results (dict): Nested dict of results[dataset][model]["metrics"] with 'labels' and 'probs'.
+        colors (dict): Mapping from model name to color.
+        linestyles (dict): Mapping from dataset label to line style.
+        label_map (dict): Mapping from dataset key to label string.
+        fontsize (int, optional): Font size for labels and ticks. Defaults to 10.
+    """
     thresholds = np.linspace(0, 1, 100)
     combined_handles = {}
     for model in model_colors.keys():
@@ -145,81 +179,103 @@ def plot_f1_common_ax(ax, results, colors, linestyles, label_map, fontsize=10):
     legend.get_title().set_fontsize(LEGEND_TITLE_SIZE)
 
 
-# Inference Plot
-def plot_infer_common_ax(
-    ax,
-    results,
-    label_map,
-    fontsize=12,
-    model_colors=model_colors,
-    line_styles=line_styles,
-):
-    combined_handles = {}
-    for model_name in model_colors.keys():
-        for dataset_key, dataset in label_map.items():
-            if model_name in results[dataset_key]:
-                batch_times = np.array(results[dataset_key][model_name]["batch_times"])
-                num_nodes = np.array(results[dataset_key][model_name]["num_nodes"])
-                unique_nodes, indices = np.unique(num_nodes, return_inverse=True)
-                average_batch_times = np.zeros_like(unique_nodes, dtype=float)
-                for i in range(len(unique_nodes)):
-                    average_batch_times[i] = np.mean(batch_times[indices == i])
-                if len(unique_nodes) > 3:
-                    spline = make_interp_spline(unique_nodes, average_batch_times, k=3)
-                    fine_x = np.linspace(unique_nodes.min(), unique_nodes.max(), 500)
-                    fine_y = spline(fine_x)
-                    ax.plot(
-                        fine_x,
-                        fine_y,
-                        color=model_colors[model_name],
-                        linestyle=line_styles[dataset],
-                        linewidth=bold_linewidth,
-                    )
-                else:
-                    ax.plot(
-                        unique_nodes,
-                        average_batch_times,
-                        "o-",
-                        color=model_colors[model_name],
-                        linestyle=line_styles[dataset],
-                        linewidth=bold_linewidth,
-                    )
-                combined_label = f"{legend_map[dataset]} {model_legend_map[model_name]}"
-                if combined_label not in combined_handles:
-                    combined_handles[combined_label] = Line2D(
-                        [0],
-                        [0],
-                        color=model_colors[model_name],
-                        linestyle=line_styles[dataset],
-                        linewidth=bold_linewidth,
-                        label=combined_label,
-                    )
-    ax.set_xlim(3, 15)
-    ax.set_ylim(0.00009, 0.00030)
-    ax.set_xlabel("Number of Nodes", fontsize=fontsize)
-    ax.set_ylabel("Inference Speed (sec)", fontsize=fontsize)
-    ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
-    ax.ticklabel_format(style="sci", axis="y", scilimits=(0, 0))
-    ax.yaxis.get_offset_text().set_fontsize(fontsize)
-    ax.yaxis.set_major_locator(MaxNLocator(nbins=6))
-    ax.tick_params(axis="both", which="major", labelsize=fontsize)
-    ax.grid(True, which="major", axis="both", linestyle="--", linewidth=0.5)
-    legend = ax.legend(
-        handles=list(combined_handles.values()),
-        fontsize=LEGEND_SIZE,
-        title_fontsize=LEGEND_TITLE_SIZE,
-        loc="lower center",
-        handlelength=LEGEND_HANDLELENGTH,
-    )
-    plt.setp(legend.get_texts(), fontsize=LEGEND_SIZE)
-    legend.get_title().set_fontsize(LEGEND_TITLE_SIZE)
-    ax.set_box_aspect(1)  # For Matplotlib 3.3+.
+# # Inference Plot
+# def plot_infer_common_ax(
+#     ax,
+#     results,
+#     label_map,
+#     fontsize=12,
+#     model_colors=model_colors,
+#     line_styles=line_styles,
+# ):
+#     """
+#     Plot inference speed vs. number of nodes for each model and dataset.
+#
+#     Args:
+#         ax (matplotlib.axes.Axes): The axis to plot on.
+#         results (dict): Nested dict of results[dataset][model] with 'batch_times' and 'num_nodes'.
+#         label_map (dict): Mapping from dataset key to label string.
+#         fontsize (int, optional): Font size for labels and ticks. Defaults to 12.
+#         model_colors (dict): Mapping from model name to color.
+#         line_styles (dict): Mapping from dataset label to line style.
+#     """
+#     combined_handles = {}
+#     for model_name in model_colors.keys():
+#         for dataset_key, dataset in label_map.items():
+#             if model_name in results[dataset_key]:
+#                 batch_times = np.array(results[dataset_key][model_name]["batch_times"])
+#                 num_nodes = np.array(results[dataset_key][model_name]["num_nodes"])
+#                 unique_nodes, indices = np.unique(num_nodes, return_inverse=True)
+#                 average_batch_times = np.zeros_like(unique_nodes, dtype=float)
+#                 for i in range(len(unique_nodes)):
+#                     average_batch_times[i] = np.mean(batch_times[indices == i])
+#                 if len(unique_nodes) > 3:
+#                     spline = make_interp_spline(unique_nodes, average_batch_times, k=3)
+#                     fine_x = np.linspace(unique_nodes.min(), unique_nodes.max(), 500)
+#                     fine_y = spline(fine_x)
+#                     ax.plot(
+#                         fine_x,
+#                         fine_y,
+#                         color=model_colors[model_name],
+#                         linestyle=line_styles[dataset],
+#                         linewidth=bold_linewidth,
+#                     )
+#                 else:
+#                     ax.plot(
+#                         unique_nodes,
+#                         average_batch_times,
+#                         "o-",
+#                         color=model_colors[model_name],
+#                         linestyle=line_styles[dataset],
+#                         linewidth=bold_linewidth,
+#                     )
+#                 combined_label = f"{legend_map[dataset]} {model_legend_map[model_name]}"
+#                 if combined_label not in combined_handles:
+#                     combined_handles[combined_label] = Line2D(
+#                         [0],
+#                         [0],
+#                         color=model_colors[model_name],
+#                         linestyle=line_styles[dataset],
+#                         linewidth=bold_linewidth,
+#                         label=combined_label,
+#                     )
+#     ax.set_xlim(3, 15)
+#     ax.set_ylim(0.00009, 0.00030)
+#     ax.set_xlabel("Number of Nodes", fontsize=fontsize)
+#     ax.set_ylabel("Inference Speed (sec)", fontsize=fontsize)
+#     ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+#     ax.ticklabel_format(style="sci", axis="y", scilimits=(0, 0))
+#     ax.yaxis.get_offset_text().set_fontsize(fontsize)
+#     ax.yaxis.set_major_locator(MaxNLocator(nbins=6))
+#     ax.tick_params(axis="both", which="major", labelsize=fontsize)
+#     ax.grid(True, which="major", axis="both", linestyle="--", linewidth=0.5)
+#     legend = ax.legend(
+#         handles=list(combined_handles.values()),
+#         fontsize=LEGEND_SIZE,
+#         title_fontsize=LEGEND_TITLE_SIZE,
+#         loc="lower center",
+#         handlelength=LEGEND_HANDLELENGTH,
+#     )
+#     plt.setp(legend.get_texts(), fontsize=LEGEND_SIZE)
+#     legend.get_title().set_fontsize(LEGEND_TITLE_SIZE)
+#     ax.set_box_aspect(1)  # For Matplotlib 3.3+.
 
 
 # Combined CDF Plot
 def plot_combined_cdf_common_ax(
     ax, results_t, fontsize, label_map, line_styles, model_colors
 ):
+    """
+    Plot combined CDF of training times for all methods and datasets on a common axis.
+
+    Args:
+        ax (matplotlib.axes.Axes): The axis to plot on.
+        results_t (dict): Nested dict of results[dataset][method]["train_times"].
+        fontsize (int): Font size for labels and ticks.
+        label_map (dict): Mapping from dataset key to label string.
+        line_styles (dict): Mapping from dataset label to line style.
+        model_colors (dict): Mapping from model name to color.
+    """
     # Collect data for all methods and datasets
     data = {
         method: {
@@ -291,6 +347,17 @@ def plot_combined_cdf_common_ax(
 def plot_combined_roc_common_ax(
     ax, results, fontsize, label_map, line_styles, model_colors
 ):
+    """
+    Plot combined ROC curves for all methods and datasets on a common axis.
+
+    Args:
+        ax (matplotlib.axes.Axes): The axis to plot on.
+        results (dict): Nested dict of results[dataset][method] with 'fpr' and 'tpr'.
+        fontsize (int): Font size for labels and ticks.
+        label_map (dict): Mapping from dataset key to label string.
+        line_styles (dict): Mapping from dataset label to line style.
+        model_colors (dict): Mapping from model name to color.
+    """
     combined_handles = {}
     for method in model_colors.keys():
         for dataset in label_map.keys():
@@ -336,6 +403,17 @@ def plot_combined_roc_common_ax(
 def plot_batch_time_vs_batch_size(
     ax, results, label_map, model_colors, line_styles, fontsize=10
 ):
+    """
+    Plot average inference speed (batch time) vs. batch size for each model and dataset.
+
+    Args:
+        ax (matplotlib.axes.Axes): The axis to plot on.
+        results (dict): Nested dict of results[dataset][model][batch_size] with 'batch_times'.
+        label_map (dict): Mapping from dataset key to label string.
+        model_colors (dict): Mapping from model name to color.
+        line_styles (dict): Mapping from dataset label to line style.
+        fontsize (int, optional): Font size for labels and ticks. Defaults to 10.
+    """
     combined_handles = {}
     found_any = False
     for model in model_colors.keys():

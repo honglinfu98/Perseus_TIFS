@@ -23,7 +23,7 @@ from perseus.dataset.dataset_preparation import (
 )
 
 
-from perseus.model.gnn_model import GCNNet, Net, GraphSAGENet
+from perseus.model.gnn_models import GCNNet, Net, GraphSAGENet
 from perseus.settings import PROJECT_ROOT
 
 
@@ -35,9 +35,32 @@ torch.manual_seed(seed)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def run_experiment(model, train_loader, test_loader, num_epochs=100):
+def run_experiment(model, train_loader, valid_loader, test_loader, num_epochs=100):
     """
-    Run the experiment for the given model and dataset. Prepare for the training and testing of the model.
+    Run the experiment for the given model and dataset. Prepares for the training and testing of the model.
+
+    Args:
+        model (torch.nn.Module): The neural network model to train and evaluate.
+        train_loader (torch.utils.data.DataLoader): DataLoader for the training set.
+        valid_loader (torch.utils.data.DataLoader): DataLoader for the validation set.
+        test_loader (torch.utils.data.DataLoader): DataLoader for the test set.
+        num_epochs (int, optional): Number of training epochs. Defaults to 100.
+
+    Returns:
+        tuple: (
+            model (torch.nn.Module): The trained model.
+            model_weights (dict): The state dict of the trained model.
+            fpr_dict (dict): False positive rates for each label.
+            tpr_dict (dict): True positive rates for each label.
+            thresholds_dict (dict): Thresholds for ROC for each label.
+            train_times (list): Training time per epoch.
+            batch_times (list): Inference time per batch in test set.
+            num_nodes (list): Number of nodes per batch in test set.
+            embs (list): Embeddings from the last layer for test set.
+            all_labels (list): List of all labels in the test set.
+            train_losses (list): Training loss per epoch.
+            valid_losses (list): Validation loss per epoch.
+        )
     """
 
     model = model.to(device)
@@ -46,8 +69,9 @@ def run_experiment(model, train_loader, test_loader, num_epochs=100):
     loss_op = torch.nn.BCELoss()
 
     train_times = []  # To store training times for each epoch
+    train_losses, valid_losses = [], []
 
-    def train():
+    def train_and_validate():
         model.train()
         for epoch in range(num_epochs):
             start_time = time.time()  # Start timing the epoch
@@ -63,8 +87,19 @@ def run_experiment(model, train_loader, test_loader, num_epochs=100):
             end_time = time.time()  # End timing the epoch
             epoch_time = end_time - start_time
             train_times.append(epoch_time)  # Store the time for this epoch
+            train_losses.append(total_loss / len(train_loader.dataset))
+
+            # Validation step
+            model.eval()
+            val_loss = 0
+            with torch.no_grad():
+                for data in valid_loader:
+                    data = data.to(device)
+                    output, _ = model(data.x, data.edge_index)
+                    val_loss += loss_op(output, data.y.float()).item() * data.num_graphs
+            valid_losses.append(val_loss / len(valid_loader.dataset))
             print(
-                f"Epoch {epoch+1}/{num_epochs}, Loss: {total_loss / len(train_loader.dataset)}, Time: {epoch_time:.2f}s"
+                f"Epoch {epoch+1}/{num_epochs}, Train Loss: {train_losses[-1]:.4f}, Val Loss: {valid_losses[-1]:.4f}, Time: {epoch_time:.2f}s"
             )
 
     @torch.no_grad()
@@ -88,7 +123,7 @@ def run_experiment(model, train_loader, test_loader, num_epochs=100):
 
         return all_probs, all_labels, all_embs, batch_times, num_nodes
 
-    train()
+    train_and_validate()
 
     probs, labels, embs, batch_times, num_nodes = test(test_loader)
     probs = torch.cat(probs, dim=0).sigmoid().numpy()
@@ -115,23 +150,65 @@ def run_experiment(model, train_loader, test_loader, num_epochs=100):
         num_nodes,
         embs,
         all_labels,
+        train_losses,
+        valid_losses,
     )
 
 
 # Updated Metrics Calculation Functions
 def calculate_accuracy(labels, preds):
+    """
+    Calculate the accuracy score.
+
+    Args:
+        labels (array-like): True labels.
+        preds (array-like): Predicted labels.
+
+    Returns:
+        float: Accuracy score.
+    """
     return accuracy_score(labels, preds)
 
 
 def calculate_precision(labels, preds):
+    """
+    Calculate the precision score.
+
+    Args:
+        labels (array-like): True labels.
+        preds (array-like): Predicted labels.
+
+    Returns:
+        float: Precision score.
+    """
     return precision_score(labels, preds)
 
 
 def calculate_recall(labels, preds):
+    """
+    Calculate the recall score.
+
+    Args:
+        labels (array-like): True labels.
+        preds (array-like): Predicted labels.
+
+    Returns:
+        float: Recall score.
+    """
     return recall_score(labels, preds)
 
 
 def calculate_f1_score(labels, preds):
+    """
+    Calculate the F1 score.
+
+    Args:
+        labels (array-like): True labels.
+        preds (array-like): Predicted labels.
+
+    Returns:
+        float: F1 score.
+    """
     return f1_score(labels, preds)
 
 
@@ -139,7 +216,16 @@ def calculate_f1_score(labels, preds):
 @torch.no_grad()
 def compute_metrics(model, loader):
     """
-    Compute the evaluation metrics for the model on the given
+    Compute the evaluation metrics for the model on the given loader.
+
+    Args:
+        model (torch.nn.Module): The trained model to evaluate.
+        loader (torch.utils.data.DataLoader): DataLoader for the dataset to evaluate on.
+
+    Returns:
+        dict: Dictionary containing:
+            - 'probs': Predicted probabilities (numpy array)
+            - 'labels': True labels (numpy array)
     """
     model.eval()
     all_probs, all_labels = [], []
@@ -161,12 +247,28 @@ def experiment_pipeline(
     model_name,
     dataset,
     train_loader,
+    valid_loader,
     test_loader,
     num_epochs=100,
     features=2,
 ):
+    """
+    Run the full experiment pipeline for a given model and dataset.
+
+    Args:
+        model_name (str): Name of the model to use ('GAT', 'GCN', 'GraphSAGE').
+        dataset (str): Name of the dataset ('COSS', 'DDINA', 'DDM', etc.).
+        train_loader (torch.utils.data.DataLoader): DataLoader for the training set.
+        valid_loader (torch.utils.data.DataLoader): DataLoader for the validation set.
+        test_loader (torch.utils.data.DataLoader): DataLoader for the test set.
+        num_epochs (int, optional): Number of training epochs. Defaults to 100.
+        features (int, optional): Number of input features. Defaults to 2.
+
+    Returns:
+        dict: Dictionary containing experiment results, including model, weights, metrics, ROC, timings, embeddings, labels, and losses.
+    """
     num_classes = 1  # Set this according to your dataset
-    hidden_channels = 8
+    hidden_channels = 64
     if dataset == "COSS":
         num_features = 14
     else:
@@ -180,8 +282,21 @@ def experiment_pipeline(
         model = GraphSAGENet(num_features, hidden_channels, num_classes)
 
     print(f"Running {model_name} Experiment on {dataset}")
-    m, model_weights, fpr, tpr, _, train_times, batch_times, num_nodes, embs, labels = (
-        run_experiment(model, train_loader, test_loader, num_epochs=num_epochs)
+    (
+        m,
+        model_weights,
+        fpr,
+        tpr,
+        _,
+        train_times,
+        batch_times,
+        num_nodes,
+        embs,
+        labels,
+        train_losses,
+        valid_losses,
+    ) = run_experiment(
+        model, train_loader, valid_loader, test_loader, num_epochs=num_epochs
     )
     metrics = compute_metrics(model, test_loader)
     return {
@@ -195,11 +310,14 @@ def experiment_pipeline(
         "num_nodes": num_nodes,
         "embs": embs,
         "labels": labels,
+        "train_losses": train_losses,
+        "valid_losses": valid_losses,
     }
 
 
 if __name__ == "__main__":
 
+    # Main script: runs experiments for all datasets and models, saves results to pickle file.
     # label = 1  # Adjust this based on the label you're interested in
     datasets = ["DDINA", "COSS", "DDM"]
     models = ["GAT", "GCN", "GraphSAGE"]
@@ -221,6 +339,7 @@ if __name__ == "__main__":
                     model_name,
                     dataset,
                     train_loader,
+                    valid_loader,
                     test_loader,
                     features=14,
                 )

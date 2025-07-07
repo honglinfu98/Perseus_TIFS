@@ -165,7 +165,7 @@ def read_labeling_csv_back_to_dict(train_test_valid: str):
     """
     if train_test_valid == "train":
         train_edited_df = pd.read_csv(
-            path.join(PROJECT_ROOT, "data", "train_labeling_0115.csv")
+            path.join(PROJECT_ROOT, "data", "old", "train_labeling_0115.csv")
         )
 
         edited_train_label_mapping = {}
@@ -178,7 +178,7 @@ def read_labeling_csv_back_to_dict(train_test_valid: str):
 
     elif train_test_valid == "valid":
         valid_edited_df = pd.read_csv(
-            path.join(PROJECT_ROOT, "data", "valid_labeling_0115.csv")
+            path.join(PROJECT_ROOT, "data", "old", "valid_labeling_0115.csv")
         )
 
         edited_valie_label_mapping = {}
@@ -191,7 +191,7 @@ def read_labeling_csv_back_to_dict(train_test_valid: str):
 
     elif train_test_valid == "test":
         test_edited_df = pd.read_csv(
-            path.join(PROJECT_ROOT, "data", "test_labeling_0115.csv")
+            path.join(PROJECT_ROOT, "data", "old", "test_labeling_0115.csv")
         )
 
         edited_test_label_mapping = {}

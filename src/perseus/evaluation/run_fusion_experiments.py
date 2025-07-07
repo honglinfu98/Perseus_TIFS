@@ -1,10 +1,15 @@
+"""
+Module for running fusion experiments with GNN models on graph datasets.
+Provides training, evaluation, and experiment orchestration utilities for MultiGAT and MultiGraphSAGE models.
+"""
+
 import itertools
 import torch
 import pandas as pd
 import matplotlib.pyplot as plt
 from torch_geometric.loader import DataListLoader
 from perseus.dataset.dataset_preparation import get_split_data_pickle_btc_noloader
-from perseus.model.fused_models import (
+from perseus.model.gnn_models import (
     MultiGAT,
     MultiGraphSAGE,
 )
@@ -21,9 +26,21 @@ import pickle
 from sklearn.metrics import roc_curve
 import os
 from torch.optim.adam import Adam
+import concurrent.futures
 
 
 def train_epoch(model, loader, optimizer, criterion, device):
+    """
+    Trains the model for one epoch.
+    Args:
+        model (torch.nn.Module): The model to train.
+        loader (DataListLoader): Data loader for training data.
+        optimizer (torch.optim.Optimizer): Optimizer for model parameters.
+        criterion: Loss function.
+        device (torch.device): Device to run computations on.
+    Returns:
+        tuple: (average loss, accuracy) for the epoch.
+    """
     model.train()
     total_loss = total_correct = total_nodes = 0
     for data_list in loader:
@@ -45,6 +62,16 @@ def train_epoch(model, loader, optimizer, criterion, device):
 
 @torch.no_grad()
 def eval_epoch(model, loader, criterion, device):
+    """
+    Evaluates the model for one epoch.
+    Args:
+        model (torch.nn.Module): The model to evaluate.
+        loader (DataListLoader): Data loader for evaluation data.
+        criterion: Loss function.
+        device (torch.device): Device to run computations on.
+    Returns:
+        tuple: (average loss, accuracy, f1, precision, recall, mcc) for the epoch.
+    """
     model.eval()
     total_loss = total_correct = total_nodes = 0
     all_preds, all_y = [], []
@@ -84,6 +111,23 @@ def run_experiment(
     return_timings=False,
     return_embs=False,
 ):
+    """
+    Runs a single experiment with the specified model and hyperparameters.
+    Args:
+        data_name (str): Name of the dataset.
+        model_cls (type): Model class to instantiate.
+        hidden_channels (int): Number of hidden channels in the model.
+        lr (float): Learning rate.
+        weight_decay (float): Weight decay for optimizer.
+        epochs (int): Number of training epochs.
+        batch_size (int): Batch size for data loader.
+        device_str (str, optional): Device string (e.g., 'cuda').
+        return_roc (bool): Whether to return ROC curve data.
+        return_timings (bool): Whether to return timing information.
+        return_embs (bool): Whether to return embeddings.
+    Returns:
+        dict: Results including metrics, model, and optionally ROC/timing/embedding data.
+    """
     import time
     from sklearn.metrics import roc_curve
 
@@ -144,7 +188,7 @@ def run_experiment(
                 num_nodes.append(x.shape[0])
     all_probs = torch.cat(all_probs, dim=0).sigmoid().numpy()
     all_labels = torch.cat(all_labels, dim=0).numpy()
-    test_loss, test_acc, test_f1, test_precision, test_recall, test_mcc = eval_epoch(
+    _, test_acc, test_f1, test_precision, test_recall, test_mcc = eval_epoch(
         model, test_loader, criterion, device
     )
     results = {
@@ -155,7 +199,7 @@ def run_experiment(
         "weight_decay": weight_decay,
         "best_val_f1": best_val_f1,
         "test_acc": test_acc,
-        "test_loss": test_loss,
+        # "test_loss": test_loss,
         "test_f1": test_f1,
         "test_precision": test_precision,
         "test_recall": test_recall,
@@ -190,74 +234,6 @@ def run_experiment(
     return results
 
 
-def hyperparameter_search(max_workers=12):
-    param_grid = list(
-        itertools.product(
-            ["DDM", "DDINA"],
-            ["MultiGraphSAGE", "MultiGAT"],
-            [8, 128, 1025],
-            [0.5, 0.005, 0.00005],
-            [5e-4],
-        )
-    )
-    results = []
-    # For mastermind_detection_from_multirun.py compatibility
-    model_save_dict = {}
-    device_str = "cuda" if torch.cuda.is_available() else "cpu"
-    model_map = {"MultiGAT": MultiGAT, "MultiGraphSAGE": MultiGraphSAGE}
-    with ProcessPoolExecutor(max_workers=max_workers) as executor:
-        futures = {
-            executor.submit(
-                run_experiment,
-                data_name,
-                model_map[model_cls_name],
-                hidden,
-                lr,
-                wd,
-                100,
-                20,
-                device_str,
-            ): (data_name, model_cls_name, hidden, lr, wd)
-            for data_name, model_cls_name, hidden, lr, wd in param_grid
-        }
-        for future in as_completed(futures):
-            cfg = futures[future]
-            try:
-                res = future.result()
-                print(f"Completed: {cfg}")
-                results.append(res)
-                # Save for mastermind_detection_from_multirun.py
-                data_name = res["data"]
-                model_name = res["model"].replace("Multi", "")
-                batch_size = res["batch_size"]
-                if data_name not in model_save_dict:
-                    model_save_dict[data_name] = {}
-                if model_name not in model_save_dict[data_name]:
-                    model_save_dict[data_name][model_name] = {}
-                model_save_dict[data_name][model_name][batch_size] = {
-                    "model": res["model_instance"],
-                    "model_weights": res["model_weights"],
-                    "all_probs": res["all_probs"],
-                    "all_labels": res["all_labels"],
-                }
-            except Exception as exc:
-                print(f"Error with config {cfg}: {exc}")
-    df = pd.DataFrame(results)
-    df.to_csv(
-        os.path.join(PROJECT_ROOT, "data", "buffer", "hp_search_results_a.csv"),
-        index=False,
-    )
-    print("Search complete. Results saved to hp_search_results.csv")
-    # Save models and predictions for mastermind detection
-    buffer_dir = os.path.join(PROJECT_ROOT, "data", "buffer")
-    os.makedirs(buffer_dir, exist_ok=True)
-    with open(os.path.join(buffer_dir, "model_saved_a.pkl"), "wb") as f:
-        pickle.dump(model_save_dict, f)
-    print(
-        f"Model and predictions saved to {os.path.join(buffer_dir, 'model_saved.pkl')}"
-    )
-
-
 def collect_full_outputs(
     data_name,
     model_cls,
@@ -268,6 +244,20 @@ def collect_full_outputs(
     epochs=100,
     device_str=None,
 ):
+    """
+    Runs experiments for multiple batch sizes and collects full outputs.
+    Args:
+        data_name (str): Name of the dataset.
+        model_cls (type): Model class to instantiate.
+        hidden_channels (int): Number of hidden channels.
+        lr (float): Learning rate.
+        weight_decay (float): Weight decay for optimizer.
+        batch_sizes (list of int): List of batch sizes to try.
+        epochs (int): Number of training epochs.
+        device_str (str, optional): Device string.
+    Returns:
+        dict: Results for each batch size.
+    """
     results_by_batch_size = {}
     for batch_size in batch_sizes:
         result = run_experiment(
@@ -290,67 +280,123 @@ def collect_full_outputs(
                 "labels": labels,
                 "probs": probs,
             },
+            "model": result["model_instance"],
+            "model_weights": result["model_weights"],
+            "batch_size": batch_size,
             "fpr": result.get("fpr", {}),
+            "best_val_f1": result.get("best_val_f1", 0),
             "tpr": result.get("tpr", {}),
             "train_times": result.get("train_times", []),
             "batch_times": result.get("batch_times", []),
             "num_nodes": result.get("num_nodes", []),
             "embs": result.get("embs", []),
-            "labels": [labels],
+            "lr": lr,
+            "test_acc": result.get("test_acc", 0),
+            "test_f1": result.get("test_f1", 0),
+            "test_precision": result.get("test_precision", 0),
+            "test_recall": result.get("test_recall", 0),
+            "test_mcc": result.get("test_mcc", 0),
+            "hidden_channels": hidden_channels,
+            "weight_decay": weight_decay,
         }
+
     return results_by_batch_size
 
 
 def export_results_for_plot(
-    csv_path=os.path.join(PROJECT_ROOT, "data", "buffer", "hp_search_results_a.csv"),
+    data_names=["DDM", "DDINA"],
+    model_names=["MultiGAT", "MultiGraphSAGE"],
+    hidden_channels_list=[8, 32, 64, 128, 516],
+    lr_list=[0.01, 0.001, 0.0001, 0.00001, 0.000001],
+    weight_decay_list=[5e-4],
+    batch_sizes=range(8, 9),
     out_path=os.path.join(PROJECT_ROOT, "data", "buffer", "new_results_btc.pkl"),
-    batch_sizes=range(2, 21),
+    param_tuning_out_path=os.path.join(
+        PROJECT_ROOT, "data", "buffer", "param_tuning_results.pkl"
+    ),
 ):
-    import concurrent.futures
+    """
+    Runs experiments for all combinations of parameters and exports results for plotting.
+    Args:
+        data_names (list of str): List of dataset names.
+        model_names (list of str): List of model names.
+        hidden_channels_list (list of int): List of hidden channel sizes.
+        lr_list (list of float): List of learning rates.
+        weight_decay_list (list of float): List of weight decays.
+        batch_sizes (iterable of int): Batch sizes to try.
+        out_path (str): Output path for results pickle file.
+        param_tuning_out_path (str): Output path for param tuning results pickle file.
+    Returns:
+        None. Saves results to files.
+    """
 
-    df = pd.read_csv(csv_path)
-    best_configs = (
-        df.sort_values("test_f1", ascending=False)
-        .groupby(["data", "model"])
-        .first()
-        .reset_index()
-    )
     model_map = {"MultiGAT": MultiGAT, "MultiGraphSAGE": MultiGraphSAGE}
-    results = {d: {} for d in df["data"].unique()}
-    jobs = []
+    results = {d: {} for d in data_names}
+    param_tuning_results = []
+    param_grid = list(
+        itertools.product(
+            data_names, model_names, hidden_channels_list, lr_list, weight_decay_list
+        )
+    )
     with concurrent.futures.ProcessPoolExecutor(max_workers=12) as executor:
         future_to_cfg = {}
-        for _, row in best_configs.iterrows():
-            data_name = row["data"]
-            model_name = row["model"]
+        for data_name, model_name, hidden_channels, lr, weight_decay in param_grid:
             model_cls = model_map[model_name]
-            print(f"Submitting full output for {data_name} {model_name}...")
+            print(
+                f"Submitting full output for {data_name} {model_name} (hidden={hidden_channels}, lr={lr}, wd={weight_decay})..."
+            )
             future = executor.submit(
                 collect_full_outputs,
                 data_name,
                 model_cls,
-                int(row["hidden_channels"]),
-                float(row["lr"]),
-                float(row["weight_decay"]),
+                hidden_channels,
+                lr,
+                weight_decay,
                 list(batch_sizes),
                 100,
             )
-            future_to_cfg[future] = (data_name, model_name)
+            future_to_cfg[future] = (
+                data_name,
+                model_name,
+                hidden_channels,
+                lr,
+                weight_decay,
+            )
         for future in concurrent.futures.as_completed(future_to_cfg):
-            data_name, model_name = future_to_cfg[future]
+            data_name, model_name, hidden_channels, lr, weight_decay = future_to_cfg[
+                future
+            ]
             try:
                 batch_size_results = future.result()
-                results[data_name][model_name.replace("Multi", "")] = batch_size_results
+                results[data_name][model_name] = batch_size_results
+                # Collect param tuning results for each batch size
+                for bsz, info in batch_size_results.items():
+                    param_tuning_results.append(
+                        {
+                            "batch_size": bsz,
+                            "lr": info.get("lr", lr),
+                            "hidden_channels": info.get(
+                                "hidden_channels", hidden_channels
+                            ),
+                            "model": model_name,
+                            "data": data_name,
+                            "best_val_f1": info.get("best_val_f1", 0),
+                        }
+                    )
                 print(f"Completed: {data_name} {model_name}")
             except Exception as exc:
                 print(f"Error with {data_name} {model_name}: {exc}")
     with open(out_path, "wb") as f:
         pickle.dump(results, f)
     print(f"Saved results for plotting to {out_path}")
+    # Save param tuning results as flat list
+    with open(param_tuning_out_path, "wb") as f:
+        pickle.dump(param_tuning_results, f)
+    print(f"Saved param tuning results to {param_tuning_out_path}")
 
 
 if __name__ == "__main__":
-    hyperparameter_search()
+    # hyperparameter_search()
 
     # Export results for plotting
     export_results_for_plot()

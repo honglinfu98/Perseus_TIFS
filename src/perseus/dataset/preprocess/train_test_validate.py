@@ -173,7 +173,9 @@ def get_new_detection():
     Get signals from the database for pre-pump scoring.
     """
 
-    with open(path.join(PROJECT_ROOT, "data", "new_detection.pkl"), "rb") as file:
+    with open(
+        path.join(PROJECT_ROOT, "data", "old", "new_detection.pkl"), "rb"
+    ) as file:
         signals = pickle.load(file)
     result = signals[~signals["telegram_chat_id"].isna()]
 

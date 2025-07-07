@@ -8,7 +8,8 @@ import pandas as pd
 import numpy as np
 import networkx as nx
 import matplotlib.patches as mpatches
-from networkx.algorithms.community import louvain_communities
+
+# from networkx.algorithms.community import louvain_communities
 import matplotlib.pyplot as plt
 from perseus.dataset.preprocess.groudtruth_labeling import (
     read_labeling_csv_back_to_dict,
@@ -32,6 +33,104 @@ from perseus.settings import PROJECT_ROOT
 import re
 from datetime import datetime
 from matplotlib.legend_handler import HandlerPatch
+
+
+def extract_elements(data):
+    """
+    Extracts and processes elements from a nested list structure, cleaning text and formatting timestamps.
+
+    Args:
+        data (list): A nested list where each sublist contains tuples with message data. Each tuple is expected to have at least 11 elements, with text at index 10 and timestamp at index 7.
+
+    Returns:
+        list: A nested list of tuples, each containing:
+            - label (str): Event label (e.g., 'd1', 'd2', ...)
+            - channel_name (str): Channel name from item[0]
+            - timestamp (str): Formatted timestamp (YYYY-MM-DD HH:MM:SS)
+            - text (str): Cleaned message text
+            - return_value: Value from item[2]
+    """
+    results = []
+    for sub_index, sub_list in enumerate(data):
+        sub_list_results = []  # Create a new list for each sublist's results
+        label = (
+            f"d{sub_index + 1}"  # Assign a label depending on the index of the sublist
+        )
+        for item in sub_list:
+            # Processing the text to remove emojis, #, and replace \n with space
+            text = item[10]
+            text = re.sub(
+                r"[^\w\s,.]", "", text
+            )  # Remove emojis and other non-alphanumeric symbols except commas and periods
+            text = text.replace("#", "")  # Remove '#'
+            text = text.replace("\n", " ")  # Replace newline characters with spaces
+            text = re.sub(
+                r"\s+", " ", text
+            ).strip()  # Replace multiple spaces with a single space and trim leading/trailing spaces
+
+            # Format timestamp
+            timestamp = (
+                item[7].strftime("%Y-%m-%d %H:%M:%S")
+                if isinstance(item[7], datetime)
+                else item[7]
+            )
+
+            # Extracting specific indices: label, 0 (channel name), formatted timestamp, processed text, and 2
+            extracted_data = (label, item[0], timestamp, text, item[2])
+            sub_list_results.append(extracted_data)
+        results.append(sub_list_results)  # Append the sublist of results
+    return results
+
+
+def generate_latex_table(results):
+    """
+    Generates a LaTeX table from the processed results for crowd-pump messages and returns.
+
+    Args:
+        results (list): Nested list of tuples as returned by extract_elements.
+
+    Returns:
+        str: A string containing the LaTeX table code.
+    """
+    table = r"\begin{table}[!h]" + "\n"
+    table += r"\centering" + "\n"
+    table += r"\footnotesize" + "\n"
+    table += r"\caption{Crowd-pump Messages and Returns}" + "\n"
+    table += r"\label{tab: case_study_wrong}" + "\n"
+    table += r"\begin{tabularx}{\textwidth}{|c|l|c|X|c|}" + "\n"
+    table += r"\hline" + "\n"
+    table += (
+        r"\textbf{Events} & \textbf{Telegram Channels} & \textbf{Timestamps} & \textbf{Messages} & \textbf{Returns} \\"
+        + "\n"
+    )
+    table += r"\hline" + "\n"
+
+    last_event = None
+    for sub_list in results:
+        for index, item in enumerate(sub_list):
+            color = (
+                "red" if index == 0 else "teal"
+            )  # Color for the first item red, others teal
+            event_label, channel_name, timestamp, message, return_value = item
+
+            # Replace '&' with 'and', and escape underscores
+            message = message.replace("&", "and").replace("_", r"\_")
+            channel_name = channel_name.replace("_", r"\_")
+
+            # Determine if the event label should be printed
+            event_label = event_label if event_label != last_event else ""
+            last_event = item[0]  # Update last_event to the current event label
+
+            table += (
+                f"\\textcolor{{{color}}}{{{event_label}}} & \\textcolor{{{color}}}{{{channel_name}}} & \\textcolor{{{color}}}{{{timestamp}}} & \\textcolor{{{color}}}{{{message}}} &  \\textcolor{{{color}}}{{{'{:.2f}'.format(return_value * 100)}\%}} \\\\"
+                + "\n"
+            )
+        table += r"\hline" + "\n"
+
+    table += r"\end{tabularx}" + "\n"
+    table += r"\end{table}"
+
+    return table
 
 
 class HandlerSquare(HandlerPatch):
@@ -94,7 +193,13 @@ class HandlerCircle(HandlerPatch):
 
 def community_detection_weighted(P_dict: dict):
     """
-    This function detects communities in a graph using the Label Propagation algorithm.
+    Detects communities in weighted graphs using the Label Propagation algorithm.
+
+    Args:
+        P_dict (dict): Dictionary where each key maps to a dict of edge tuples (source, target) and their weights.
+
+    Returns:
+        dict: Dictionary mapping each key to a list of sets, each set representing a community of nodes.
     """
 
     communities_dict = {}
@@ -125,12 +230,21 @@ def draw_graph_with_communities(
     label_distance=0.2,
 ):
     """
-    Draw the graph with communities.
-    Each node is drawn as a circle with a fill color:
-      - lightblue if label == 0
-      - lightcoral if label == 1
-    Each node is annotated with its community number.
-    A legend is added to indicate the mapping between color and label.
+    Draws a graph with detected communities, coloring nodes by label and annotating with community numbers.
+
+    Args:
+        gs (dict): Dictionary of graphs keyed by coin/event name.
+        key (str): The key to select the graph from gs and communities_dict.
+        communities_dict (dict): Dictionary mapping keys to lists of communities (sets of nodes).
+        id_to_username (dict): Mapping from node IDs to usernames.
+        labels (dict): Mapping from node IDs to label values (0 or 1).
+        base_node_size (int, optional): Base size for nodes. Default is 1500.
+        font_size (int, optional): Font size for labels. Default is 45.
+        arrow_size (int, optional): Arrow size for edges. Default is 40.
+        label_distance (float, optional): Distance for label offset. Default is 0.2.
+
+    Returns:
+        None. Saves the plot as a PDF and displays it.
     """
     # Retrieve graph and communities.
     G = gs[key]
@@ -149,7 +263,7 @@ def draw_graph_with_communities(
     # Draw edges behind nodes.
     nx.draw_networkx_edges(G, pos, arrowsize=arrow_size, width=3, ax=ax)
 
-    # Determine node “radius” based on the layout's x-range.
+    # Determine node "radius" based on the layout's x-range.
     xs = [p[0] for p in pos.values()]
     ys = [p[1] for p in pos.values()]
     x_range = max(xs) - min(xs)
@@ -241,7 +355,142 @@ def draw_graph_with_communities(
     ax.set_xlim(min(xs) - 2, max(xs) + 2)
     ax.set_ylim(min(ys) - 2, max(ys) + 2)
     fig.tight_layout()
-    fig.savefig(path.join(PROJECT_ROOT, "data", f"june_{key}_case.pdf"))
+    fig.savefig(path.join(PROJECT_ROOT, "data", "buffer", f"june_{key}_case.pdf"))
+    plt.show()
+
+
+def draw_graph_with_communities_correct_case(
+    gs: dict,
+    key: str,
+    communities_dict: dict,
+    id_to_username: dict,
+    labels: dict,
+    base_node_size=1500,  # Controls the size of the nodes.
+    font_size=45,
+    arrow_size=40,
+    label_distance=0.2,
+):
+    """
+    Draws a graph for the 'correct case', coloring nodes by label and annotating with community numbers.
+
+    Args:
+        gs (dict): Dictionary of graphs keyed by coin/event name.
+        key (str): The key to select the graph from gs and communities_dict.
+        communities_dict (dict): Dictionary mapping keys to lists of communities (sets of nodes).
+        id_to_username (dict): Mapping from node IDs to usernames.
+        labels (dict): Mapping from node IDs to label values (0 or 1).
+        base_node_size (int, optional): Base size for nodes. Default is 1500.
+        font_size (int, optional): Font size for labels. Default is 45.
+        arrow_size (int, optional): Arrow size for edges. Default is 40.
+        label_distance (float, optional): Distance for label offset. Default is 0.2.
+
+    Returns:
+        None. Saves the plot as a PDF and displays it.
+    """
+    # Retrieve graph and communities.
+    G = gs[key]
+    communities = communities_dict[key]
+
+    # Map nodes to their community index.
+    node_to_community = {}
+    for idx, community in enumerate(communities):
+        for node in community:
+            node_to_community[node] = idx
+
+    # Set up figure and axis.
+    fig, ax = plt.subplots(figsize=(20, 20))
+    pos = nx.circular_layout(G)
+
+    # Draw edges behind nodes.
+    nx.draw_networkx_edges(G, pos, arrowsize=arrow_size, width=3, ax=ax)
+
+    # Determine node "radius" based on the layout's x-range.
+    xs = [p[0] for p in pos.values()]
+    ys = [p[1] for p in pos.values()]
+    x_range = max(xs) - min(xs)
+    default_node_size = 1500
+    scale_constant = x_range / (50 * np.sqrt(default_node_size))
+    radius = np.sqrt(base_node_size) * scale_constant
+
+    # Draw each node as a circle with a fill color based on its label,
+    # and annotate the node with its community number.
+    for node in G.nodes():
+        x, y = pos[node]
+        label_value = labels.get(node, 0)
+        # Choose fill color based on the label value.
+        if label_value == 0:
+            fill_color = "lightblue"
+        elif label_value == 1:
+            fill_color = "lightcoral"
+        else:
+            fill_color = "white"  # default color if label is not 0 or 1
+
+        circle = mpatches.Circle(
+            (x, y), radius=radius, facecolor=fill_color, edgecolor="black", lw=2
+        )
+        ax.add_patch(circle)
+        # Annotate the node with its community number (starting at 1).
+        comm_id = node_to_community[node] + 1
+        ax.text(
+            x,
+            y,
+            str(comm_id),
+            horizontalalignment="center",
+            verticalalignment="center",
+            fontsize=font_size * 1.2,
+            color="black",
+        )
+
+    # Draw node labels (e.g., usernames) offset from the node center.
+    label_pos = {
+        node: (
+            pos[node][0]
+            + 1.6 * label_distance * np.cos(np.arctan2(pos[node][1], pos[node][0])),
+            pos[node][1]
+            + 2 * label_distance * np.sin(np.arctan2(pos[node][1], pos[node][0])),
+        )
+        for node in G.nodes()
+    }
+    adjusted_labels = {node: id_to_username.get(node, str(node)) for node in G.nodes()}
+    nx.draw_networkx_labels(
+        G, label_pos, labels=adjusted_labels, font_size=font_size, ax=ax
+    )
+
+    # Build legend for node labels.
+    label0_circle = mpatches.Circle(
+        (0, 0),
+        radius=radius,
+        facecolor="lightcoral",
+        edgecolor="black",
+        lw=2,
+        label="True Positive",
+    )
+    label1_circle = mpatches.Circle(
+        (0, 0),
+        radius=radius,
+        facecolor="lightblue",
+        edgecolor="black",
+        lw=2,
+        label="True Negative",
+    )
+    leg = ax.legend(
+        handles=[label0_circle, label1_circle],
+        title="Node Labels",
+        loc="lower center",
+        bbox_to_anchor=(0.5, 0),
+        ncol=2,
+        frameon=False,
+        fontsize=font_size,
+        title_fontsize=font_size,
+        handler_map={mpatches.Circle: HandlerCircle(scale=2)},
+    )
+    ax.add_artist(leg)
+
+    ax.axis("off")
+    ax.set_xlim(min(xs) - 2, max(xs) + 2)
+    ax.set_ylim(min(ys) - 2, max(ys) + 2)
+    fig.tight_layout()
+    fig.savefig(path.join(PROJECT_ROOT, "data", "buffer", f"june_{key}_case.pdf"))
     plt.show()
 
 
@@ -257,16 +506,21 @@ def draw_graph_with_communities_wrong_case(
     label_distance=0.4,  # Distance of the label from the node center
 ):
     """
-    Draw the graph with communities and predictions using patches for nodes.
+    Draws a graph for the 'wrong case', using rectangles for false predictions and circles for correct ones.
 
-    For each node:
-      - If prediction == (0,1) or (1,0) (i.e. a false case), draw a rectangle:
-          * Use lightblue if prediction == (0,1)
-          * Use lightcoral otherwise.
-      - Otherwise (correct prediction), draw a circle with lightcoral.
+    Args:
+        gs (dict): Dictionary of graphs keyed by coin/event name.
+        key (str): The key to select the graph from gs and communities_dict.
+        communities_dict (dict): Dictionary mapping keys to lists of communities (sets of nodes).
+        id_to_username (dict): Mapping from node IDs to usernames.
+        predictions (dict): Mapping from node IDs to prediction tuples (true label, predicted label).
+        base_node_size (int, optional): Base size for nodes. Default is 1500.
+        font_size (int, optional): Font size for labels. Default is 45.
+        arrow_size (int, optional): Arrow size for edges. Default is 40.
+        label_distance (float, optional): Distance for label offset. Default is 0.4.
 
-    Each node is annotated with its community number.
-    The legend shows rectangle markers for false negative (lightblue) and false positive (lightcoral).
+    Returns:
+        None. Saves the plot as a PDF and displays it.
     """
     G = gs[key]
     communities = communities_dict[key]
@@ -388,7 +642,7 @@ def draw_graph_with_communities_wrong_case(
     ax.set_xlim(min(xs) - 2, max(xs) + 2)
     ax.set_ylim(min(ys) - 2, max(ys) + 2)
     fig.tight_layout()
-    fig.savefig(path.join(PROJECT_ROOT, "data", f"june_{key}_case.pdf"))
+    fig.savefig(path.join(PROJECT_ROOT, "data", "buffer", f"june_{key}_case.pdf"))
     plt.show()
 
 
@@ -432,7 +686,9 @@ if __name__ == "__main__":
             pass
 
     # load the prediction labels pickle file from the data folder
-    with open(path.join(PROJECT_ROOT, "data", "sp", "predictions.pkl"), "rb") as file:
+    with open(
+        path.join(PROJECT_ROOT, "data", "buffer", "test_predictions.pkl"), "rb"
+    ) as file:
         predictions = pickle.load(file)
 
     true_false_labels = {}
@@ -470,16 +726,44 @@ if __name__ == "__main__":
         if {(1, 0), (0, 1)}.issubset(label_set):
             potential_coins.append(coin)
 
+    # # Plot all true cases
+    # for coin in potential_coins_true:
+    #     print(f"Plotting true case for coin: {coin}")
+    #     draw_graph_with_communities_correct_case(
+    #         gs,
+    #         coin,
+    #         communities_dict,
+    #         id_to_username,
+    #         labels[coin],
+    #         base_node_size=20000,
+    #         font_size=55,
+    #         arrow_size=120,
+    #         label_distance=0.25,
+    #     )
+
+    draw_graph_with_communities_correct_case(
+        gs,
+        "ETC",
+        communities_dict,
+        id_to_username,
+        labels["ETC"],
+        base_node_size=20000,
+        font_size=55,
+        arrow_size=120,
+        label_distance=0.25,
+    )
+    # result = [(k[0], k[7], k[-1], k[2]) for i in cascade_labeling["AVAX"] for j in i for k in j]
+
     draw_graph_with_communities_wrong_case(
         gs,
         "STORJ",
         communities_dict,
         id_to_username,
-        true_false_labels["STORJ"],
+        predictions["STORJ"],
         base_node_size=20000,
         font_size=55,
         arrow_size=120,
-        label_distance=0.5,
+        label_distance=0.25,
     )
 
     draw_graph_with_communities(
@@ -493,90 +777,13 @@ if __name__ == "__main__":
         arrow_size=120,
         label_distance=0.25,
     )
-    # result = [(k[0], k[7], k[-1], k[2]) for i in cascade_labeling["AVAX"] for j in i for k in j]
-
-
-def extract_elements(data):
-    results = []
-    for sub_index, sub_list in enumerate(data):
-        sub_list_results = []  # Create a new list for each sublist's results
-        label = (
-            f"d{sub_index + 1}"  # Assign a label depending on the index of the sublist
-        )
-        for item in sub_list:
-            # Processing the text to remove emojis, #, and replace \n with space
-            text = item[10]
-            text = re.sub(
-                r"[^\w\s,.]", "", text
-            )  # Remove emojis and other non-alphanumeric symbols except commas and periods
-            text = text.replace("#", "")  # Remove '#'
-            text = text.replace("\n", " ")  # Replace newline characters with spaces
-            text = re.sub(
-                r"\s+", " ", text
-            ).strip()  # Replace multiple spaces with a single space and trim leading/trailing spaces
-
-            # Format timestamp
-            timestamp = (
-                item[7].strftime("%Y-%m-%d %H:%M:%S")
-                if isinstance(item[7], datetime)
-                else item[7]
-            )
-
-            # Extracting specific indices: label, 0 (channel name), formatted timestamp, processed text, and 2
-            extracted_data = (label, item[0], timestamp, text, item[2])
-            sub_list_results.append(extracted_data)
-        results.append(sub_list_results)  # Append the sublist of results
-    return results
-
-
-def generate_latex_table(results):
-    table = r"\begin{table}[!h]" + "\n"
-    table += r"\centering" + "\n"
-    table += r"\footnotesize" + "\n"
-    table += r"\caption{Crowd-pump Messages and Returns}" + "\n"
-    table += r"\label{tab: case_study_wrong}" + "\n"
-    table += r"\begin{tabularx}{\textwidth}{|c|l|c|X|c|}" + "\n"
-    table += r"\hline" + "\n"
-    table += (
-        r"\textbf{Events} & \textbf{Telegram Channels} & \textbf{Timestamps} & \textbf{Messages} & \textbf{Returns} \\"
-        + "\n"
-    )
-    table += r"\hline" + "\n"
-
-    last_event = None
-    for sub_list in results:
-        for index, item in enumerate(sub_list):
-            color = (
-                "red" if index == 0 else "teal"
-            )  # Color for the first item red, others teal
-            event_label, channel_name, timestamp, message, return_value = item
-
-            # Replace '&' with 'and', and escape underscores
-            message = message.replace("&", "and").replace("_", r"\_")
-            channel_name = channel_name.replace("_", r"\_")
-
-            # Determine if the event label should be printed
-            event_label = event_label if event_label != last_event else ""
-            last_event = item[0]  # Update last_event to the current event label
-
-            table += (
-                f"\\textcolor{{{color}}}{{{event_label}}} & \\textcolor{{{color}}}{{{channel_name}}} & \\textcolor{{{color}}}{{{timestamp}}} & \\textcolor{{{color}}}{{{message}}} &  \\textcolor{{{color}}}{{{'{:.2f}'.format(return_value * 100)}\%}} \\\\"
-                + "\n"
-            )
-        table += r"\hline" + "\n"
-
-    table += r"\end{tabularx}" + "\n"
-    table += r"\end{table}"
-
-    return table
-
 
 # Assuming 'data' is your complex nested list variable, you would call the function like this:
-results = extract_elements(cascade_labeling["STORJ"])
-latex_table = generate_latex_table(results)
-print(latex_table)
+# results = extract_elements(cascade_labeling["STORJ"])
+# latex_table = generate_latex_table(results)
+# print(latex_table)
 
 
-results = extract_elements(cascade_labeling["SUI"])
-latex_table = generate_latex_table(results)
-print(latex_table)
+# results = extract_elements(cascade_labeling["SUI"])
+# latex_table = generate_latex_table(results)
+# print(latex_table)
