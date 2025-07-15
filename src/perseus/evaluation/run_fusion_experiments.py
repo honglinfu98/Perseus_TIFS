@@ -27,6 +27,23 @@ from sklearn.metrics import roc_curve
 import os
 from torch.optim.adam import Adam
 import concurrent.futures
+import random
+import numpy as np
+
+
+def set_seed(seed=7):
+    """
+    Sets random seed for reproducibility.
+    Args:
+        seed (int): The seed value to use.
+    """
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
 
 
 def train_epoch(model, loader, optimizer, criterion, device):
@@ -110,6 +127,7 @@ def run_experiment(
     return_roc=False,
     return_timings=False,
     return_embs=False,
+    seed=42,
 ):
     """
     Runs a single experiment with the specified model and hyperparameters.
@@ -125,9 +143,11 @@ def run_experiment(
         return_roc (bool): Whether to return ROC curve data.
         return_timings (bool): Whether to return timing information.
         return_embs (bool): Whether to return embeddings.
+        seed (int): Random seed for reproducibility.
     Returns:
         dict: Results including metrics, model, and optionally ROC/timing/embedding data.
     """
+    set_seed(seed)
     import time
     from sklearn.metrics import roc_curve
 
@@ -306,11 +326,11 @@ def collect_full_outputs(
 def export_results_for_plot(
     data_names=["DDM", "DDINA"],
     model_names=["MultiGAT", "MultiGraphSAGE"],
-    hidden_channels_list=[8, 32, 64, 128, 516],
-    lr_list=[0.01, 0.001, 0.0001, 0.00001, 0.000001],
+    hidden_channels_list=[128],
+    lr_list=[0.0005],
     weight_decay_list=[5e-4],
-    batch_sizes=range(8, 9),
-    out_path=os.path.join(PROJECT_ROOT, "data", "buffer", "new_results_btc.pkl"),
+    batch_sizes=range(2, 21, 2),
+    out_path=os.path.join(PROJECT_ROOT, "data", "buffer", "new_results_btc_711.pkl"),
     param_tuning_out_path=os.path.join(
         PROJECT_ROOT, "data", "buffer", "param_tuning_results.pkl"
     ),

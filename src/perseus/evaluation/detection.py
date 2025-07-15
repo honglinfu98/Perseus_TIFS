@@ -40,9 +40,9 @@ def get_detection(
     mode: str,
     data_name: str = "DDM",
     model_name: str = "MultiGAT",
-    hidden_channels: int = 8,
-    lr: float = 0.0001,
-    batch_size: int = 2,
+    hidden_channels: int = 128,
+    lr: float = 0.001,
+    batch_size: int = 8,
     results_path: str = "",
 ) -> tuple[dict, dict]:
     """
@@ -64,7 +64,10 @@ def get_detection(
     """
     # Load results (unflattened for batch plot)
     with open(
-        path.join(PROJECT_ROOT, "data", "buffer", "new_results_btc.pkl"), "rb"
+        path.join(
+            PROJECT_ROOT, "data", "buffer", "new_results_btc_seed7_batch_2_20.pkl"
+        ),
+        "rb",
     ) as file:
         batch_results = pickle.load(file)
 
@@ -72,7 +75,7 @@ def get_detection(
     # Example: DDM, MultiGAT, batch_size=2
     data_name = "DDM"
     model_name = "MultiGAT"
-    batch_size = 2
+    batch_size = 8
 
     # Get the result dict for this experiment
     result = batch_results[data_name][model_name][batch_size]

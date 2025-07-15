@@ -203,14 +203,18 @@ if __name__ == "__main__":
         df_reordered = df_reordered.append(row, ignore_index=True)
 
     # Fusion/multi results
-    with open(path.join(PROJECT_ROOT, "data/buffer/new_results_btc.pkl"), "rb") as f:
+    with open(
+        path.join(PROJECT_ROOT, "data/buffer/new_results_btc_seed7_batch_2_20.pkl"),
+        "rb",
+    ) as f:
         fusion_results = pickle.load(f)
+    batch_size = 8
     fusion_rows = []
     model_map = {"MultiGAT": "Fusion GAT", "MultiGraphSAGE": "Fusion GraphSAGE"}
     dataset_map = {"DDINA": "Directed diffusion", "DDM": "Weighted diffusion"}
     for data in ["DDINA", "DDM"]:
         for model in ["MultiGAT", "MultiGraphSAGE"]:
-            metrics = fusion_results[data][model][2]["metrics"]
+            metrics = fusion_results[data][model][batch_size]["metrics"]
             labels = metrics["labels"].flatten()
             probs = metrics["probs"].flatten()
             threshold = find_best_f1_threshold(probs, labels)

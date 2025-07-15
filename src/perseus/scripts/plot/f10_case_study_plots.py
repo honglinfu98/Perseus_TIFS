@@ -58,7 +58,7 @@ def extract_elements(data):
         )
         for item in sub_list:
             # Processing the text to remove emojis, #, and replace \n with space
-            text = item[10]
+            text = item[11]
             text = re.sub(
                 r"[^\w\s,.]", "", text
             )  # Remove emojis and other non-alphanumeric symbols except commas and periods
@@ -70,13 +70,13 @@ def extract_elements(data):
 
             # Format timestamp
             timestamp = (
-                item[7].strftime("%Y-%m-%d %H:%M:%S")
-                if isinstance(item[7], datetime)
-                else item[7]
+                item[8].strftime("%Y-%m-%d %H:%M:%S")
+                if isinstance(item[8], datetime)
+                else item[8]
             )
 
             # Extracting specific indices: label, 0 (channel name), formatted timestamp, processed text, and 2
-            extracted_data = (label, item[0], timestamp, text, item[2])
+            extracted_data = (label, item[0], timestamp, text)
             sub_list_results.append(extracted_data)
         results.append(sub_list_results)  # Append the sublist of results
     return results
@@ -97,10 +97,10 @@ def generate_latex_table(results):
     table += r"\footnotesize" + "\n"
     table += r"\caption{Crowd-pump Messages and Returns}" + "\n"
     table += r"\label{tab: case_study_wrong}" + "\n"
-    table += r"\begin{tabularx}{\textwidth}{|c|l|c|X|c|}" + "\n"
+    table += r"\begin{tabularx}{\textwidth}{|c|l|c|X|}" + "\n"
     table += r"\hline" + "\n"
     table += (
-        r"\textbf{Events} & \textbf{Telegram Channels} & \textbf{Timestamps} & \textbf{Messages} & \textbf{Returns} \\"
+        r"\textbf{Events} & \textbf{Telegram Channels} & \textbf{Timestamps} & \textbf{Messages}  \\"
         + "\n"
     )
     table += r"\hline" + "\n"
@@ -111,7 +111,7 @@ def generate_latex_table(results):
             color = (
                 "red" if index == 0 else "teal"
             )  # Color for the first item red, others teal
-            event_label, channel_name, timestamp, message, return_value = item
+            event_label, channel_name, timestamp, message = item
 
             # Replace '&' with 'and', and escape underscores
             message = message.replace("&", "and").replace("_", r"\_")
@@ -122,7 +122,7 @@ def generate_latex_table(results):
             last_event = item[0]  # Update last_event to the current event label
 
             table += (
-                f"\\textcolor{{{color}}}{{{event_label}}} & \\textcolor{{{color}}}{{{channel_name}}} & \\textcolor{{{color}}}{{{timestamp}}} & \\textcolor{{{color}}}{{{message}}} &  \\textcolor{{{color}}}{{{'{:.2f}'.format(return_value * 100)}\%}} \\\\"
+                f"\\textcolor{{{color}}}{{{event_label}}} & \\textcolor{{{color}}}{{{channel_name}}} & \\textcolor{{{color}}}{{{timestamp}}} & \\textcolor{{{color}}}{{{message}}} \\\\"
                 + "\n"
             )
         table += r"\hline" + "\n"
@@ -399,7 +399,9 @@ def draw_graph_with_communities_correct_case(
 
     # Set up figure and axis.
     fig, ax = plt.subplots(figsize=(20, 20))
-    pos = nx.circular_layout(G)
+    pos = nx.circular_layout(
+        G,
+    )
 
     # Draw edges behind nodes.
     nx.draw_networkx_edges(G, pos, arrowsize=arrow_size, width=3, ax=ax)
@@ -445,12 +447,22 @@ def draw_graph_with_communities_correct_case(
     label_pos = {
         node: (
             pos[node][0]
-            + 1.6 * label_distance * np.cos(np.arctan2(pos[node][1], pos[node][0])),
+            + 2.7 * label_distance * np.cos(np.arctan2(pos[node][1], pos[node][0])),
             pos[node][1]
-            + 2 * label_distance * np.sin(np.arctan2(pos[node][1], pos[node][0])),
+            + 3.7 * label_distance * np.sin(np.arctan2(pos[node][1], pos[node][0])),
         )
         for node in G.nodes()
     }
+    # Move 'binance_360' label further away from the center
+    for node_id in id_to_username:
+        if id_to_username[node_id] == "binance_360" and node_id in label_pos:
+            # Increase the offset multiplier for this node
+            x, y = pos[node_id]
+            angle = np.arctan2(y, x)
+            label_pos[node_id] = (
+                x + 4 * label_distance * np.cos(angle),  # increase multiplier as needed
+                y + 7 * label_distance * np.sin(angle),
+            )
     adjusted_labels = {node: id_to_username.get(node, str(node)) for node in G.nodes()}
     nx.draw_networkx_labels(
         G, label_pos, labels=adjusted_labels, font_size=font_size, ax=ax
@@ -754,33 +766,33 @@ if __name__ == "__main__":
     )
     # result = [(k[0], k[7], k[-1], k[2]) for i in cascade_labeling["AVAX"] for j in i for k in j]
 
-    draw_graph_with_communities_wrong_case(
-        gs,
-        "STORJ",
-        communities_dict,
-        id_to_username,
-        predictions["STORJ"],
-        base_node_size=20000,
-        font_size=55,
-        arrow_size=120,
-        label_distance=0.25,
-    )
+    # draw_graph_with_communities_wrong_case(
+    #     gs,
+    #     "STORJ",
+    #     communities_dict,
+    #     id_to_username,
+    #     predictions["STORJ"],
+    #     base_node_size=20000,
+    #     font_size=55,
+    #     arrow_size=120,
+    #     label_distance=0.25,
+    # )
 
-    draw_graph_with_communities(
-        gs,
-        "SUI",
-        communities_dict,
-        id_to_username,
-        labels["SUI"],
-        base_node_size=20000,
-        font_size=55,
-        arrow_size=120,
-        label_distance=0.25,
-    )
+    # draw_graph_with_communities(
+    #     gs,
+    #     "SUI",
+    #     communities_dict,
+    #     id_to_username,
+    #     labels["SUI"],
+    #     base_node_size=20000,
+    #     font_size=55,
+    #     arrow_size=120,
+    #     label_distance=0.25,
+    # )
 
 # Assuming 'data' is your complex nested list variable, you would call the function like this:
-# results = extract_elements(cascade_labeling["STORJ"])
-# latex_table = generate_latex_table(results)
+results = extract_elements(cascade_labeling["ETC"])
+latex_table = generate_latex_table(results)
 # print(latex_table)
 
 
