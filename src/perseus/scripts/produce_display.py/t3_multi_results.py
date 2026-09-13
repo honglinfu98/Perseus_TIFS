@@ -1,5 +1,12 @@
-# --- Add MultiGAT/MultiGraphSAGE results from multi_run.py ---
+"""
+Module: t3_multi_results.py
+---------------------------
+Compute the model comparison table (GAT / GraphSAGE / SOTA GCN / Random Forest /
+Fusion models on directed and weighted diffusion features) and save it directly
+as a CSV file in results/. Use t3_display_multi_results.py to view it.
+"""
 
+import os
 import pickle
 import numpy as np
 import pandas as pd
@@ -21,6 +28,8 @@ from perseus.dataset.dataset_preparation import (
     get_split_data_pickle_wot,
     get_split_data_pickle_btc,
 )
+
+MULTI_RESULTS_CSV = path.join(PROJECT_ROOT, "results", "t3_multi_results.csv")
 
 
 def extract_data_from_loader(data_loader):
@@ -128,14 +137,25 @@ def train_and_evaluate_rf(train_loader, test_loader, model_dataset_name):
     }
 
 
-if __name__ == "__main__":
+def generate_multi_results(output_path=None):
+    """
+    Build the full model comparison table and save it directly as a CSV file.
+
+    Parameters:
+        output_path: Where to save the CSV (default: results/t3_multi_results.csv).
+
+    Returns:
+        pd.DataFrame: One row per model/feature-set combination with columns
+        model_dataset, precision, f1, accuracy, recall, mcc.
+    """
+    if output_path is None:
+        output_path = MULTI_RESULTS_CSV
+
     datasets = ["DDINA", "DDM"]
     models = ["GCN", "GAT", "GraphSAGE"]
 
     # Load results
-    with open(
-        path.join(PROJECT_ROOT, "data", "buffer", "results_btc_11.pkl"), "rb"
-    ) as file:
+    with open(path.join(PROJECT_ROOT, "results", "gnn_results.pkl"), "rb") as file:
         results_tr = pickle.load(file)
 
     # Get metrics and DataFrame
@@ -199,12 +219,11 @@ if __name__ == "__main__":
             train_loader_d, test_loader_d, "Random Forest Directed Diffusion"
         )
     )
-    for row in rf_rows:
-        df_reordered = df_reordered.append(row, ignore_index=True)
+    df_reordered = pd.concat([df_reordered, pd.DataFrame(rf_rows)], ignore_index=True)
 
     # Fusion/multi results
     with open(
-        path.join(PROJECT_ROOT, "data/buffer/new_results_btc_seed7_batch_2_20.pkl"),
+        path.join(PROJECT_ROOT, "results", "fusion_results.pkl"),
         "rb",
     ) as f:
         fusion_results = pickle.load(f)
@@ -242,3 +261,13 @@ if __name__ == "__main__":
     df_reordered["model_dataset"] = df_reordered["model_dataset"].str.replace(
         "Multi-head", "Fusion"
     )
+
+    os.makedirs(path.dirname(output_path), exist_ok=True)
+    df_reordered.to_csv(output_path, index=False)
+    print(f"Saved multi results to {output_path}")
+    return df_reordered
+
+
+if __name__ == "__main__":
+    df = generate_multi_results()
+    print(df)

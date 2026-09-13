@@ -230,7 +230,7 @@ def draw_graph_with_communities(
     label_distance=0.2,
 ):
     """
-    Draws a graph with detected communities, coloring nodes by label and annotating with community numbers.
+    Draws a graph with detected communities, coloring nodes by label.
 
     Args:
         gs (dict): Dictionary of graphs keyed by coin/event name.
@@ -271,8 +271,7 @@ def draw_graph_with_communities(
     scale_constant = x_range / (50 * np.sqrt(default_node_size))
     radius = np.sqrt(base_node_size) * scale_constant
 
-    # Draw each node as a circle with a fill color based on its label,
-    # and annotate the node with its community number.
+    # Draw each node as a circle with a fill color based on its label.
     for node in G.nodes():
         x, y = pos[node]
         label_value = labels.get(node, 0)
@@ -288,17 +287,6 @@ def draw_graph_with_communities(
             (x, y), radius=radius, facecolor=fill_color, edgecolor="black", lw=2
         )
         ax.add_patch(circle)
-        # Annotate the node with its community number (starting at 1).
-        comm_id = node_to_community[node] + 1
-        ax.text(
-            x,
-            y,
-            str(comm_id),
-            horizontalalignment="center",
-            verticalalignment="center",
-            fontsize=font_size * 1.2,
-            color="black",
-        )
 
     # (Optional) Draw additional labels (e.g., usernames) offset from the node.
     label_pos = {
@@ -321,41 +309,16 @@ def draw_graph_with_communities(
         G, label_pos, labels=adjusted_labels, font_size=font_size, font_color="black"
     )
 
-    # Build legend for node labels.
-    label0_circle = mpatches.Circle(
-        (0, 0),
-        radius=radius,
-        facecolor="lightcoral",
-        edgecolor="black",
-        lw=2,
-        label="True Positive",
-    )
-    label1_circle = mpatches.Circle(
-        (0, 0),
-        radius=radius,
-        facecolor="lightblue",
-        edgecolor="black",
-        lw=2,
-        label="True Negative",
-    )
-    leg = ax.legend(
-        handles=[label0_circle, label1_circle],
-        title="Node Labels",
-        loc="lower center",
-        bbox_to_anchor=(0.5, 0),
-        ncol=2,
-        frameon=False,
-        fontsize=font_size,
-        title_fontsize=font_size,
-        handler_map={mpatches.Circle: HandlerCircle(scale=2)},
-    )
-    ax.add_artist(leg)
+    # Legend removed - now created separately
 
     ax.axis("off")
     ax.set_xlim(min(xs) - 2, max(xs) + 2)
     ax.set_ylim(min(ys) - 2, max(ys) + 2)
+    # Remove all spines
+    for spine in ax.spines.values():
+        spine.set_visible(False)
     fig.tight_layout()
-    fig.savefig(path.join(PROJECT_ROOT, "data", "buffer", f"june_{key}_case.pdf"))
+    fig.savefig(path.join(PROJECT_ROOT, "data", "buffer", f"june_{key}_case.png"), bbox_inches='tight', pad_inches=0)
     plt.show()
 
 
@@ -371,7 +334,7 @@ def draw_graph_with_communities_correct_case(
     label_distance=0.2,
 ):
     """
-    Draws a graph for the 'correct case', coloring nodes by label and annotating with community numbers.
+    Draws a graph for the 'correct case', coloring nodes by label.
 
     Args:
         gs (dict): Dictionary of graphs keyed by coin/event name.
@@ -414,8 +377,7 @@ def draw_graph_with_communities_correct_case(
     scale_constant = x_range / (50 * np.sqrt(default_node_size))
     radius = np.sqrt(base_node_size) * scale_constant
 
-    # Draw each node as a circle with a fill color based on its label,
-    # and annotate the node with its community number.
+    # Draw each node as a circle with a fill color based on its label.
     for node in G.nodes():
         x, y = pos[node]
         label_value = labels.get(node, 0)
@@ -431,17 +393,6 @@ def draw_graph_with_communities_correct_case(
             (x, y), radius=radius, facecolor=fill_color, edgecolor="black", lw=2
         )
         ax.add_patch(circle)
-        # Annotate the node with its community number (starting at 1).
-        comm_id = node_to_community[node] + 1
-        ax.text(
-            x,
-            y,
-            str(comm_id),
-            horizontalalignment="center",
-            verticalalignment="center",
-            fontsize=font_size * 1.2,
-            color="black",
-        )
 
     # Draw node labels (e.g., usernames) offset from the node center.
     label_pos = {
@@ -468,8 +419,35 @@ def draw_graph_with_communities_correct_case(
         G, label_pos, labels=adjusted_labels, font_size=font_size, ax=ax
     )
 
-    # Build legend for node labels.
-    label0_circle = mpatches.Circle(
+    # Legend removed - now created separately
+
+    ax.axis("off")
+    ax.set_xlim(min(xs) - 2, max(xs) + 2)
+    ax.set_ylim(min(ys) - 2, max(ys) + 2)
+    # Remove all spines
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    fig.tight_layout()
+    fig.savefig(path.join(PROJECT_ROOT, "data", "buffer", f"june_{key}_case.png"), bbox_inches='tight', pad_inches=0)
+    plt.show()
+
+
+def create_combined_legend(font_size=55, save_path=None):
+    """
+    Creates a standalone plot containing only the combined legend for all graph types.
+    
+    Args:
+        font_size (int): Font size for legend text
+        save_path (str): Path to save the legend figure
+    """
+    fig, ax = plt.subplots(figsize=(10, 8))
+    ax.axis('off')
+    
+    # Create dummy patches for the legend
+    radius = 0.1  # Dummy radius for legend
+    
+    # Node label legend items
+    true_positive_circle = mpatches.Circle(
         (0, 0),
         radius=radius,
         facecolor="lightcoral",
@@ -477,7 +455,8 @@ def draw_graph_with_communities_correct_case(
         lw=2,
         label="True Positive",
     )
-    label1_circle = mpatches.Circle(
+    
+    true_negative_circle = mpatches.Circle(
         (0, 0),
         radius=radius,
         facecolor="lightblue",
@@ -485,24 +464,54 @@ def draw_graph_with_communities_correct_case(
         lw=2,
         label="True Negative",
     )
-    leg = ax.legend(
-        handles=[label0_circle, label1_circle],
-        title="Node Labels",
-        loc="lower center",
-        bbox_to_anchor=(0.5, 0),
-        ncol=2,
+    
+    # Prediction legend items
+    false_negative_rect = mpatches.Rectangle(
+        (0, 0),
+        1,
+        1,
+        facecolor="lightcoral",
+        edgecolor="black",
+        lw=2,
+        label="False Negative",
+    )
+    
+    false_positive_rect = mpatches.Rectangle(
+        (0, 0),
+        1,
+        1,
+        facecolor="lightblue",
+        edgecolor="black",
+        lw=2,
+        label="False Positive",
+    )
+    
+    # Create the legend with more vertical spacing
+    legend = ax.legend(
+        handles=[true_positive_circle, true_negative_circle, false_negative_rect, false_positive_rect],
+        loc='center',
+        ncol=1,  # Changed to 1 column for vertical layout
         frameon=False,
         fontsize=font_size,
-        title_fontsize=font_size,
-        handler_map={mpatches.Circle: HandlerCircle(scale=2)},
+        title="Legend",
+        title_fontsize=font_size * 1.2,
+        handler_map={
+            mpatches.Circle: HandlerCircle(scale=3),
+            mpatches.Rectangle: HandlerSquare(scale=3)
+        },
+        labelspacing=2.0,  # Increase vertical spacing between items
+        handletextpad=1.5,  # Increase spacing between symbol and text
     )
-    ax.add_artist(leg)
-
-    ax.axis("off")
-    ax.set_xlim(min(xs) - 2, max(xs) + 2)
-    ax.set_ylim(min(ys) - 2, max(ys) + 2)
-    fig.tight_layout()
-    fig.savefig(path.join(PROJECT_ROOT, "data", "buffer", f"june_{key}_case.pdf"))
+    
+    # Add frame to legend
+    legend.get_frame().set_edgecolor('black')
+    legend.get_frame().set_linewidth(2)
+    
+    plt.tight_layout()
+    
+    if save_path:
+        fig.savefig(save_path, bbox_inches='tight', pad_inches=0.1)
+    
     plt.show()
 
 
@@ -555,10 +564,9 @@ def draw_graph_with_communities_wrong_case(
     x_range = max(xs) - min(xs)
     radius = (np.sqrt(base_node_size) / np.sqrt(1500)) * (x_range / 50.0)
 
-    # Draw nodes with shapes based on predictions, and annotate each node with its community number.
+    # Draw nodes with shapes based on predictions.
     for node in G.nodes():
         x, y = pos[node]
-        community_index = node_to_community[node]
         prediction = predictions.get(node, (0, 0))  # Default: correct (0,0)
 
         if prediction in {(1, 0), (0, 1)}:
@@ -591,22 +599,12 @@ def draw_graph_with_communities_wrong_case(
                 zorder=3,
             )
         ax.add_patch(patch)
-        # Add community number text inside the node.
-        ax.text(
-            x,
-            y,
-            str(community_index + 3),
-            horizontalalignment="center",
-            verticalalignment="center",
-            fontsize=font_size * 1.2,
-            color="black",
-        )
 
     # Draw node labels (e.g., usernames) offset from the node center.
     label_pos = {
         node: (
             pos[node][0]
-            + 1.6 * label_distance * np.cos(np.arctan2(pos[node][1], pos[node][0])),
+            + 2 * label_distance * np.cos(np.arctan2(pos[node][1], pos[node][0])),
             pos[node][1]
             + 2 * label_distance * np.sin(np.arctan2(pos[node][1], pos[node][0])),
         )
@@ -617,44 +615,16 @@ def draw_graph_with_communities_wrong_case(
         G, label_pos, labels=adjusted_labels, font_size=font_size, ax=ax
     )
 
-    # Build legend for predictions using rectangle markers.
-    false_negative_handle = mpatches.Rectangle(
-        (0, 0),
-        1,
-        1,
-        facecolor="lightcoral",
-        edgecolor="black",
-        lw=2,
-        label="False Negative",
-    )
-    false_positive_handle = mpatches.Rectangle(
-        (0, 0),
-        1,
-        1,
-        facecolor="lightblue",
-        edgecolor="black",
-        lw=2,
-        label="False Positive",
-    )
-    leg2 = ax.legend(
-        handles=[false_negative_handle, false_positive_handle],
-        title="",
-        loc="lower center",
-        bbox_to_anchor=(0.5, 0),
-        ncol=2,
-        frameon=False,
-        fontsize=font_size,
-        title_fontsize=font_size,
-        handler_map={mpatches.Rectangle: HandlerSquare(scale=2)},
-    )
-    leg2.get_frame().set_edgecolor("black")
-    ax.add_artist(leg2)
+    # Legend removed - now created separately
 
     ax.axis("off")
     ax.set_xlim(min(xs) - 2, max(xs) + 2)
     ax.set_ylim(min(ys) - 2, max(ys) + 2)
+    # Remove all spines
+    for spine in ax.spines.values():
+        spine.set_visible(False)
     fig.tight_layout()
-    fig.savefig(path.join(PROJECT_ROOT, "data", "buffer", f"june_{key}_case.pdf"))
+    fig.savefig(path.join(PROJECT_ROOT, "data", "buffer", f"june_{key}_case.png"), bbox_inches='tight', pad_inches=0)
     plt.show()
 
 
@@ -766,29 +736,35 @@ if __name__ == "__main__":
     )
     # result = [(k[0], k[7], k[-1], k[2]) for i in cascade_labeling["AVAX"] for j in i for k in j]
 
-    # draw_graph_with_communities_wrong_case(
-    #     gs,
-    #     "STORJ",
-    #     communities_dict,
-    #     id_to_username,
-    #     predictions["STORJ"],
-    #     base_node_size=20000,
-    #     font_size=55,
-    #     arrow_size=120,
-    #     label_distance=0.25,
-    # )
+    draw_graph_with_communities_wrong_case(
+        gs,
+        "STORJ",
+        communities_dict,
+        id_to_username,
+        predictions["STORJ"],
+        base_node_size=20000,
+        font_size=55,
+        arrow_size=120,
+        label_distance=0.25,
+    )
 
-    # draw_graph_with_communities(
-    #     gs,
-    #     "SUI",
-    #     communities_dict,
-    #     id_to_username,
-    #     labels["SUI"],
-    #     base_node_size=20000,
-    #     font_size=55,
-    #     arrow_size=120,
-    #     label_distance=0.25,
-    # )
+    draw_graph_with_communities(
+        gs,
+        "SUI",
+        communities_dict,
+        id_to_username,
+        labels["SUI"],
+        base_node_size=20000,
+        font_size=55,
+        arrow_size=120,
+        label_distance=0.25,
+    )
+    
+    # Create and save the combined legend separately
+    create_combined_legend(
+        font_size=55,
+        save_path=path.join(PROJECT_ROOT, "data", "buffer", "combined_legend.png")
+    )
 
 # Assuming 'data' is your complex nested list variable, you would call the function like this:
 results = extract_elements(cascade_labeling["ETC"])

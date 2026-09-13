@@ -326,13 +326,13 @@ def collect_full_outputs(
 def export_results_for_plot(
     data_names=["DDM", "DDINA"],
     model_names=["MultiGAT", "MultiGraphSAGE"],
-    hidden_channels_list=[128],
-    lr_list=[0.0005],
+    hidden_channels_list=[32],
+    lr_list=[0.005],
     weight_decay_list=[5e-4],
     batch_sizes=range(2, 21, 2),
-    out_path=os.path.join(PROJECT_ROOT, "data", "buffer", "new_results_btc_711.pkl"),
+    out_path=os.path.join(PROJECT_ROOT, "results", "fusion_results.pkl"),
     param_tuning_out_path=os.path.join(
-        PROJECT_ROOT, "data", "buffer", "param_tuning_results.pkl"
+        PROJECT_ROOT, "results", "parameter_search_results_batched.pkl"
     ),
 ):
     """

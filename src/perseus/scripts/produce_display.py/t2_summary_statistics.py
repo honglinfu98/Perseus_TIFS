@@ -4,7 +4,13 @@ Module: t2_summary_statistics.py
 This script computes and prints summary statistics for cryptocurrency event datasets, including counts of cryptocurrencies, events, graphs, nodes, edges, masterminds, and accomplices. It processes train, validation, and test splits, and supports flexible input of signals and labeling files.
 """
 
+import os
+from os import path
+
 import numpy as np
+import pandas as pd
+
+from perseus.settings import PROJECT_ROOT
 from perseus.dataset.preprocess.train_test_validate import (
     get_btc_train_scored_signals,
     get_btc_test_scored_signals,
@@ -25,6 +31,10 @@ from perseus.dataset.preprocess.groudtruth_labeling import (
 )
 from perseus.dataset.dataset_preparation import get_split_data_pickle_btc_noloader
 
+RESULTS_DIR = path.join(PROJECT_ROOT, "results")
+SUMMARY_STATISTICS_CSV = path.join(RESULTS_DIR, "t2_summary_statistics.csv")
+SPLITS = ["train", "valid", "test"]
+
 
 def generate_summary_statistics(
     train_signals,
@@ -35,9 +45,11 @@ def generate_summary_statistics(
     test_label_file="test",
     direct_model="DDINA",
     weighted_model="DDM",
+    output_path=None,
 ):
     """
-    Generate summary statistics for cryptocurrency event datasets.
+    Generate summary statistics for cryptocurrency event datasets and save them
+    directly as a CSV file.
 
     Parameters:
         train_signals: List or DataFrame of training signals.
@@ -48,10 +60,14 @@ def generate_summary_statistics(
         test_label_file: Filename or identifier for test labels.
         direct_model: Model name for direct graph data.
         weighted_model: Model name for weighted graph data.
+        output_path: Where to save the CSV (default: results/t2_summary_statistics.csv).
 
     Returns:
-        dict: Summary statistics including counts of cryptocurrencies, events, graphs, nodes, edges, masterminds, and accomplices for each split.
+        pd.DataFrame: Summary statistics with one row per statistic (cryptocurrencies,
+        events, graphs, nodes, edges, masterminds, accomplices) and one column per split.
     """
+    if output_path is None:
+        output_path = SUMMARY_STATISTICS_CSV
     datasets = [train_signals, valid_signals, test_signals]
     gs_ls = []
     features_ls = []
@@ -143,13 +159,21 @@ def generate_summary_statistics(
             sum([len(np.array(i.edge_index[0, :])) for i in weighted[2]]),
         ],
     }
-    return stats
+
+    # One row per statistic, one column per split; all values are integer counts.
+    df = pd.DataFrame(stats, index=SPLITS).T
+    df = df.apply(pd.to_numeric).round().astype("int64")
+    df.index.name = "statistic"
+
+    os.makedirs(path.dirname(output_path), exist_ok=True)
+    df.to_csv(output_path)
+    print(f"Saved summary statistics to {output_path}")
+    return df
 
 
 if __name__ == "__main__":
     train_signals = get_btc_train_scored_signals()
     valid_signals = get_btc_valid_scored_signals()
     test_signals = get_btc_test_scored_signals()
-    stats = generate_summary_statistics(train_signals, valid_signals, test_signals)
-    for k, v in stats.items():
-        print(f"{k}: {v}")
+    df = generate_summary_statistics(train_signals, valid_signals, test_signals)
+    print(df)

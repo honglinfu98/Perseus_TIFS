@@ -176,7 +176,9 @@ def aggregate_and_compare_combined(
             title_fontsize=font_size,
         )
         plt.tight_layout(rect=[0, 0, 1, 0.9])
-        plt.savefig(path.join(PROJECT_ROOT, "data", f"distribution_{metric}.pdf"))
+        plt.savefig(
+            path.join(PROJECT_ROOT, "data", "buffer", f"distribution_{metric}.pdf")
+        )
         plt.show()
         plt.close(fig)
     return ttest_results, metrics_by_group

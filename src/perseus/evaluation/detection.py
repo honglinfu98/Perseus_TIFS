@@ -41,9 +41,9 @@ def get_detection(
     data_name: str = "DDM",
     model_name: str = "MultiGAT",
     hidden_channels: int = 128,
-    lr: float = 0.001,
+    # lr: float = 0.001,
     batch_size: int = 8,
-    results_path: str = "",
+    # results_path: str = "",
 ) -> tuple[dict, dict]:
     """
     Run detection using a trained GNN model on either test or new data, returning graphs and prediction results.
@@ -64,9 +64,7 @@ def get_detection(
     """
     # Load results (unflattened for batch plot)
     with open(
-        path.join(
-            PROJECT_ROOT, "data", "buffer", "new_results_btc_seed7_batch_2_20.pkl"
-        ),
+        path.join(PROJECT_ROOT, "data", "buffer", "new_results_btc_batched.pkl"),
         "rb",
     ) as file:
         batch_results = pickle.load(file)
@@ -264,6 +262,7 @@ def get_detection(
             sum(inner_dict.values()) for inner_dict in transformed_predictions.values()
         )
         print(total_sum)
+        print("\n\n\n")
 
         # Dictionary to hold the count of tokens with 1, 2, 3, etc., '1's
         ones_count = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0}
@@ -310,5 +309,5 @@ def get_detection(
 
 
 if __name__ == "__main__":
-    gs, output_dict = get_detection("test")
+    gs, output_dict = get_detection("new")
     # gs, output_dict = get_detection("new")

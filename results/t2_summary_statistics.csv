@@ -1,0 +1,10 @@
+statistic,train,valid,test
+number_of_cryptocurrency,358,208,208
+crowd_pumps,41329,4447,3459
+crowd_pumps_event,3523,304,274
+mastermind,487,107,135
+accomplices,3277,408,419
+number_of_graphs,265,62,70
+number_of_nodes,3764,515,554
+number_of_edges_directed,7912,1610,1786
+number_of_edges_weighted,8601,1633,1788

@@ -15,9 +15,9 @@ import numpy as np
 
 def visualize_results(
     metric: str = "best_val_f1",
-    fontsize: int = 12,
+    fontsize: int = 23,
     save_path: str = os.path.join(PROJECT_ROOT, "data", "tuning_grid.pdf"),
-    batch_size: int = 2,
+    batch_size: int = 8,
     data_name_filter: str = "DDM",
     model_name_filter: str = "MultiGAT",
 ):
@@ -38,16 +38,23 @@ def visualize_results(
     """
     # Load flat param tuning results
     with open(
-        os.path.join(PROJECT_ROOT, "data", "buffer", "param_tuning_results.pkl"), "rb"
+        os.path.join(PROJECT_ROOT, "data", "buffer", "parameter_search_results.pkl"),
+        "rb",
     ) as file:
         param_tuning_results = pickle.load(file)
 
-    # Gather all (lr, hidden_channels, metric) for the specified batch size, data, and model
+    # Filter for your desired settings
+
+    batch_size = 8
+    data_name_filter = "DDM"
+    model_name_filter = "MultiGAT"
+    metric = "best_val_f1"
+
     points = []
     for entry in param_tuning_results:
-        if data_name_filter is not None and entry.get("data") != data_name_filter:
+        if entry.get("data") != data_name_filter:
             continue
-        if model_name_filter is not None and entry.get("model") != model_name_filter:
+        if entry.get("model") != model_name_filter:
             continue
         if entry.get("batch_size") != batch_size:
             continue
@@ -56,42 +63,49 @@ def visualize_results(
         metric_val = entry.get(metric)
         if lr is not None and hidden_channels is not None and metric_val is not None:
             points.append((lr, hidden_channels, metric_val))
-        print(f"INFO: {entry}")
+
     if not points:
-        print(
-            f"No points found for plotting with batch_size={batch_size}, data_name={data_name_filter}, model_name={model_name_filter}."
+        print("No points found for plotting.")
+    else:
+        lrs = sorted(set(p[0] for p in points))
+        hiddens = sorted(set(p[1] for p in points))
+        metric_grid = np.full((len(hiddens), len(lrs)), np.nan)
+        for lr, hidden, val in points:
+            i = hiddens.index(hidden)
+            j = lrs.index(lr)
+            metric_grid[i, j] = val
+
+        def format_lr(lr):
+            mantissa, exponent = f"{lr:.0e}".split("e")
+            return f"{mantissa}e{int(exponent)}"
+
+        fig, ax = plt.subplots(figsize=(6, 5))
+        im = ax.imshow(metric_grid, aspect="auto", cmap="Greens")
+        ax.set_xticks(range(len(lrs)))
+        ax.set_xticklabels([format_lr(lr) for lr in lrs], fontsize=fontsize)
+        ax.set_yticks(range(len(hiddens)))
+        ax.set_yticklabels([str(h) for h in hiddens], fontsize=fontsize)
+        ax.set_xlabel("Learning Rate", fontsize=fontsize)
+        ax.set_ylabel("Hidden Channels", fontsize=fontsize)
+
+        # Add red cross at (32, 0.005)
+        target_hidden = 32
+        target_lr = 0.005
+        if target_hidden in hiddens and target_lr in lrs:
+            i_cross = hiddens.index(target_hidden)
+            j_cross = lrs.index(target_lr)
+            ax.plot(j_cross, i_cross, "rx", markersize=35, markeredgewidth=3)
+
+        # Removed the title as requested
+        cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+        cbar.ax.tick_params(labelsize=fontsize)
+        plt.tight_layout()
+        plt.savefig(
+            os.path.join(PROJECT_ROOT, "data", "tuning_grid.pdf"),
+            bbox_inches="tight",
+            format="pdf",
         )
-        return
-    # Get sorted unique lrs and hidden_channels
-    lrs = sorted(set(p[0] for p in points))
-    hiddens = sorted(set(p[1] for p in points))
-    # Build a 2D array for metric values
-    metric_grid = np.full((len(hiddens), len(lrs)), np.nan)
-    for lr, hidden, val in points:
-        i = hiddens.index(hidden)
-        j = lrs.index(lr)
-        metric_grid[i, j] = val
-    # Ensure we get a single Axes object
-    fig, ax = plt.subplots(figsize=(6, 5))
-    # If ax is an ndarray (shouldn't be, but just in case), get the first Axes
-    if isinstance(ax, np.ndarray):
-        ax = ax.flatten()[0]
-    im = ax.imshow(metric_grid, aspect="auto", cmap="Greens")
-    ax.set_xticks(range(len(lrs)))
-    ax.set_xticklabels([str(lr) for lr in lrs], fontsize=fontsize)
-    ax.set_yticks(range(len(hiddens)))
-    ax.set_yticklabels([str(h) for h in hiddens], fontsize=fontsize)
-    ax.set_xlabel("Learning Rate", fontsize=fontsize)
-    ax.set_ylabel("Hidden Channels", fontsize=fontsize)
-    ax.set_title(
-        f"{data_name_filter} - {model_name_filter} - batch={batch_size}",
-        fontsize=fontsize,
-    )
-    print(f"Plotted points: {points}")
-    fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-    plt.tight_layout()
-    plt.savefig(save_path, bbox_inches="tight")
-    plt.show()
+        plt.show()
 
 
 if __name__ == "__main__":

@@ -10,10 +10,7 @@ from matplotlib.ticker import MaxNLocator, ScalarFormatter
 from perseus.settings import PROJECT_ROOT
 import copy
 
-# Load results (unflattened for batch plot)
-with open(
-    path.join(PROJECT_ROOT, "data", "buffer", "new_results_btc.pkl"), "rb"
-) as file:
+with open(path.join(PROJECT_ROOT, "results", "fusion_results.pkl"), "rb") as file:
     batch_results = pickle.load(file)
 
 
@@ -34,7 +31,7 @@ legend_map = {"Directed": "D", "Weighted": "W"}
 model_legend_map = {"MultiGAT": "A", "MultiGraphSAGE": "S"}
 
 # For old plots, flatten to default batch size
-default_batch_size = 2
+default_batch_size = 8
 results_m = copy.deepcopy(batch_results)
 for dataset in results_m:
     for model in results_m[dataset]:
@@ -177,88 +174,6 @@ def plot_f1_common_ax(ax, results, colors, linestyles, label_map, fontsize=10):
     )
     plt.setp(legend.get_texts(), fontsize=LEGEND_SIZE)
     legend.get_title().set_fontsize(LEGEND_TITLE_SIZE)
-
-
-# # Inference Plot
-# def plot_infer_common_ax(
-#     ax,
-#     results,
-#     label_map,
-#     fontsize=12,
-#     model_colors=model_colors,
-#     line_styles=line_styles,
-# ):
-#     """
-#     Plot inference speed vs. number of nodes for each model and dataset.
-#
-#     Args:
-#         ax (matplotlib.axes.Axes): The axis to plot on.
-#         results (dict): Nested dict of results[dataset][model] with 'batch_times' and 'num_nodes'.
-#         label_map (dict): Mapping from dataset key to label string.
-#         fontsize (int, optional): Font size for labels and ticks. Defaults to 12.
-#         model_colors (dict): Mapping from model name to color.
-#         line_styles (dict): Mapping from dataset label to line style.
-#     """
-#     combined_handles = {}
-#     for model_name in model_colors.keys():
-#         for dataset_key, dataset in label_map.items():
-#             if model_name in results[dataset_key]:
-#                 batch_times = np.array(results[dataset_key][model_name]["batch_times"])
-#                 num_nodes = np.array(results[dataset_key][model_name]["num_nodes"])
-#                 unique_nodes, indices = np.unique(num_nodes, return_inverse=True)
-#                 average_batch_times = np.zeros_like(unique_nodes, dtype=float)
-#                 for i in range(len(unique_nodes)):
-#                     average_batch_times[i] = np.mean(batch_times[indices == i])
-#                 if len(unique_nodes) > 3:
-#                     spline = make_interp_spline(unique_nodes, average_batch_times, k=3)
-#                     fine_x = np.linspace(unique_nodes.min(), unique_nodes.max(), 500)
-#                     fine_y = spline(fine_x)
-#                     ax.plot(
-#                         fine_x,
-#                         fine_y,
-#                         color=model_colors[model_name],
-#                         linestyle=line_styles[dataset],
-#                         linewidth=bold_linewidth,
-#                     )
-#                 else:
-#                     ax.plot(
-#                         unique_nodes,
-#                         average_batch_times,
-#                         "o-",
-#                         color=model_colors[model_name],
-#                         linestyle=line_styles[dataset],
-#                         linewidth=bold_linewidth,
-#                     )
-#                 combined_label = f"{legend_map[dataset]} {model_legend_map[model_name]}"
-#                 if combined_label not in combined_handles:
-#                     combined_handles[combined_label] = Line2D(
-#                         [0],
-#                         [0],
-#                         color=model_colors[model_name],
-#                         linestyle=line_styles[dataset],
-#                         linewidth=bold_linewidth,
-#                         label=combined_label,
-#                     )
-#     ax.set_xlim(3, 15)
-#     ax.set_ylim(0.00009, 0.00030)
-#     ax.set_xlabel("Number of Nodes", fontsize=fontsize)
-#     ax.set_ylabel("Inference Speed (sec)", fontsize=fontsize)
-#     ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
-#     ax.ticklabel_format(style="sci", axis="y", scilimits=(0, 0))
-#     ax.yaxis.get_offset_text().set_fontsize(fontsize)
-#     ax.yaxis.set_major_locator(MaxNLocator(nbins=6))
-#     ax.tick_params(axis="both", which="major", labelsize=fontsize)
-#     ax.grid(True, which="major", axis="both", linestyle="--", linewidth=0.5)
-#     legend = ax.legend(
-#         handles=list(combined_handles.values()),
-#         fontsize=LEGEND_SIZE,
-#         title_fontsize=LEGEND_TITLE_SIZE,
-#         loc="lower center",
-#         handlelength=LEGEND_HANDLELENGTH,
-#     )
-#     plt.setp(legend.get_texts(), fontsize=LEGEND_SIZE)
-#     legend.get_title().set_fontsize(LEGEND_TITLE_SIZE)
-#     ax.set_box_aspect(1)  # For Matplotlib 3.3+.
 
 
 # Combined CDF Plot
@@ -489,7 +404,7 @@ plot_precision_common_ax(
     ax, results_m, model_colors, line_styles, label_map, fontsize=size
 )
 fig.savefig(
-    path.join(PROJECT_ROOT, "data", "mar_Precision_plot.pdf"),
+    path.join(PROJECT_ROOT, "results", "mar_Precision_plot.pdf"),
     bbox_inches="tight",
     format="pdf",
 )
@@ -499,29 +414,12 @@ plt.show()
 fig, ax = get_common_ax(figsize=(8, 8))
 plot_f1_common_ax(ax, results_m, model_colors, line_styles, label_map, fontsize=size)
 fig.savefig(
-    path.join(PROJECT_ROOT, "data", "mar_F1_plot.pdf"),
+    path.join(PROJECT_ROOT, "results", "mar_F1_plot.pdf"),
     bbox_inches="tight",
     format="pdf",
 )
 plt.show()
 
-# # Inference Plot
-# fig, ax = get_common_ax(figsize=(8, 8))
-# plot_infer_common_ax(
-#     ax,
-#     results_m,
-#     label_map,
-#     fontsize=size,
-#     model_colors=model_colors,
-#     line_styles=line_styles,
-# )
-# fig.tight_layout()  # Adjust layout if necessary
-# fig.savefig(
-#     path.join(PROJECT_ROOT, "data", "mar_inference_plot.pdf"),
-#     bbox_inches="tight",
-#     format="pdf",
-# )
-# plt.show()
 
 # Combined CDF Plot
 fig, ax = get_common_ax(figsize=(8, 8))
@@ -534,7 +432,7 @@ plot_combined_cdf_common_ax(
     model_colors=model_colors,
 )
 fig.savefig(
-    path.join(PROJECT_ROOT, "data", "mar_combined_cdf_plot.pdf"),
+    path.join(PROJECT_ROOT, "results", "mar_combined_cdf_plot.pdf"),
     bbox_inches="tight",
     format="pdf",
 )
@@ -551,7 +449,7 @@ plot_combined_roc_common_ax(
     model_colors=model_colors,
 )
 fig.savefig(
-    path.join(PROJECT_ROOT, "data", "mar_combined_roc_plot.pdf"),
+    path.join(PROJECT_ROOT, "results", "mar_combined_roc_plot.pdf"),
     bbox_inches="tight",
     format="pdf",
 )
@@ -563,10 +461,10 @@ plot_batch_time_vs_batch_size(
     ax, batch_results, label_map, model_colors, line_styles, fontsize=size
 )
 ax.set_xlim(2, 20)  # Adjust to your batch size range
-ax.set_ylim(0, 0.01)  # Adjust to your data range
+ax.set_ylim(0, 0.025)  # Adjust to your data range
 fig.tight_layout()
 fig.savefig(
-    path.join(PROJECT_ROOT, "data", "mar_inference_plot.pdf"),
+    path.join(PROJECT_ROOT, "results", "mar_inference_plot.pdf"),
     bbox_inches="tight",
     format="pdf",
 )

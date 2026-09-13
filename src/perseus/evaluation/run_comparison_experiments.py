@@ -26,7 +26,6 @@ from perseus.dataset.dataset_preparation import (
 from perseus.model.gnn_models import GCNNet, Net, GraphSAGENet
 from perseus.settings import PROJECT_ROOT
 
-
 # Set a seed value
 seed = 42
 random.seed(seed)
@@ -356,7 +355,5 @@ if __name__ == "__main__":
                     f"{model_name} experiment on {dataset} generated an exception: {exc}"
                 )
 
-    with open(
-        path.join(PROJECT_ROOT, "data", "buffer", "results_btc_11.pkl"), "wb"
-    ) as file:
+    with open(path.join(PROJECT_ROOT, "results", "gnn_results.pkl"), "wb") as file:
         pickle.dump(results_l, file)
