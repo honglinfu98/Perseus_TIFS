@@ -1,5 +1,5 @@
 bandit
-black==25.1.0
+black==26.5.1
 flake8==6.0.0
 jupyter
 pre-commit==4.1.0
