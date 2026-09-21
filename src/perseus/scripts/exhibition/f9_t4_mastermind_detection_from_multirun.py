@@ -27,7 +27,7 @@ import seaborn as sns
 import networkx as nx
 from scipy import stats
 
-from perseus.evaluation.detection import get_detection
+from perseus.evaluation.detection import get_detection, save_detection
 
 
 # --- Example: Run your analysis/plotting functions as before ---
@@ -198,7 +198,15 @@ def assign_significance(p: float):
 if __name__ == "__main__":
 
     # --- Run the pooled analysis ---
-    gs, output_dict = get_detection("new")
+    # Read gs / output_dict from the results folder; build the file on first run.
+    detection_file = path.join(PROJECT_ROOT, "results", "detection_new.pkl")
+    if path.exists(detection_file):
+        with open(detection_file, "rb") as file:
+            saved = pickle.load(file)
+        gs, output_dict = saved["gs"], saved["output_dict"]
+    else:
+        gs, output_dict = get_detection("new")
+        save_detection("new", gs, output_dict)
     results, c = aggregate_and_compare_combined(gs, output_dict, 28, 28, 0.9)
 
     data = {
@@ -210,6 +218,7 @@ if __name__ == "__main__":
         "Group 0 Mean": [],
         "Group 1 Mean": [],
     }
+
     for metric, result in results.items():
         data["Metric"].append(metric)
         data["Statistic"].append(result.statistic)

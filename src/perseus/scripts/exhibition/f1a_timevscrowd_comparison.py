@@ -50,7 +50,7 @@ def plot_fraud_trends(base_size=12, start_year=2018):
     )
     plt.tight_layout()
 
-    plt.savefig(path.join(PROJECT_ROOT, "data", "march_comparison_plot.pdf"))
+    plt.savefig(path.join(PROJECT_ROOT, "results", "march_comparison_plot.pdf"))
     plt.show()
 
 

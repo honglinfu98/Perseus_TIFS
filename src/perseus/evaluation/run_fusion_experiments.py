@@ -179,7 +179,10 @@ def run_experiment(
         if val_f1 > best_val_f1:
             best_val_f1 = val_f1
             best_state = model.state_dict()
-    model.load_state_dict(best_state)
+    # best_state stays None if validation F1 never rose above 0 (e.g. a tiny
+    # learning rate); keep the final weights instead of crashing the run.
+    if best_state is not None:
+        model.load_state_dict(best_state)
     # Collect all_probs and all_labels on test set
     model.eval()
     all_probs, all_labels = [], []
@@ -323,6 +326,107 @@ def collect_full_outputs(
     return results_by_batch_size
 
 
+def make_param_tuning_entry(
+    data_name, model_name, batch_size, lr, hidden_channels, best_val_f1
+):
+    """
+    Builds one flat parameter-tuning record.
+
+    This is the schema consumed by ``scripts/plot/f8_parameter_tuning.py``:
+    a dict with keys ``batch_size``, ``lr``, ``hidden_channels``, ``model``,
+    ``data`` and ``best_val_f1``.
+    """
+    return {
+        "batch_size": batch_size,
+        "lr": lr,
+        "hidden_channels": hidden_channels,
+        "model": model_name,
+        "data": data_name,
+        "best_val_f1": best_val_f1,
+    }
+
+
+def run_parameter_search(
+    data_names=["DDM", "DDINA"],
+    model_names=["MultiGAT", "MultiGraphSAGE"],
+    hidden_channels_list=[8, 32, 64, 128, 512],
+    lr_list=[5e-6, 5e-5, 5e-4, 5e-3, 5e-2],
+    weight_decay=5e-4,
+    batch_size=8,
+    epochs=100,
+    max_workers=12,
+    out_path=os.path.join(PROJECT_ROOT, "results", "parameter_search_results.pkl"),
+):
+    """
+    Grid-searches learning rate and hidden channel size at a fixed batch size and
+    saves a flat list of ``make_param_tuning_entry`` records to ``out_path``.
+
+    The output is what ``scripts/plot/f8_parameter_tuning.py`` plots as a
+    learning-rate x hidden-channels heatmap of ``best_val_f1``.
+
+    Args:
+        data_names (list of str): Dataset names.
+        model_names (list of str): Model names (keys of the model map).
+        hidden_channels_list (list of int): Hidden channel sizes to try.
+        lr_list (list of float): Learning rates to try.
+        weight_decay (float): Weight decay for the optimizer.
+        batch_size (int): Batch size used for every run.
+        epochs (int): Number of training epochs per run.
+        max_workers (int): Number of worker processes.
+        out_path (str): Output path for the pickle file.
+    Returns:
+        list of dict: The saved parameter-tuning records.
+    """
+    model_map = {"MultiGAT": MultiGAT, "MultiGraphSAGE": MultiGraphSAGE}
+    param_grid = list(
+        itertools.product(data_names, model_names, hidden_channels_list, lr_list)
+    )
+    param_tuning_results = []
+    with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
+        future_to_cfg = {}
+        for data_name, model_name, hidden_channels, lr in param_grid:
+            print(
+                f"Submitting search run for {data_name} {model_name} (hidden={hidden_channels}, lr={lr}, bsz={batch_size})..."
+            )
+            future = executor.submit(
+                run_experiment,
+                data_name,
+                model_map[model_name],
+                hidden_channels,
+                lr,
+                weight_decay,
+                epochs,
+                batch_size,
+            )
+            future_to_cfg[future] = (data_name, model_name, hidden_channels, lr)
+        for future in concurrent.futures.as_completed(future_to_cfg):
+            data_name, model_name, hidden_channels, lr = future_to_cfg[future]
+            try:
+                result = future.result()
+                param_tuning_results.append(
+                    make_param_tuning_entry(
+                        data_name,
+                        model_name,
+                        batch_size,
+                        lr,
+                        hidden_channels,
+                        result["best_val_f1"],
+                    )
+                )
+                print(
+                    f"Completed: {data_name} {model_name} hidden={hidden_channels} lr={lr} best_val_f1={result['best_val_f1']:.4f}"
+                )
+            except Exception as exc:
+                print(
+                    f"Error with {data_name} {model_name} hidden={hidden_channels} lr={lr}: {exc}"
+                )
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    with open(out_path, "wb") as f:
+        pickle.dump(param_tuning_results, f)
+    print(f"Saved {len(param_tuning_results)} param search results to {out_path}")
+    return param_tuning_results
+
+
 def export_results_for_plot(
     data_names=["DDM", "DDINA"],
     model_names=["MultiGAT", "MultiGraphSAGE"],
@@ -332,7 +436,7 @@ def export_results_for_plot(
     batch_sizes=range(2, 21, 2),
     out_path=os.path.join(PROJECT_ROOT, "results", "fusion_results.pkl"),
     param_tuning_out_path=os.path.join(
-        PROJECT_ROOT, "results", "parameter_search_results_batched.pkl"
+        PROJECT_ROOT, "results", "parameter_search_results.pkl"
     ),
 ):
     """
@@ -392,16 +496,14 @@ def export_results_for_plot(
                 # Collect param tuning results for each batch size
                 for bsz, info in batch_size_results.items():
                     param_tuning_results.append(
-                        {
-                            "batch_size": bsz,
-                            "lr": info.get("lr", lr),
-                            "hidden_channels": info.get(
-                                "hidden_channels", hidden_channels
-                            ),
-                            "model": model_name,
-                            "data": data_name,
-                            "best_val_f1": info.get("best_val_f1", 0),
-                        }
+                        make_param_tuning_entry(
+                            data_name,
+                            model_name,
+                            bsz,
+                            info.get("lr", lr),
+                            info.get("hidden_channels", hidden_channels),
+                            info.get("best_val_f1", 0),
+                        )
                     )
                 print(f"Completed: {data_name} {model_name}")
             except Exception as exc:
@@ -416,7 +518,10 @@ def export_results_for_plot(
 
 
 if __name__ == "__main__":
-    # hyperparameter_search()
+    # Grid search over learning rate x hidden channels at a fixed batch size.
+    # Produces results/parameter_search_results.pkl for f8_parameter_tuning.py.
+    run_parameter_search()
 
-    # Export results for plotting
+    # Batch-size sweep at the chosen (lr, hidden) setting.
+    # Produces results/fusion_results.pkl and results/parameter_search_results_batched.pkl.
     export_results_for_plot()

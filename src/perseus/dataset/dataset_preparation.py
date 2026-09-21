@@ -55,23 +55,10 @@ def prepare_data(graphs: dict, features: dict, label_mapping: dict):
 
         # Selecting feature columns for normalization
         feature_columns = [
-            # "average_speed",  # market
-            # "sum_total_targets",  # osn
             "average_btc_base_return",
             "average_increase_percentage",  # market
-            # "number_of_signals",  # osn
             "sum_targets_achieved",  # osn
             "rating",  # topological
-            # "in_ratio",  # topological
-            # "out_ratio",  # topological
-            # "out_nodes",  # topological
-            # "density",  # topological
-            # "clustering_coeff",  # topological
-            # "closeness_centrality",  # topological
-            # "eff_size",  # topological
-            # "efficiency",  # topological
-            # "betweenness_centrality",
-            # "pagerank",
             "ego_in_ratio",
             "ego_out_ratio",
             "ego_out_nodes",
@@ -82,16 +69,6 @@ def prepare_data(graphs: dict, features: dict, label_mapping: dict):
             "closeness_centrality",
             "pagerank",
             "betweenness_centrality",
-            # "ego_weighted_in_ratio",
-            # "ego_weighted_out_ratio",
-            # "ego_out_weights",
-            # "weighted_closeness_centrality",
-            # "weighted_betweenness_centrality",
-            # "weighted_pagerank",
-            # "ego_weighted_eff_size",
-            # "ego_weighted_efficiency",
-            # "weighted_clustering_coefficient",
-            # "ego_weighted_density",
         ]
 
         features_to_normalize = features_buffer[feature_columns]

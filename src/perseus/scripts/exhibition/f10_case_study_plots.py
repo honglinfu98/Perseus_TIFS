@@ -318,7 +318,11 @@ def draw_graph_with_communities(
     for spine in ax.spines.values():
         spine.set_visible(False)
     fig.tight_layout()
-    fig.savefig(path.join(PROJECT_ROOT, "data", "buffer", f"june_{key}_case.png"), bbox_inches='tight', pad_inches=0)
+    fig.savefig(
+        path.join(PROJECT_ROOT, "results", f"june_{key}_case.png"),
+        bbox_inches="tight",
+        pad_inches=0,
+    )
     plt.show()
 
 
@@ -428,24 +432,28 @@ def draw_graph_with_communities_correct_case(
     for spine in ax.spines.values():
         spine.set_visible(False)
     fig.tight_layout()
-    fig.savefig(path.join(PROJECT_ROOT, "data", "buffer", f"june_{key}_case.png"), bbox_inches='tight', pad_inches=0)
+    fig.savefig(
+        path.join(PROJECT_ROOT, "results", f"june_{key}_case.png"),
+        bbox_inches="tight",
+        pad_inches=0,
+    )
     plt.show()
 
 
 def create_combined_legend(font_size=55, save_path=None):
     """
     Creates a standalone plot containing only the combined legend for all graph types.
-    
+
     Args:
         font_size (int): Font size for legend text
         save_path (str): Path to save the legend figure
     """
     fig, ax = plt.subplots(figsize=(10, 8))
-    ax.axis('off')
-    
+    ax.axis("off")
+
     # Create dummy patches for the legend
     radius = 0.1  # Dummy radius for legend
-    
+
     # Node label legend items
     true_positive_circle = mpatches.Circle(
         (0, 0),
@@ -455,7 +463,7 @@ def create_combined_legend(font_size=55, save_path=None):
         lw=2,
         label="True Positive",
     )
-    
+
     true_negative_circle = mpatches.Circle(
         (0, 0),
         radius=radius,
@@ -464,7 +472,7 @@ def create_combined_legend(font_size=55, save_path=None):
         lw=2,
         label="True Negative",
     )
-    
+
     # Prediction legend items
     false_negative_rect = mpatches.Rectangle(
         (0, 0),
@@ -475,7 +483,7 @@ def create_combined_legend(font_size=55, save_path=None):
         lw=2,
         label="False Negative",
     )
-    
+
     false_positive_rect = mpatches.Rectangle(
         (0, 0),
         1,
@@ -485,11 +493,16 @@ def create_combined_legend(font_size=55, save_path=None):
         lw=2,
         label="False Positive",
     )
-    
+
     # Create the legend with more vertical spacing
     legend = ax.legend(
-        handles=[true_positive_circle, true_negative_circle, false_negative_rect, false_positive_rect],
-        loc='center',
+        handles=[
+            true_positive_circle,
+            true_negative_circle,
+            false_negative_rect,
+            false_positive_rect,
+        ],
+        loc="center",
         ncol=1,  # Changed to 1 column for vertical layout
         frameon=False,
         fontsize=font_size,
@@ -497,21 +510,21 @@ def create_combined_legend(font_size=55, save_path=None):
         title_fontsize=font_size * 1.2,
         handler_map={
             mpatches.Circle: HandlerCircle(scale=3),
-            mpatches.Rectangle: HandlerSquare(scale=3)
+            mpatches.Rectangle: HandlerSquare(scale=3),
         },
         labelspacing=2.0,  # Increase vertical spacing between items
         handletextpad=1.5,  # Increase spacing between symbol and text
     )
-    
+
     # Add frame to legend
-    legend.get_frame().set_edgecolor('black')
+    legend.get_frame().set_edgecolor("black")
     legend.get_frame().set_linewidth(2)
-    
+
     plt.tight_layout()
-    
+
     if save_path:
-        fig.savefig(save_path, bbox_inches='tight', pad_inches=0.1)
-    
+        fig.savefig(save_path, bbox_inches="tight", pad_inches=0.1)
+
     plt.show()
 
 
@@ -624,7 +637,11 @@ def draw_graph_with_communities_wrong_case(
     for spine in ax.spines.values():
         spine.set_visible(False)
     fig.tight_layout()
-    fig.savefig(path.join(PROJECT_ROOT, "data", "buffer", f"june_{key}_case.png"), bbox_inches='tight', pad_inches=0)
+    fig.savefig(
+        path.join(PROJECT_ROOT, "results", f"june_{key}_case.png"),
+        bbox_inches="tight",
+        pad_inches=0,
+    )
     plt.show()
 
 
@@ -668,9 +685,7 @@ if __name__ == "__main__":
             pass
 
     # load the prediction labels pickle file from the data folder
-    with open(
-        path.join(PROJECT_ROOT, "data", "buffer", "test_predictions.pkl"), "rb"
-    ) as file:
+    with open(path.join(PROJECT_ROOT, "results", "test_predictions.pkl"), "rb") as file:
         predictions = pickle.load(file)
 
     true_false_labels = {}
@@ -708,21 +723,6 @@ if __name__ == "__main__":
         if {(1, 0), (0, 1)}.issubset(label_set):
             potential_coins.append(coin)
 
-    # # Plot all true cases
-    # for coin in potential_coins_true:
-    #     print(f"Plotting true case for coin: {coin}")
-    #     draw_graph_with_communities_correct_case(
-    #         gs,
-    #         coin,
-    #         communities_dict,
-    #         id_to_username,
-    #         labels[coin],
-    #         base_node_size=20000,
-    #         font_size=55,
-    #         arrow_size=120,
-    #         label_distance=0.25,
-    #     )
-
     draw_graph_with_communities_correct_case(
         gs,
         "ETC",
@@ -759,19 +759,14 @@ if __name__ == "__main__":
         arrow_size=120,
         label_distance=0.25,
     )
-    
+
     # Create and save the combined legend separately
     create_combined_legend(
         font_size=55,
-        save_path=path.join(PROJECT_ROOT, "data", "buffer", "combined_legend.png")
+        save_path=path.join(PROJECT_ROOT, "results", "combined_legend.png"),
     )
 
 # Assuming 'data' is your complex nested list variable, you would call the function like this:
 results = extract_elements(cascade_labeling["ETC"])
 latex_table = generate_latex_table(results)
-# print(latex_table)
-
-
-# results = extract_elements(cascade_labeling["SUI"])
-# latex_table = generate_latex_table(results)
 # print(latex_table)

@@ -64,7 +64,8 @@ def get_detection(
     """
     # Load results (unflattened for batch plot)
     with open(
-        path.join(PROJECT_ROOT, "data", "buffer", "new_results_btc_batched.pkl"),
+        # path.join(PROJECT_ROOT, "data", "buffer", "new_results_btc_batched.pkl"),
+        path.join(PROJECT_ROOT, "results", "fusion_results.pkl"),
         "rb",
     ) as file:
         batch_results = pickle.load(file)
@@ -301,13 +302,45 @@ def get_detection(
                 combined_predictions[asset][node_id] = (int(pred), int(label))
 
         with open(
-            path.join(PROJECT_ROOT, "data", "buffer", f"{mode}_predictions.pkl"), "wb"
+            path.join(PROJECT_ROOT, "results", f"{mode}_predictions.pkl"), "wb"
         ) as file:
             pickle.dump(combined_predictions, file)
 
     return gs, output_dict
 
 
+def detection_cache_path(mode: str) -> str:
+    """Path of the pickle holding (gs, output_dict) for a given detection mode."""
+    return path.join(PROJECT_ROOT, "results", f"detection_{mode}.pkl")
+
+
+def save_detection(mode: str, gs: dict, output_dict: dict) -> str:
+    """Pickle (gs, output_dict) so later scripts can reuse them without re-running the model."""
+    out = detection_cache_path(mode)
+    with open(out, "wb") as file:
+        pickle.dump({"gs": gs, "output_dict": output_dict}, file)
+    return out
+
+
+def load_detection(mode: str, recompute: bool = False, **kwargs) -> tuple[dict, dict]:
+    """
+    Load (gs, output_dict) from the cache written by ``save_detection``.
+
+    If the cache is missing or ``recompute`` is True, run ``get_detection`` and
+    refresh the cache. Extra keyword arguments are forwarded to ``get_detection``.
+    """
+    cache = detection_cache_path(mode)
+    if not recompute and path.exists(cache):
+        with open(cache, "rb") as file:
+            saved = pickle.load(file)
+        return saved["gs"], saved["output_dict"]
+
+    gs, output_dict = get_detection(mode, **kwargs)
+    save_detection(mode, gs, output_dict)
+    return gs, output_dict
+
+
 if __name__ == "__main__":
-    gs, output_dict = get_detection("new")
-    # gs, output_dict = get_detection("new")
+    for mode in ("new", "test"):
+        gs, output_dict = get_detection(mode)
+        print(f"saved {mode} detection to {save_detection(mode, gs, output_dict)}")

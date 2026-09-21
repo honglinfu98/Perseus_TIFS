@@ -10,7 +10,7 @@ from matplotlib.ticker import MaxNLocator, ScalarFormatter
 from perseus.settings import PROJECT_ROOT
 import copy
 
-with open(path.join(PROJECT_ROOT, "results", "fusion_results.pkl"), "rb") as file:
+with open(path.join(PROJECT_ROOT, "data", "fusion_results.pkl"), "rb") as file:
     batch_results = pickle.load(file)
 
 

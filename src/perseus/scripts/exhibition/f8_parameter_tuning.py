@@ -9,17 +9,19 @@ import os
 import pickle
 import matplotlib.pyplot as plt
 from perseus.settings import PROJECT_ROOT
-
 import numpy as np
 
 
 def visualize_results(
     metric: str = "best_val_f1",
     fontsize: int = 23,
-    save_path: str = os.path.join(PROJECT_ROOT, "data", "tuning_grid.pdf"),
+    save_path: str = os.path.join(PROJECT_ROOT, "results", "tuning_grid.pdf"),
     batch_size: int = 8,
     data_name_filter: str = "DDM",
     model_name_filter: str = "MultiGAT",
+    results_path: str = os.path.join(
+        PROJECT_ROOT, "results", "parameter_search_results.pkl"
+    ),
 ):
     """
     Visualize hyperparameter tuning results as a heatmap.
@@ -28,6 +30,10 @@ def visualize_results(
     (e.g., best validation F1 score) for different combinations of learning rate and hidden channel size,
     filtered by batch size, dataset name, and model name.
 
+    The pickle is a flat list of dicts produced by
+    ``perseus.evaluation.run_fusion_experiments.run_parameter_search`` with keys
+    ``batch_size``, ``lr``, ``hidden_channels``, ``model``, ``data`` and ``best_val_f1``.
+
     Args:
         metric (str): The key in the result dict to plot (e.g., 'best_val_f1').
         fontsize (int): Font size for plot labels and ticks.
@@ -35,20 +41,11 @@ def visualize_results(
         batch_size (int): Batch size to filter results by.
         data_name_filter (str): Dataset name to filter results by (e.g., 'DDM').
         model_name_filter (str): Model name to filter results by (e.g., 'MultiGAT').
+        results_path (str): Path to the parameter search results pickle.
     """
     # Load flat param tuning results
-    with open(
-        os.path.join(PROJECT_ROOT, "data", "buffer", "parameter_search_results.pkl"),
-        "rb",
-    ) as file:
+    with open(results_path, "rb") as file:
         param_tuning_results = pickle.load(file)
-
-    # Filter for your desired settings
-
-    batch_size = 8
-    data_name_filter = "DDM"
-    model_name_filter = "MultiGAT"
-    metric = "best_val_f1"
 
     points = []
     for entry in param_tuning_results:
@@ -100,15 +97,12 @@ def visualize_results(
         cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
         cbar.ax.tick_params(labelsize=fontsize)
         plt.tight_layout()
-        plt.savefig(
-            os.path.join(PROJECT_ROOT, "data", "tuning_grid.pdf"),
-            bbox_inches="tight",
-            format="pdf",
-        )
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        plt.savefig(save_path, bbox_inches="tight", format="pdf")
         plt.show()
 
 
 if __name__ == "__main__":
     # To visualize, set the metric you want, e.g.:
     # "best_val_f1", or other keys present in the pickle
-    visualize_results(metric="best_val_f1", batch_size=2)
+    visualize_results(metric="best_val_f1", batch_size=8)
