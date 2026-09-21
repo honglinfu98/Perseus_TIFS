@@ -141,3 +141,13 @@ venv
 data/test_signals.pkl
 data/validate_signals.pkl
 data/train_signals.pkl
+
+# Large data files (exceed GitHub's 50 MB recommendation)
+run/users_features_combined.csv
+src/clotho/dataset/extract/download/train_signals.pkl
+src/clotho/dataset/extract/download/all_scored.pkl
+src/clotho/dataset/extract/all_scored.pkl
+src/clotho/dataset/extract/signals1.pkl
+src/clotho/model/signals1.pkl
+src/clotho/
+run/
