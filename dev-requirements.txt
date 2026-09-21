@@ -1,6 +1,6 @@
 bandit
 black==25.1.0
-flake8==6.0.0
+flake8==7.3.0
 jupyter
 pre-commit==4.1.0
 py2neo
